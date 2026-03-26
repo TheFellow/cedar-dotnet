@@ -1,3 +1,3 @@
 namespace Cedar.Ast.Internal;
 
-internal interface INode;
+public interface INode;

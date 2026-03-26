@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <Compile Remove="Internal\Parser\**\*.cs" />
+    <Compile Remove="Internal\Rust\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Cedar.Tests" />
   </ItemGroup>
 

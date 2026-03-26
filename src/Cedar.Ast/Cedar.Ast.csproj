@@ -3,4 +3,9 @@
     <ProjectReference Include="..\Cedar.Core\Cedar.Core.csproj" />
     <ProjectReference Include="..\Cedar.Types\Cedar.Types.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Cedar.Core\Internal\Parser\**\*.cs" Link="Internal\Parser\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Cedar.Core\Internal\Rust\**\*.cs" Link="Internal\Rust\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>
