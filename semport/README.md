@@ -2,15 +2,17 @@
 
 Commit ledger of the github.com/cedar-policy/cedar-go upstream for this C# semport.
 
-Check and update inspiration/cedar-go (a git repo). You can clone it if it's not there:
+Check and update inspiration/cedar-go (a git repo). You can copy or clone it if it's not there:
 
 ```
+cp -r /path/to/cedar-go inspiration/cedar-go
+# or
 git clone https://github.com/cedar-policy/cedar-go.git inspiration/cedar-go
 ```
 
 ## Tracking Start Date
 
-Tracking began on **January 6, 2026** with commit `69d8817` (HEAD at sprint plan approval). All commits from this date forward are tracked in `ledger.tsv`. The 9-sprint plan covers porting the codebase up to and including this commit; the semport ledger tracks incremental upstream changes after this baseline.
+Tracking began on **January 6, 2026** with commit `69d8817` (cedar-go HEAD at time of project setup). All commits from this date forward are tracked in `ledger.tsv`. The semport workflow will port the cedar-go codebase into C# incrementally, processing each upstream commit in chronological order.
 
 ## Workflow
 
