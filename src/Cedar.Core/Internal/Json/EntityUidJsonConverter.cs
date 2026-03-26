@@ -40,7 +40,17 @@ internal sealed class EntityUidJsonConverter : JsonConverter<EntityUid>
         JsonElement payload = element;
         if (element.TryGetProperty("__entity", out JsonElement explicitEntity))
         {
+            if (explicitEntity.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
             payload = explicitEntity;
+        }
+
+        if (payload.ValueKind != JsonValueKind.Object)
+        {
+            return false;
         }
 
         if (!payload.TryGetProperty("type", out JsonElement typeElement) || typeElement.ValueKind != JsonValueKind.String)

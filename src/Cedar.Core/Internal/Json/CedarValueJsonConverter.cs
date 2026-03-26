@@ -167,9 +167,20 @@ internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
 
     private static bool TryGetExtensionElement(JsonElement element, out JsonElement extension)
     {
-        if (element.TryGetProperty("__extn", out extension))
+        if (element.TryGetProperty("__extn", out JsonElement explicitExtension))
         {
-            return true;
+            if (explicitExtension.ValueKind == JsonValueKind.Object
+                && explicitExtension.TryGetProperty("fn", out JsonElement explicitFunction)
+                && explicitFunction.ValueKind == JsonValueKind.String
+                && explicitExtension.TryGetProperty("arg", out JsonElement explicitArgument)
+                && explicitArgument.ValueKind == JsonValueKind.String)
+            {
+                extension = explicitExtension;
+                return true;
+            }
+
+            extension = default;
+            return false;
         }
 
         if (element.TryGetProperty("fn", out JsonElement functionElement)

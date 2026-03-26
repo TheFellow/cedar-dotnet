@@ -2,10 +2,25 @@
   <ItemGroup>
     <Compile Remove="Internal\Parser\**\*.cs" />
     <Compile Remove="Internal\Rust\**\*.cs" />
+    <Compile Remove="Policy.cs" />
+    <Compile Remove="PolicySet.cs" />
+    <Compile Remove="PolicyList.cs" />
+    <Compile Remove="Annotations.cs" />
+    <Compile Remove="IPolicyIterator.cs" />
+    <Compile Remove="Encoder.cs" />
+    <Compile Remove="Decoder.cs" />
+    <Compile Remove="Internal\Json\NodeJsonModel.cs" />
+    <Compile Remove="Internal\Json\ScopeJsonModel.cs" />
+    <Compile Remove="Internal\Json\PolicyJsonModel.cs" />
+    <Compile Remove="Internal\Json\PolicyJsonMarshal.cs" />
+    <Compile Remove="Internal\Json\PolicyJsonUnmarshal.cs" />
+    <Compile Remove="Internal\Json\PolicySetJsonModel.cs" />
+    <Compile Remove="Internal\Json\PolicyJsonSerializerOptions.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cedar.Tests" />
+    <InternalsVisibleTo Include="Cedar.Ast" />
   </ItemGroup>
 
   <ItemGroup>

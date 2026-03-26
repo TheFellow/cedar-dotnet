@@ -7,5 +7,19 @@
   <ItemGroup>
     <Compile Include="..\Cedar.Core\Internal\Parser\**\*.cs" Link="Internal\Parser\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\Cedar.Core\Internal\Rust\**\*.cs" Link="Internal\Rust\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Cedar.Core\Policy.cs" Link="Policy.cs" />
+    <Compile Include="..\Cedar.Core\PolicySet.cs" Link="PolicySet.cs" />
+    <Compile Include="..\Cedar.Core\PolicyList.cs" Link="PolicyList.cs" />
+    <Compile Include="..\Cedar.Core\Annotations.cs" Link="Annotations.cs" />
+    <Compile Include="..\Cedar.Core\IPolicyIterator.cs" Link="IPolicyIterator.cs" />
+    <Compile Include="..\Cedar.Core\Encoder.cs" Link="Encoder.cs" />
+    <Compile Include="..\Cedar.Core\Decoder.cs" Link="Decoder.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\NodeJsonModel.cs" Link="Internal\Json\NodeJsonModel.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\ScopeJsonModel.cs" Link="Internal\Json\ScopeJsonModel.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\PolicyJsonModel.cs" Link="Internal\Json\PolicyJsonModel.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\PolicyJsonMarshal.cs" Link="Internal\Json\PolicyJsonMarshal.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\PolicyJsonUnmarshal.cs" Link="Internal\Json\PolicyJsonUnmarshal.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\PolicySetJsonModel.cs" Link="Internal\Json\PolicySetJsonModel.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Json\PolicyJsonSerializerOptions.cs" Link="Internal\Json\PolicyJsonSerializerOptions.cs" />
   </ItemGroup>
 </Project>
