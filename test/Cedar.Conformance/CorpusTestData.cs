@@ -1,0 +1,556 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Formats.Tar;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using Cedar.Ast.Internal;
+using Cedar.Core;
+using Cedar.Core.Internal.Parser;
+using Cedar.Types;
+
+namespace Cedar.Conformance;
+
+public sealed record CorpusRequestCase(
+    string ScenarioFile,
+    int RequestIndex,
+    PolicySet Policies,
+    EntityMap Entities,
+    Request Request,
+    Decision ExpectedDecision,
+    ImmutableArray<string> ExpectedReasons,
+    ImmutableArray<string> ExpectedErrors)
+{
+    public override string ToString()
+    {
+        return $"{ScenarioFile}#{RequestIndex}";
+    }
+}
+
+public static class CorpusTestData
+{
+    private const long MaxArchiveBytes = 512L * 1024L * 1024L;
+    private const long MaxEntryBytes = 16L * 1024L * 1024L;
+
+    private static readonly Lazy<IReadOnlyList<CorpusRequestCase>> CachedCases = new(LoadCases);
+
+    public static IEnumerable<object[]> Requests
+    {
+        get
+        {
+            foreach (CorpusRequestCase request in CachedCases.Value)
+            {
+                yield return new object[] { request };
+            }
+        }
+    }
+
+    private static IReadOnlyList<CorpusRequestCase> LoadCases()
+    {
+        string archivePath = LocateCorpusArchive();
+        Dictionary<string, byte[]> files = ExtractArchive(archivePath);
+
+        List<string> scenarioFiles = files.Keys
+            .Where(static file => file.StartsWith("corpus-tests/", StringComparison.Ordinal))
+            .Where(static file => file.EndsWith(".json", StringComparison.Ordinal))
+            .Where(static file => !file.EndsWith(".entities.json", StringComparison.Ordinal))
+            .OrderBy(static file => file, StringComparer.Ordinal)
+            .ToList();
+
+        List<CorpusRequestCase> requests = [];
+        foreach (string scenarioFile in scenarioFiles)
+        {
+            using JsonDocument scenarioDocument = JsonDocument.Parse(ReadRequiredFile(files, scenarioFile));
+            JsonElement scenarioRoot = scenarioDocument.RootElement;
+            if (scenarioRoot.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidDataException($"Scenario '{scenarioFile}' must be a JSON object.");
+            }
+
+            string policiesPath = GetRequiredString(scenarioRoot, "policies");
+            string entitiesPath = GetRequiredString(scenarioRoot, "entities");
+            string policyText = ReadRequiredTextFile(files, policiesPath);
+            byte[] entitiesBytes = ReadRequiredFile(files, entitiesPath);
+
+            PolicySet policySet = BuildPolicySet(policyText);
+            EntityMap entityMap = ParseEntityMap(entitiesBytes);
+
+            JsonElement requestsElement = GetRequiredProperty(scenarioRoot, "requests", JsonValueKind.Array);
+            int requestIndex = 0;
+            foreach (JsonElement requestElement in requestsElement.EnumerateArray())
+            {
+                Request request = ParseRequest(requestElement);
+                Decision decision = ParseDecision(GetRequiredString(requestElement, "decision"));
+                ImmutableArray<string> reasons = ReadStringArray(requestElement, "reason");
+                ImmutableArray<string> errors = ReadStringArray(requestElement, "errors");
+
+                requests.Add(new CorpusRequestCase(
+                    scenarioFile,
+                    requestIndex,
+                    policySet,
+                    entityMap,
+                    request,
+                    decision,
+                    reasons,
+                    errors));
+                requestIndex++;
+            }
+        }
+
+        return requests;
+    }
+
+    private static string LocateCorpusArchive()
+    {
+        string? directory = AppContext.BaseDirectory;
+        while (directory is not null)
+        {
+            string candidate = Path.Combine(directory, "testdata", "corpus-tests.tar.gz");
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            DirectoryInfo? parent = Directory.GetParent(directory);
+            directory = parent?.FullName;
+        }
+
+        throw new FileNotFoundException("Unable to locate testdata/corpus-tests.tar.gz from AppContext.BaseDirectory.");
+    }
+
+    private static Dictionary<string, byte[]> ExtractArchive(string archivePath)
+    {
+        using FileStream fileStream = File.OpenRead(archivePath);
+        using GZipStream gzip = new(fileStream, CompressionMode.Decompress, leaveOpen: false);
+        using TarReader tarReader = new(gzip, leaveOpen: false);
+
+        Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+        long extractedBytes = 0;
+
+        while (tarReader.GetNextEntry() is TarEntry entry)
+        {
+            if (entry.EntryType is not TarEntryType.RegularFile and not TarEntryType.V7RegularFile)
+            {
+                continue;
+            }
+
+            if (entry.DataStream is null)
+            {
+                continue;
+            }
+
+            string normalizedPath = NormalizePath(entry.Name);
+            if (normalizedPath.Length == 0 || !normalizedPath.StartsWith("corpus-tests/", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            byte[] data = ReadAllBytesBounded(entry.DataStream, MaxEntryBytes);
+            extractedBytes += data.LongLength;
+            if (extractedBytes > MaxArchiveBytes)
+            {
+                throw new InvalidDataException($"Corpus archive exceeds {MaxArchiveBytes} bytes after extraction.");
+            }
+
+            files[normalizedPath] = data;
+        }
+
+        return files;
+    }
+
+    private static byte[] ReadAllBytesBounded(Stream stream, long maxBytes)
+    {
+        using MemoryStream output = new();
+        byte[] buffer = new byte[16 * 1024];
+        long total = 0;
+
+        while (true)
+        {
+            int read = stream.Read(buffer, 0, buffer.Length);
+            if (read == 0)
+            {
+                break;
+            }
+
+            total += read;
+            if (total > maxBytes)
+            {
+                throw new InvalidDataException($"Single corpus entry exceeds {maxBytes} bytes.");
+            }
+
+            output.Write(buffer, 0, read);
+        }
+
+        return output.ToArray();
+    }
+
+    private static PolicySet BuildPolicySet(string policyText)
+    {
+        PolicyAst[] ast = CedarParser.ParsePolicies(policyText);
+        Policy[] policies = Policy.UnmarshalCedarList(policyText);
+        if (policies.Length != ast.Length)
+        {
+            throw new InvalidDataException("Parser and policy unmarshaler returned different policy counts.");
+        }
+
+        PolicySet set = new();
+        for (int index = 0; index < policies.Length; index++)
+        {
+            set.Add(new PolicyId($"policy{index}"), policies[index]);
+        }
+
+        return set;
+    }
+
+    private static EntityMap ParseEntityMap(byte[] json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException("Entity file must contain a JSON array.");
+        }
+
+        List<Entity> entities = [];
+        foreach (JsonElement entityElement in document.RootElement.EnumerateArray())
+        {
+            entities.Add(ParseEntity(entityElement));
+        }
+
+        return new EntityMap(entities);
+    }
+
+    private static Entity ParseEntity(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException("Entity values must be JSON objects.");
+        }
+
+        EntityUid uid = ParseEntityUid(GetRequiredProperty(element, "uid", JsonValueKind.Object));
+        EntityUidSet parents = element.TryGetProperty("parents", out JsonElement parentsElement)
+            ? ParseParents(parentsElement)
+            : new EntityUidSet();
+        CedarRecord attributes = element.TryGetProperty("attrs", out JsonElement attrsElement)
+            ? ParseRecord(attrsElement, "attrs")
+            : new CedarRecord();
+        CedarRecord tags = element.TryGetProperty("tags", out JsonElement tagsElement)
+            ? ParseRecord(tagsElement, "tags")
+            : new CedarRecord();
+
+        return new Entity(uid, parents, attributes, tags);
+    }
+
+    private static EntityUidSet ParseParents(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException("Entity parents must be an array.");
+        }
+
+        List<EntityUid> values = [];
+        foreach (JsonElement parent in element.EnumerateArray())
+        {
+            values.Add(ParseEntityUid(parent));
+        }
+
+        return new EntityUidSet(values);
+    }
+
+    private static Request ParseRequest(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException("Request values must be JSON objects.");
+        }
+
+        EntityUid principal = ParseEntityUid(GetRequiredProperty(element, "principal", JsonValueKind.Object));
+        EntityUid action = ParseEntityUid(GetRequiredProperty(element, "action", JsonValueKind.Object));
+        EntityUid resource = ParseEntityUid(GetRequiredProperty(element, "resource", JsonValueKind.Object));
+        CedarRecord context = element.TryGetProperty("context", out JsonElement contextElement)
+            ? ParseRecord(contextElement, "context")
+            : new CedarRecord();
+
+        return new Request(principal, action, resource, context);
+    }
+
+    private static Decision ParseDecision(string value)
+    {
+        return value switch
+        {
+            "allow" => Decision.Allow,
+            "deny" => Decision.Deny,
+            _ => throw new InvalidDataException($"Unsupported decision '{value}'.")
+        };
+    }
+
+    private static ImmutableArray<string> ReadStringArray(JsonElement objectElement, string propertyName)
+    {
+        if (!objectElement.TryGetProperty(propertyName, out JsonElement value))
+        {
+            return ImmutableArray<string>.Empty;
+        }
+
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException($"Property '{propertyName}' must be an array.");
+        }
+
+        ImmutableArray<string>.Builder builder = ImmutableArray.CreateBuilder<string>();
+        foreach (JsonElement item in value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                throw new InvalidDataException($"Property '{propertyName}' must only contain strings.");
+            }
+
+            builder.Add(item.GetString() ?? string.Empty);
+        }
+
+        return builder.ToImmutable();
+    }
+
+    private static CedarRecord ParseRecord(JsonElement element, string name)
+    {
+        if (element.ValueKind == JsonValueKind.Null)
+        {
+            return new CedarRecord();
+        }
+
+        ICedarData value = ParseCedarValue(element);
+        return value as CedarRecord ?? throw new InvalidDataException($"Property '{name}' must be an object.");
+    }
+
+    private static ICedarData ParseCedarValue(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.True => CedarBool.True,
+            JsonValueKind.False => CedarBool.False,
+            JsonValueKind.Number => ParseLong(element),
+            JsonValueKind.String => new CedarString(element.GetString() ?? string.Empty),
+            JsonValueKind.Array => ParseSet(element),
+            JsonValueKind.Object => ParseObject(element),
+            _ => throw new InvalidDataException($"Unsupported JSON token '{element.ValueKind}' in Cedar value.")
+        };
+    }
+
+    private static CedarLong ParseLong(JsonElement element)
+    {
+        if (!element.TryGetInt64(out long value))
+        {
+            throw new InvalidDataException("Numeric values must fit in signed 64-bit range.");
+        }
+
+        return new CedarLong(value);
+    }
+
+    private static CedarSet ParseSet(JsonElement element)
+    {
+        List<ICedarData> values = [];
+        foreach (JsonElement child in element.EnumerateArray())
+        {
+            values.Add(ParseCedarValue(child));
+        }
+
+        return new CedarSet(values);
+    }
+
+    private static ICedarData ParseObject(JsonElement element)
+    {
+        if (TryParseEntityUid(element, out EntityUid? uid))
+        {
+            return uid!;
+        }
+
+        if (TryParseExtension(element, out ICedarData? extensionValue))
+        {
+            return extensionValue!;
+        }
+
+        RecordMap values = [];
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            values.Add(new CedarString(property.Name), ParseCedarValue(property.Value));
+        }
+
+        return new CedarRecord(values);
+    }
+
+    private static EntityUid ParseEntityUid(JsonElement element)
+    {
+        if (!TryParseEntityUid(element, out EntityUid? uid))
+        {
+            throw new InvalidDataException("Expected entity uid object in {type,id} or {__entity:{type,id}} format.");
+        }
+
+        return uid!;
+    }
+
+    private static bool TryParseEntityUid(JsonElement element, out EntityUid? uid)
+    {
+        uid = null;
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        JsonElement payload = element;
+        if (element.TryGetProperty("__entity", out JsonElement explicitEntity))
+        {
+            if (explicitEntity.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            payload = explicitEntity;
+        }
+
+        if (!payload.TryGetProperty("type", out JsonElement typeElement) || typeElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        if (!payload.TryGetProperty("id", out JsonElement idElement) || idElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        string type = typeElement.GetString() ?? string.Empty;
+        string id = idElement.GetString() ?? string.Empty;
+        uid = new EntityUid(new EntityType(type), new CedarString(id));
+        return true;
+    }
+
+    private static bool TryParseExtension(JsonElement element, out ICedarData? value)
+    {
+        value = null;
+        if (!TryGetExtensionPayload(element, out JsonElement payload))
+        {
+            return false;
+        }
+
+        string fn = GetRequiredString(payload, "fn");
+        string arg = GetRequiredString(payload, "arg");
+
+        try
+        {
+            value = fn switch
+            {
+                "decimal" => CedarDecimal.Parse(arg),
+                "datetime" => CedarDatetime.Parse(arg),
+                "duration" => CedarDuration.Parse(arg),
+                "ip" => CedarIpAddress.Parse(arg),
+                "pattern" => CedarPattern.Parse(arg),
+                _ => null
+            };
+        }
+        catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException or FormatException or OverflowException)
+        {
+            value = null;
+            return false;
+        }
+
+        return value is not null;
+    }
+
+    private static bool TryGetExtensionPayload(JsonElement element, out JsonElement payload)
+    {
+        if (element.TryGetProperty("__extn", out JsonElement explicitExtension))
+        {
+            if (explicitExtension.ValueKind == JsonValueKind.Object
+                && explicitExtension.TryGetProperty("fn", out JsonElement explicitFn)
+                && explicitFn.ValueKind == JsonValueKind.String
+                && explicitExtension.TryGetProperty("arg", out JsonElement explicitArg)
+                && explicitArg.ValueKind == JsonValueKind.String)
+            {
+                payload = explicitExtension;
+                return true;
+            }
+
+            payload = default;
+            return false;
+        }
+
+        if (element.TryGetProperty("fn", out JsonElement functionElement)
+            && functionElement.ValueKind == JsonValueKind.String
+            && element.TryGetProperty("arg", out JsonElement argumentElement)
+            && argumentElement.ValueKind == JsonValueKind.String)
+        {
+            payload = element;
+            return true;
+        }
+
+        payload = default;
+        return false;
+    }
+
+    private static JsonElement GetRequiredProperty(JsonElement objectElement, string propertyName, JsonValueKind expectedKind)
+    {
+        if (!objectElement.TryGetProperty(propertyName, out JsonElement value))
+        {
+            throw new InvalidDataException($"Missing required property '{propertyName}'.");
+        }
+
+        if (value.ValueKind != expectedKind)
+        {
+            throw new InvalidDataException($"Property '{propertyName}' must be '{expectedKind}', got '{value.ValueKind}'.");
+        }
+
+        return value;
+    }
+
+    private static string GetRequiredString(JsonElement objectElement, string propertyName)
+    {
+        JsonElement value = GetRequiredProperty(objectElement, propertyName, JsonValueKind.String);
+        return value.GetString() ?? string.Empty;
+    }
+
+    private static byte[] ReadRequiredFile(IReadOnlyDictionary<string, byte[]> files, string path)
+    {
+        string normalizedPath = NormalizePath(path);
+        if (!files.TryGetValue(normalizedPath, out byte[]? data))
+        {
+            throw new FileNotFoundException($"Missing referenced corpus file '{normalizedPath}'.");
+        }
+
+        return data;
+    }
+
+    private static string ReadRequiredTextFile(IReadOnlyDictionary<string, byte[]> files, string path)
+    {
+        return Encoding.UTF8.GetString(ReadRequiredFile(files, path));
+    }
+
+    private static string NormalizePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        string normalized = path.Replace('\\', '/');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        if (Path.IsPathRooted(normalized))
+        {
+            throw new InvalidDataException($"Absolute paths are not allowed in archive entries: '{path}'.");
+        }
+
+        string[] segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string segment in segments)
+        {
+            if (segment is "." or "..")
+            {
+                throw new InvalidDataException($"Unsafe path traversal in archive entry: '{path}'.");
+            }
+        }
+
+        return string.Join('/', segments);
+    }
+}

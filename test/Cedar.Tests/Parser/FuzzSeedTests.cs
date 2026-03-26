@@ -1,0 +1,102 @@
+using System;
+using System.Text;
+using Cedar.Core.Internal.Parser;
+using Xunit;
+
+namespace Cedar.Tests.Parser;
+
+public sealed class FuzzSeedTests
+{
+    [Theory]
+    [MemberData(nameof(TokenizerSeeds))]
+    public void TokenizerSeeds_DoNotCrash(string input)
+    {
+        Exception? exception = Record.Exception(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes(input)));
+        if (exception is not null)
+        {
+            Assert.IsType<ParseException>(exception);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ParserSeeds))]
+    public void ParserSeeds_DoNotCrash(string input)
+    {
+        Exception? exception = Record.Exception(() => CedarParser.ParsePolicies(input));
+        if (exception is null)
+        {
+            return;
+        }
+
+        AggregateException aggregate = Assert.IsType<AggregateException>(exception);
+        Assert.All(aggregate.InnerExceptions, static inner => Assert.IsType<ParseException>(inner));
+    }
+
+    public static TheoryData<string> TokenizerSeeds =>
+    [
+        "These are some identifiers",
+        "0 1 1234",
+        "-1 9223372036854775807 -9223372036854775808",
+        """
+        "" "string" "\"\'\n\r\t\\\0" "\x123" "\u{0}\u{10fFfF}"
+        """,
+        "\"*\" \"\\*\" \"*\\**\"",
+        "@.,;(){}[]+-*",
+        ":::",
+        "!!=<<=>>=",
+        "||&&",
+        "// single line comment",
+        "/*",
+        "multiline comment",
+        "// embedded comment does nothing",
+        "*/",
+        "'/%|&="
+    ];
+
+    public static TheoryData<string> ParserSeeds =>
+    [
+        "permit(principal,action,resource);",
+        "forbid(principal,action,resource);",
+        "permit(principal,action,resource in asdf::\"1234\");",
+        "permit(principal,action,resource) when { resource in \"foo\" };",
+        "permit(principal,action,resource) when { context.x == 42 };",
+        "permit(principal,action,resource) when { principal.x == 42 };",
+        "permit(principal,action,resource) when { principal in parent::\"bob\" };",
+        "permit(principal == coder::\"cuzco\",action,resource);",
+        "permit(principal in team::\"osiris\",action,resource);",
+        "permit(principal,action == table::\"drop\",resource);",
+        "permit(principal,action in scary::\"stuff\",resource);",
+        "permit(principal,action in [scary::\"stuff\"],resource);",
+        "permit(principal,action,resource == table::\"whatever\");",
+        "permit(principal,action,resource) unless { false };",
+        "permit(principal,action,resource) when { (if true then true else true) };",
+        "permit(principal,action,resource) when { (true || false) };",
+        "permit(principal,action,resource) when { (true && true) };",
+        "permit(principal,action,resource) when { (1<2) && (1<=1) && (2>1) && (1>=1) && (1!=2) && (1==1)};",
+        "permit(principal,action,resource) when { principal in principal };",
+        "permit(principal,action,resource) when { principal has name };",
+        "permit(principal,action,resource) when { 40+3-1==42 };",
+        "permit(principal,action,resource) when { 6*7==42 };",
+        "permit(principal,action,resource) when { -42==-42 };",
+        "permit(principal,action,resource) when { !(1+1==42) };",
+        "permit(principal,action,resource) when { [1,2,3].contains(2) };",
+        "permit(principal,action,resource) when { {name:\"bob\"} has name };",
+        "permit(principal,action,resource) when { action in action };",
+        "permit(principal,action,resource) when { [1,2,3].contains(2,3) };",
+        "permit(principal,action,resource) when { [1,2,3].containsAll([2,3]) };",
+        "permit(principal,action,resource) when { [1,2,3].containsAll(2,3) };",
+        "permit(principal,action,resource) when { [1,2,3].containsAny([2,5]) };",
+        "permit(principal,action,resource) when { [1,2,3].containsAny(2,5) };",
+        "permit(principal,action,resource) when { {name:\"bob\"}[\"name\"] == \"bob\" };",
+        "permit(principal,action,resource) when { [1,2,3].shuffle() };",
+        "permit(principal,action,resource) when { \"bananas\" like \"*nan*\" };",
+        "permit(principal,action,resource) when { fooBar(\"10\") };",
+        "permit(principal,action,resource) when { decimal(1, 2) };",
+        "permit(principal,action,resource) when { ip() };",
+        "permit(principal,action,resource) when { ip(\"1.2.3.4\").isIpv4(true) };",
+        "permit(principal,action,resource) when { ip(\"1.2.3.4\").isIpv6(true) };",
+        "permit(principal,action,resource) when { ip(\"1.2.3.4\").isLoopback(true) };",
+        "permit(principal,action,resource) when { ip(\"1.2.3.4\").isMulticast(true) };",
+        "permit(principal,action,resource) when { ip(\"1.2.3.4\").isInRange() };"
+    ];
+}

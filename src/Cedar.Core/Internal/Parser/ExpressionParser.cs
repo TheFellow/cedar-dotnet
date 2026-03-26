@@ -374,8 +374,20 @@ internal sealed class ExpressionParser
             "hasTag" => RequireOneArg(method, args, static (node, arg) => new NodeHasTag(node, arg), lhs),
             "getTag" => RequireOneArg(method, args, static (node, arg) => new NodeGetTag(node, arg), lhs),
             "isEmpty" => RequireZeroArgs(method, args, static node => new NodeIsEmpty(node), lhs),
-            _ => throw _state.Error(method, $"Unknown method '{method.Text}'.")
+            _ => ParseExtensionStyleMethodCall(lhs, method, args)
         };
+    }
+
+    private static INode ParseExtensionStyleMethodCall(INode lhs, Token method, ImmutableArray<INode> args)
+    {
+        ImmutableArray<INode>.Builder callArgs = ImmutableArray.CreateBuilder<INode>(args.Length + 1);
+        callArgs.Add(lhs);
+        foreach (INode arg in args)
+        {
+            callArgs.Add(arg);
+        }
+
+        return new NodeExtensionCall(method.Text, callArgs.ToImmutable());
     }
 
     private INode ParseSetLiteral()

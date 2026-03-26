@@ -9,7 +9,8 @@ internal static class Compiler
 {
     public static BoolEvaluator Compile(PolicyAst policy)
     {
-        return new BoolEvaluator(ToEval(ScopeCompiler.CompilePolicy(policy)));
+        PolicyAst folded = ConstantFolder.FoldPolicy(policy);
+        return new BoolEvaluator(ToEval(ScopeCompiler.CompilePolicy(folded)));
     }
 
     public static IEvaluator ToEval(INode node)

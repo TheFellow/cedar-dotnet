@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Cedar.Ast.Internal;
 using Cedar.Core.Internal.Parser;
 using Xunit;
 
@@ -43,12 +44,13 @@ public sealed class ParserErrorTests
     }
 
     [Fact]
-    public void UnknownMethodProducesError()
+    public void UnknownMethodParsesAsExtensionStyleCall()
     {
-        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { context.unknown() };"));
-
-        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
-        Assert.Contains("Unknown method", parse.Message, StringComparison.Ordinal);
+        PolicyAst policy = Assert.Single(CedarParser.ParsePolicies("permit(principal, action, resource) when { context.unknown() };"));
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
+        Assert.Equal("unknown", call.Name);
+        Assert.Single(call.Args);
+        Assert.IsType<NodeVariable>(call.Args[0]);
     }
 
     [Fact]
