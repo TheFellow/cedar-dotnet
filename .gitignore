@@ -1,0 +1,18 @@
+# Upstream reference repo (cloned locally, not committed)
+inspiration/
+
+# Attractor working directory
+.ai/
+
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# NuGet
+packages/
+
+# Test results
+TestResults/
