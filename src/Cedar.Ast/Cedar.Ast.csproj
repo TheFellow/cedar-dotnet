@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Cedar.Types\Cedar.Types.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cedar.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cedar.Types\Cedar.Types.csproj" />
+    <ProjectReference Include="..\Cedar.Ast\Cedar.Ast.csproj" />
+  </ItemGroup>
+</Project>
