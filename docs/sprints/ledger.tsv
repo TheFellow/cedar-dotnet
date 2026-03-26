@@ -1,5 +1,5 @@
 sprint_id	title	status	updated_at
-001	Bootstrap, Build Infrastructure, and Primitive Values	planned	2026-03-26T18:19:39Z
+001	Bootstrap, Build Infrastructure, and Primitive Values	completed	2026-03-26T18:34:25Z
 002	Extended Types, Collection Types, Entity System, and Serialization	planned	2026-03-26T18:19:39Z
 003	Internal AST Node Hierarchy and Public Fluent Builder	planned	2026-03-26T18:19:39Z
 004	Tokenizer, Recursive Descent Parser, and Cedar Text Serialization	planned	2026-03-26T18:19:39Z
