@@ -1,2 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="..\Cedar.Core\Internal\Consts\CedarConsts.cs" Link="Internal\Consts\CedarConsts.cs" />
+    <Compile Include="..\Cedar.Core\Internal\MapSet\ImmutableMapSet.cs" Link="Internal\MapSet\ImmutableMapSet.cs" />
+    <Compile Include="..\Cedar.Core\Internal\MapSet\MapSetBuilder.cs" Link="Internal\MapSet\MapSetBuilder.cs" />
+  </ItemGroup>
 </Project>

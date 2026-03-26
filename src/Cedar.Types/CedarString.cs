@@ -15,7 +15,7 @@ public sealed record CedarString(string Value) : CedarValue
         return CedarHash.ForString(nameof(CedarString), Value);
     }
 
-    private static string Escape(string value)
+    internal static string Escape(string value)
     {
         StringBuilder builder = new();
         bool isFirst = true;

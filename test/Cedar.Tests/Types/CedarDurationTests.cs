@@ -1,0 +1,101 @@
+using System;
+using Cedar.Tests.TestSupport;
+using Cedar.Types;
+using Xunit;
+
+namespace Cedar.Tests.Types;
+
+public sealed class CedarDurationTests
+{
+    [Fact]
+    public void ConstructorStoresMilliseconds()
+    {
+        CedarDuration value = new(42);
+
+        Assert.Equal(42, value.Value);
+    }
+
+    [Fact]
+    public void ParseAcceptsSingleUnit()
+    {
+        CedarAssert.CedarText(CedarDuration.Parse("1h"), "duration(\"1h\")");
+    }
+
+    [Fact]
+    public void ParseCollapsesEquivalentUnits()
+    {
+        CedarAssert.CedarText(CedarDuration.Parse("60m"), "duration(\"1h\")");
+    }
+
+    [Fact]
+    public void ParseAcceptsNegativeDurations()
+    {
+        CedarAssert.CedarText(CedarDuration.Parse("-36h"), "duration(\"-1d12h\")");
+    }
+
+    [Fact]
+    public void ZeroFormatsAsMilliseconds()
+    {
+        CedarAssert.CedarText(new CedarDuration(0), "duration(\"0ms\")");
+    }
+
+    [Fact]
+    public void UnitAccessorsReturnTruncatedValues()
+    {
+        CedarDuration duration = CedarDuration.Parse("1d2h31m43s17ms");
+
+        Assert.Equal(1, duration.ToDays());
+        Assert.Equal(26, duration.ToHours());
+        Assert.Equal(1591, duration.ToMinutes());
+        Assert.Equal(95503, duration.ToSeconds());
+        Assert.Equal(95_503_017, duration.ToMilliseconds());
+    }
+
+    [Fact]
+    public void ParseRejectsEmptyInput()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse(""));
+    }
+
+    [Fact]
+    public void ParseRejectsUnexpectedUnitOrder()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("1h1h"));
+    }
+
+    [Fact]
+    public void ParseRejectsMissingTrailingUnit()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("3h3"));
+    }
+
+    [Fact]
+    public void EqualValuesAreEqual()
+    {
+        CedarAssert.Equal(new CedarDuration(3_600_000), CedarDuration.Parse("60m"));
+    }
+
+    [Fact]
+    public void DifferentValuesAreNotEqual()
+    {
+        CedarAssert.NotEqual(new CedarDuration(1), new CedarDuration(2));
+    }
+
+    [Fact]
+    public void HashCodeIsStable()
+    {
+        CedarAssert.HashStable(CedarDuration.Parse("42ms"));
+    }
+
+    [Fact]
+    public void JsonRoundTripUsesDurationExtension()
+    {
+        CedarDuration expected = CedarDuration.Parse("42ms");
+
+        string json = CedarJson.SerializeData(expected);
+        ICedarData actual = CedarJson.DeserializeData(json);
+
+        Assert.Equal("{\"__extn\":{\"fn\":\"duration\",\"arg\":\"42ms\"}}", json);
+        CedarAssert.Equal(expected, Assert.IsType<CedarDuration>(actual));
+    }
+}

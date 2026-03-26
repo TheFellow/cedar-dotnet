@@ -1,6 +1,6 @@
 namespace Cedar.Types;
 
-public abstract record CedarValue
+public abstract record CedarValue : ICedarData
 {
     public abstract string MarshalCedar();
 
