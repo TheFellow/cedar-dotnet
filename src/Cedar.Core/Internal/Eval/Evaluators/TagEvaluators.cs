@@ -1,0 +1,34 @@
+using Cedar.Types;
+
+namespace Cedar.Core.Internal.Eval.Evaluators;
+
+internal sealed class GetTagEvaluator(IEvaluator left, IEvaluator right) : IEvaluator
+{
+    public ICedarData Eval(EvalEnv env)
+    {
+        EntityUid entityUid = TypeConversion.ValueToEntity(left.Eval(env));
+        string tag = TypeConversion.ValueToString(right.Eval(env));
+
+        if (!env.Entities.TryGet(entityUid, out Entity entity))
+        {
+            throw new EvalException($"entity `{entityUid}` {EvalErrors.MissingEntity}");
+        }
+
+        if (entity.Tags.TryGetValue(new CedarString(tag), out ICedarData value))
+        {
+            return value;
+        }
+
+        throw new EvalException($"`{entityUid}` {EvalErrors.MissingTag} `{tag}`");
+    }
+}
+
+internal sealed class HasTagEvaluator(IEvaluator left, IEvaluator right) : IEvaluator
+{
+    public ICedarData Eval(EvalEnv env)
+    {
+        EntityUid entityUid = TypeConversion.ValueToEntity(left.Eval(env));
+        string tag = TypeConversion.ValueToString(right.Eval(env));
+        return new CedarBool(env.Entities.TryGet(entityUid, out Entity entity) && entity.Tags.TryGetValue(new CedarString(tag), out _));
+    }
+}

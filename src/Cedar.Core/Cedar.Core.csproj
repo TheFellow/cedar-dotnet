@@ -16,6 +16,9 @@
     <Compile Remove="Internal\Json\PolicyJsonUnmarshal.cs" />
     <Compile Remove="Internal\Json\PolicySetJsonModel.cs" />
     <Compile Remove="Internal\Json\PolicyJsonSerializerOptions.cs" />
+    <Compile Remove="Internal\Eval\**\*.cs" />
+    <Compile Remove="Internal\Extensions\**\*.cs" />
+    <Compile Remove="Authorization.cs" />
   </ItemGroup>
 
   <ItemGroup>

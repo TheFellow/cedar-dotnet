@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <InternalsVisibleTo Include="Cedar.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Cedar.Core\Cedar.Core.csproj" />
     <ProjectReference Include="..\Cedar.Types\Cedar.Types.csproj" />
   </ItemGroup>
@@ -21,5 +25,8 @@
     <Compile Include="..\Cedar.Core\Internal\Json\PolicyJsonUnmarshal.cs" Link="Internal\Json\PolicyJsonUnmarshal.cs" />
     <Compile Include="..\Cedar.Core\Internal\Json\PolicySetJsonModel.cs" Link="Internal\Json\PolicySetJsonModel.cs" />
     <Compile Include="..\Cedar.Core\Internal\Json\PolicyJsonSerializerOptions.cs" Link="Internal\Json\PolicyJsonSerializerOptions.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Eval\**\*.cs" Link="Internal\Eval\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Cedar.Core\Internal\Extensions\**\*.cs" Link="Internal\Extensions\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Cedar.Core\Authorization.cs" Link="Authorization.cs" />
   </ItemGroup>
 </Project>
