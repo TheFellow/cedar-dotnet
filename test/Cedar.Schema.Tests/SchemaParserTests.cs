@@ -22,6 +22,46 @@ public sealed class SchemaParserTests
             { "duplicate multi-name action", "action read, read;" }
         };
 
+    public static TheoryData<string, string> ReservedKeywordAsNameCases =>
+        new()
+        {
+            { "reserved identifier entity name true", "entity true;" },
+            { "reserved identifier entity name false", "entity false;" },
+            { "reserved identifier entity name if", "entity if;" },
+            { "reserved identifier entity name then", "entity then;" },
+            { "reserved identifier entity name else", "entity else;" },
+            { "reserved identifier entity name in", "entity in;" },
+            { "reserved identifier entity name is", "entity is;" },
+            { "reserved identifier entity name like", "entity like;" },
+            { "reserved identifier entity name has", "entity has;" },
+            { "reserved identifier in namespace path", "namespace true {}" },
+            { "reserved identifier type name", "type true = String;" },
+            { "reserved identifier action name", "action true;" },
+            { "reserved identifier attr name", "entity Foo { true: String };" },
+            { "reserved identifier in path component", "entity Foo in [true::Bar];" },
+            { "reserved identifier second entity name", "entity A, true {};" },
+            { "reserved identifier in action parent path", "action view in [true::Action::\"foo\"];" },
+            { "__cedar as entity name", "entity __cedar;" },
+            { "__cedar as second entity name", "entity A, __cedar {};" },
+            { "__cedar as enum name", "entity __cedar enum [\"x\"];" },
+            { "__cedar as type name", "type __cedar = String;" }
+        };
+
+    public static TheoryData<string, string> AnnotationAndAppliesToErrorCases =>
+        new()
+        {
+            { "duplicate annotation key", "@doc(\"a\") @doc(\"b\") entity Foo;" },
+            { "duplicate annotation key no value", "@deprecated @deprecated entity Foo;" },
+            { "duplicate principal in appliesTo", "action view appliesTo { principal: A, principal: B };" },
+            { "duplicate resource in appliesTo", "action view appliesTo { resource: A, principal: C, resource: B };" },
+            { "duplicate context in appliesTo", "action view appliesTo { principal: A, resource: B, context: {}, context: {} };" },
+            { "empty principal list", "action view appliesTo { principal: [], resource: Photo };" },
+            { "empty resource list", "action view appliesTo { principal: Photo, resource: [] };" },
+            { "missing principal in appliesTo", "action view appliesTo { resource: Photo };" },
+            { "missing resource in appliesTo", "action view appliesTo { principal: Photo };" },
+            { "empty appliesTo", "action view appliesTo {};" }
+        };
+
     [Fact]
     public void UnmarshalCedar_ParsesEmptyDocument()
     {
@@ -236,5 +276,19 @@ public sealed class SchemaParserTests
         AggregateException exception = Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
 
         Assert.Contains("declared twice", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [MemberData(nameof(ReservedKeywordAsNameCases))]
+    public void UnmarshalCedar_RejectsReservedKeywordAsName(string _, string cedar)
+    {
+        Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
+    }
+
+    [Theory]
+    [MemberData(nameof(AnnotationAndAppliesToErrorCases))]
+    public void UnmarshalCedar_RejectsAnnotationAndAppliesToErrors(string _, string cedar)
+    {
+        Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
     }
 }
