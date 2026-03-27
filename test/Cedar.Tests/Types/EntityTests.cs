@@ -120,6 +120,21 @@ public sealed class EntityTests
     }
 
     [Fact]
+    public void EntityWithEmptyTagsRoundTripsCorrectly()
+    {
+        Entity expected = new(
+            new EntityUid(new EntityType("User"), new CedarString("alice")),
+            new EntityUidSet(),
+            new CedarRecord(),
+            new CedarRecord());
+
+        Entity actual = CedarJson.DeserializeEntity(CedarJson.SerializeEntity(expected));
+
+        Assert.Equal(expected, actual);
+        Assert.Equal(new CedarRecord(), actual.Tags);
+    }
+
+    [Fact]
     public void AttributesAndTagsRemainIndependent()
     {
         Entity entity = CreateEntity();

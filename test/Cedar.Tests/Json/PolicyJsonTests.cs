@@ -92,6 +92,26 @@ public sealed class PolicyJsonTests
     }
 
     [Fact]
+    public void MarshalJson_EmptySetSerializesAsSetEmptyArray()
+    {
+        const string cedar = "permit(principal, action, resource) when { [] };";
+        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
+
+        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement body = document.RootElement.GetProperty("conditions")[0].GetProperty("body");
+
+        Assert.True(body.TryGetProperty("Set", out JsonElement setElement));
+        Assert.Equal(JsonValueKind.Array, setElement.ValueKind);
+        Assert.Equal(0, setElement.GetArrayLength());
+        Assert.Single(body.EnumerateObject());
+
+        Policy roundTripped = Policy.UnmarshalJson(json);
+
+        Assert.Equal(expected, roundTripped.MarshalCedar());
+    }
+
+    [Fact]
     public void MarshalJson_UsesRecordPairsShape()
     {
         string json = Policy.UnmarshalCedar("permit(principal, action, resource) when { {a: 1, b: 2} };").MarshalJson();

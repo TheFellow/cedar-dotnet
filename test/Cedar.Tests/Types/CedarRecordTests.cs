@@ -153,4 +153,14 @@ public sealed class CedarRecordTests
 
         CedarAssert.Equal(expected, Assert.IsType<CedarRecord>(actual));
     }
+
+    [Fact]
+    public void JsonRoundTripEmptyRecordEqualsDefaultRecord()
+    {
+        CedarRecord expected = new();
+
+        ICedarData actual = CedarJson.DeserializeData(CedarJson.SerializeData(expected));
+
+        CedarAssert.Equal(expected, Assert.IsType<CedarRecord>(actual));
+    }
 }
