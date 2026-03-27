@@ -111,7 +111,10 @@ internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
 
     private static ICedarData ReadObject(JsonElement element)
     {
-        if (EntityUidJsonConverter.TryReadElement(element, out EntityUid? entityUid))
+        // Only the explicit __entity escape form produces an EntityUid in schema-free context.
+        // The implicit {"type":"X","id":"Y"} form requires schema-guided parsing.
+        if (element.TryGetProperty("__entity", out _)
+            && EntityUidJsonConverter.TryReadElement(element, out EntityUid? entityUid))
         {
             return entityUid!;
         }

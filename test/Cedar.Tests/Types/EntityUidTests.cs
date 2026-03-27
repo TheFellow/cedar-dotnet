@@ -98,6 +98,16 @@ public sealed class EntityUidTests
     }
 
     [Fact]
+    public void ValueConverterReadsImplicitEntityFormAsRecord()
+    {
+        ICedarData actual = CedarJson.DeserializeData("{\"type\":\"User\",\"id\":\"alice\"}");
+
+        CedarRecord record = Assert.IsType<CedarRecord>(actual);
+        Assert.Equal(new CedarString("User"), Assert.IsType<CedarString>(record[new CedarString("type")]));
+        Assert.Equal(new CedarString("alice"), Assert.IsType<CedarString>(record[new CedarString("id")]));
+    }
+
+    [Fact]
     public void EntityUidCanRoundTripInsideSet()
     {
         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
