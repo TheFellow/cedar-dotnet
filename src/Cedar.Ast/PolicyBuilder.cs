@@ -60,6 +60,12 @@ public sealed class PolicyBuilder
         return WithActionScope(new ScopeInSet([.. entities]));
     }
 
+    public PolicyBuilder ResourceEq(EntityUid entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        return WithResourceScope(new ScopeEq(entity));
+    }
+
     public PolicyBuilder ResourceIs(string entityType)
     {
         return ResourceIs(new EntityType(entityType));

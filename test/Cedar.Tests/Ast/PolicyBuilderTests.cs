@@ -109,6 +109,18 @@ public sealed class PolicyBuilderTests
     }
 
     [Fact]
+    public void ResourceEqSetsResourceScope()
+    {
+        EntityUid document = new(new EntityType("Document"), new CedarString("report"));
+
+        PolicyBuilder policy = CedarAst.Permit().ResourceEq(document);
+
+        ScopeEq scope = Assert.IsType<ScopeEq>(policy.Ast.ResourceScope);
+        Assert.Equal(document, scope.Entity);
+        Assert.IsType<ScopeAll>(policy.Ast.PrincipalScope);
+    }
+
+    [Fact]
     public void ResourceInSetsResourceScope()
     {
         EntityUid folder = new(new EntityType("Folder"), new CedarString("finance"));
