@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Cedar.Ast.Internal;
 using Cedar.Types;
 
@@ -27,9 +28,14 @@ public static class Values
 
     public static Node Set(params Node[] values)
     {
+        return SetNodes(values);
+    }
+
+    public static Node SetNodes(IEnumerable<Node> values)
+    {
         ArgumentNullException.ThrowIfNull(values);
 
-        ImmutableArray<INode>.Builder builder = ImmutableArray.CreateBuilder<INode>(values.Length);
+        ImmutableArray<INode>.Builder builder = ImmutableArray.CreateBuilder<INode>();
         foreach (Node value in values)
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -37,6 +43,13 @@ public static class Values
         }
 
         return new Node(new NodeSet(builder.ToImmutable()));
+    }
+
+    public static Node Set(CedarSet values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+
+        return SetNodes(values.Select(ValueToNode));
     }
 
     public static Node Record(params RecordElement[] entries)
@@ -62,6 +75,30 @@ public static class Values
         }
 
         return new Node(new NodeRecord(builder.ToImmutable()));
+    }
+
+    public static Node RecordNodes(IReadOnlyDictionary<string, Node> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        ImmutableArray<NodeRecordElement>.Builder builder = ImmutableArray.CreateBuilder<NodeRecordElement>(entries.Count);
+
+        foreach (KeyValuePair<string, Node> entry in entries)
+        {
+            ArgumentNullException.ThrowIfNull(entry.Key);
+            ArgumentNullException.ThrowIfNull(entry.Value);
+
+            builder.Add(new NodeRecordElement(new CedarString(entry.Key), entry.Value.Inner));
+        }
+
+        return new Node(new NodeRecord(builder.ToImmutable()));
+    }
+
+    public static Node Record(CedarRecord entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        return RecordNodes(entries.ToDictionary(static entry => entry.Key.Value, static entry => ValueToNode(entry.Value), StringComparer.Ordinal));
     }
 
     public static Node EntityUid(string entityType, string id)
@@ -119,5 +156,25 @@ public static class Values
         ArgumentNullException.ThrowIfNull(value);
 
         return new Node(new NodeValue(value));
+    }
+
+    private static Node ValueToNode(ICedarData value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        return value switch
+        {
+            CedarBool boolean => Boolean(boolean.Value),
+            CedarString @string => String(@string.Value),
+            CedarLong number => Long(number.Value),
+            CedarSet set => Set(set),
+            CedarRecord record => Record(record),
+            EntityUid entityUid => EntityUid(entityUid),
+            CedarDecimal decimalValue => Value(decimalValue),
+            CedarIpAddress ipAddress => Value(ipAddress),
+            CedarDatetime datetime => Value(datetime),
+            CedarDuration duration => Value(duration),
+            _ => throw new InvalidOperationException($"Unexpected Cedar value type: {value.GetType().Name}"),
+        };
     }
 }

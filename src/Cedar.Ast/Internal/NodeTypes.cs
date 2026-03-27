@@ -43,7 +43,7 @@ public sealed record NodeLike(INode Arg, CedarPattern Pattern) : INode;
 
 public sealed record NodeIfThenElse(INode If, INode Then, INode Else) : INode;
 
-public sealed record NodeAccess(INode Arg, CedarString Attribute) : INode;
+public sealed record NodeAccess(INode Arg, INode Attribute) : INode;
 
 public sealed record NodeGetTag(INode Left, INode Right) : INode;
 

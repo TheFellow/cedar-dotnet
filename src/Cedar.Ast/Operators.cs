@@ -136,7 +136,15 @@ public static class Operators
     {
         ArgumentNullException.ThrowIfNull(lhs);
 
-        return new Node(new NodeAccess(lhs.Inner, new CedarString(attribute)));
+        return new Node(new NodeAccess(lhs.Inner, new NodeValue(new CedarString(attribute))));
+    }
+
+    public static Node AccessNode(this Node lhs, Node attributeExpr)
+    {
+        ArgumentNullException.ThrowIfNull(lhs);
+        ArgumentNullException.ThrowIfNull(attributeExpr);
+
+        return new Node(new NodeAccess(lhs.Inner, attributeExpr.Inner));
     }
 
     public static Node GetTag(this Node lhs, Node rhs)

@@ -249,10 +249,12 @@ public sealed class NodeTypeTests
     {
         INode arg = ValueNode(1);
 
-        NodeAccess node = new(arg, new CedarString("owner"));
+        NodeAccess node = new(arg, new NodeValue(new CedarString("owner")));
 
         Assert.Same(arg, node.Arg);
-        Assert.Equal("owner", node.Attribute.Value);
+        NodeValue attribute = Assert.IsType<NodeValue>(node.Attribute);
+        CedarString value = Assert.IsType<CedarString>(attribute.Value);
+        Assert.Equal("owner", value.Value);
     }
 
     [Fact]

@@ -443,7 +443,7 @@ public sealed class EvaluatorTests
         {
             { new CedarString("name"), new CedarString("alice") }
         });
-        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(record), new CedarString("name"));
+        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(record), Lit(new CedarString("name")));
         Assert.Equal(new CedarString("alice"), evaluator.Eval(MakeEnv()));
     }
 
@@ -451,7 +451,7 @@ public sealed class EvaluatorTests
     public void AttributeAccessEvaluator_RecordMissingAttribute_ThrowsEvalException()
     {
         CedarRecord record = new();
-        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(record), new CedarString("missing"));
+        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(record), Lit(new CedarString("missing")));
         Assert.Throws<EvalException>(() => evaluator.Eval(MakeEnv()));
     }
 
@@ -465,14 +465,14 @@ public sealed class EvaluatorTests
                 { new CedarString("role"), new CedarString("admin") }
             }),
             new CedarRecord());
-        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(Alice), new CedarString("role"));
+        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(Alice), Lit(new CedarString("role")));
         Assert.Equal(new CedarString("admin"), evaluator.Eval(MakeEnv(entity)));
     }
 
     [Fact]
     public void AttributeAccessEvaluator_EntityMissing_ThrowsEvalException()
     {
-        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(Alice), new CedarString("role"));
+        IEvaluator evaluator = new AttributeAccessEvaluator(Lit(Alice), Lit(new CedarString("role")));
         Assert.Throws<EvalException>(() => evaluator.Eval(MakeEnv()));
     }
 

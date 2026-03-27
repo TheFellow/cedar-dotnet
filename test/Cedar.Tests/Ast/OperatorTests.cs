@@ -140,7 +140,20 @@ public sealed class OperatorTests
     {
         NodeAccess node = Assert.IsType<NodeAccess>(Resource().Access("owner").Inner);
 
-        Assert.Equal("owner", node.Attribute.Value);
+        NodeValue attribute = Assert.IsType<NodeValue>(node.Attribute);
+        CedarString value = Assert.IsType<CedarString>(attribute.Value);
+
+        Assert.Equal("owner", value.Value);
+    }
+
+    [Fact]
+    public void AccessNodeCreatesNodeAccessWithExpressionKey()
+    {
+        NodeAccess node = Assert.IsType<NodeAccess>(Resource().AccessNode(Context().Access("resourceField")).Inner);
+
+        Assert.IsType<NodeVariable>(node.Arg);
+        NodeAccess attribute = Assert.IsType<NodeAccess>(node.Attribute);
+        Assert.IsType<NodeVariable>(attribute.Arg);
     }
 
     [Fact]

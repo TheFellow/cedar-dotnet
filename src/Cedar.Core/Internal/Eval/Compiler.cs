@@ -17,7 +17,7 @@ internal static class Compiler
     {
         return node switch
         {
-            NodeAccess access => new AttributeAccessEvaluator(ToEval(access.Arg), access.Attribute),
+            NodeAccess access => new AttributeAccessEvaluator(ToEval(access.Arg), ToEval(access.Attribute)),
             NodeHas has => new HasEvaluator(ToEval(has.Arg), has.Attribute),
             NodeGetTag getTag => new GetTagEvaluator(ToEval(getTag.Left), ToEval(getTag.Right)),
             NodeHasTag hasTag => new HasTagEvaluator(ToEval(hasTag.Left), ToEval(hasTag.Right)),

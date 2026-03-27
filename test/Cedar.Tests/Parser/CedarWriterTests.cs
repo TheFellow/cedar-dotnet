@@ -90,7 +90,7 @@ public sealed class CedarWriterTests
     [Fact]
     public void WriteAccessWithQuotedAttribute()
     {
-        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new CedarString("not valid"));
+        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new NodeValue(new CedarString("not valid")));
         PolicyAst policy = BuildPolicy(expression);
 
         Assert.Equal(
@@ -112,7 +112,7 @@ public sealed class CedarWriterTests
     [Fact]
     public void WriteAccessWithReservedKeyword()
     {
-        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new CedarString("true"));
+        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new NodeValue(new CedarString("true")));
         PolicyAst policy = BuildPolicy(expression);
 
         Assert.Equal(
@@ -123,11 +123,24 @@ public sealed class CedarWriterTests
     [Fact]
     public void WriteAccessWithEmptyString()
     {
-        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new CedarString(string.Empty));
+        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new NodeValue(new CedarString(string.Empty)));
         PolicyAst policy = BuildPolicy(expression);
 
         Assert.Equal(
             "permit(principal, action, resource)\n  when { context[\"\"] };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
+    public void WriteAccessWithExpressionAttribute()
+    {
+        INode expression = new NodeAccess(
+            new NodeVariable(new CedarString("resource")),
+            new NodeAccess(new NodeVariable(new CedarString("context")), new NodeValue(new CedarString("resourceField"))));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { resource[context.resourceField] };",
             CedarWriter.Write(policy));
     }
 

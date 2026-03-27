@@ -116,7 +116,7 @@ public sealed class AuthorizeTests
     public void EvalError_CapturedInDiagnostics_DoesNotCrash()
     {
         // Create a policy with a condition that will cause an eval error (accessing a missing attribute)
-        INode errorCondition = new NodeAccess(new NodeVariable(new CedarString("principal")), new CedarString("missing_attr"));
+        INode errorCondition = new NodeAccess(new NodeVariable(new CedarString("principal")), new NodeValue(new CedarString("missing_attr")));
         PolicySet policies = MakePolicySet(
             ("err", MakePolicy(Effect.Permit, conditions: errorCondition)));
         (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), MakeRequest());
@@ -127,7 +127,7 @@ public sealed class AuthorizeTests
     [Fact]
     public void EvalError_StillAllowsOtherPolicies()
     {
-        INode errorCondition = new NodeAccess(new NodeVariable(new CedarString("principal")), new CedarString("missing_attr"));
+        INode errorCondition = new NodeAccess(new NodeVariable(new CedarString("principal")), new NodeValue(new CedarString("missing_attr")));
         PolicySet policies = MakePolicySet(
             ("err", MakePolicy(Effect.Permit, conditions: errorCondition)),
             ("p1", MakePolicy(Effect.Permit)));

@@ -53,7 +53,7 @@ internal static class ConstantFolder
             NodeHasTag hasTag => new NodeHasTag(FoldNode(hasTag.Left), FoldNode(hasTag.Right)),
             NodeLike like => new NodeLike(FoldNode(like.Arg), like.Pattern),
             NodeIfThenElse conditional => new NodeIfThenElse(FoldNode(conditional.If), FoldNode(conditional.Then), FoldNode(conditional.Else)),
-            NodeAccess access => new NodeAccess(FoldNode(access.Arg), access.Attribute),
+            NodeAccess access => new NodeAccess(FoldNode(access.Arg), FoldNode(access.Attribute)),
             NodeGetTag getTag => new NodeGetTag(FoldNode(getTag.Left), FoldNode(getTag.Right)),
             NodeContains contains => new NodeContains(FoldNode(contains.Left), FoldNode(contains.Right)),
             NodeContainsAll containsAll => new NodeContainsAll(FoldNode(containsAll.Left), FoldNode(containsAll.Right)),

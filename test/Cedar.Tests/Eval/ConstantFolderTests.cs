@@ -137,7 +137,7 @@ public sealed class ConstantFolderTests
     [Fact]
     public void DoesNotFold_EntityDependentNodeAccess()
     {
-        INode folded = FoldSingle(new NodeAccess(new NodeValue(Alice), new CedarString("name")));
+        INode folded = FoldSingle(new NodeAccess(new NodeValue(Alice), new NodeValue(new CedarString("name"))));
         Assert.IsType<NodeAccess>(folded);
     }
 

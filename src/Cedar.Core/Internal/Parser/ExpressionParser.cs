@@ -143,7 +143,7 @@ internal sealed class ExpressionParser
 
         CedarString firstAttribute = new(token.Text);
         INode result = new NodeHas(lhs, firstAttribute);
-        INode currentLhs = new NodeAccess(lhs, firstAttribute);
+        INode currentLhs = new NodeAccess(lhs, new NodeValue(firstAttribute));
 
         while (_state.Match(TokenType.Dot))
         {
@@ -151,7 +151,7 @@ internal sealed class ExpressionParser
             CedarString attribute = new(attributeToken.Text);
             INode hasNode = new NodeHas(currentLhs, attribute);
             result = new NodeAnd(result, hasNode);
-            currentLhs = new NodeAccess(currentLhs, attribute);
+            currentLhs = new NodeAccess(currentLhs, new NodeValue(attribute));
         }
 
         return result;
@@ -274,7 +274,7 @@ internal sealed class ExpressionParser
                 }
                 else
                 {
-                    lhs = new NodeAccess(lhs, new CedarString(member.Text));
+                    lhs = new NodeAccess(lhs, new NodeValue(new CedarString(member.Text)));
                 }
 
                 continue;
@@ -285,7 +285,7 @@ internal sealed class ExpressionParser
                 Token keyToken = _state.Expect(TokenType.String, "Expected string literal in bracket access.");
                 string key = _state.ParseStringToken(keyToken);
                 _state.Expect(TokenType.RBracket, "Expected ']' after index expression.");
-                lhs = new NodeAccess(lhs, new CedarString(key));
+                lhs = new NodeAccess(lhs, new NodeValue(new CedarString(key)));
                 continue;
             }
 

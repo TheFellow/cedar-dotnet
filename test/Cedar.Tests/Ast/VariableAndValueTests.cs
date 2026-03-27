@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using Cedar.Ast;
 using Cedar.Ast.Internal;
 using Cedar.Types;
 using Xunit;
+using static Cedar.Ast.Operators;
 using static Cedar.Ast.Values;
 using static Cedar.Ast.Variables;
 
@@ -207,5 +209,60 @@ public sealed class VariableAndValueTests
 
         CedarDuration value = Assert.IsType<CedarDuration>(node.Value);
         Assert.Equal("duration(" + '"' + "1m30s" + '"' + ")", value.MarshalCedar());
+    }
+
+    [Fact]
+    public void SetNodesCreatesNodeSetFromExpressions()
+    {
+        NodeSet node = Assert.IsType<NodeSet>(SetNodes(
+            [
+                Long(1),
+                Long(2).Add(Long(3)),
+                Context().Access("fooCount"),
+            ]).Inner);
+
+        Assert.Equal(3, node.Elements.Length);
+        Assert.IsType<NodeValue>(node.Elements[0]);
+        Assert.IsType<NodeAdd>(node.Elements[1]);
+        Assert.IsType<NodeAccess>(node.Elements[2]);
+    }
+
+    [Fact]
+    public void RecordNodesCreatesNodeRecordFromExpressions()
+    {
+        NodeRecord node = Assert.IsType<NodeRecord>(RecordNodes(new Dictionary<string, Node>
+        {
+            ["x"] = Long(1).Add(Context().Access("fooCount")),
+        }).Inner);
+
+        Assert.Single(node.Elements);
+        Assert.Equal("x", node.Elements[0].Key.Value);
+        Assert.IsType<NodeAdd>(node.Elements[0].Value);
+    }
+
+    [Fact]
+    public void SetFromCedarSetConvertsValuesToNodes()
+    {
+        CedarSet values = new(new CedarLong(1), new CedarLong(2));
+
+        NodeSet node = Assert.IsType<NodeSet>(Set(values).Inner);
+
+        Assert.Equal(2, node.Elements.Length);
+        Assert.All(node.Elements, element => Assert.IsType<NodeValue>(element));
+    }
+
+    [Fact]
+    public void RecordFromCedarRecordConvertsValuesToNodes()
+    {
+        CedarRecord values = new(new Dictionary<CedarString, ICedarData>
+        {
+            [new CedarString("x")] = new CedarString("value"),
+        });
+
+        NodeRecord node = Assert.IsType<NodeRecord>(Record(values).Inner);
+
+        Assert.Single(node.Elements);
+        Assert.Equal("x", node.Elements[0].Key.Value);
+        Assert.IsType<NodeValue>(node.Elements[0].Value);
     }
 }

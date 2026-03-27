@@ -252,15 +252,24 @@ public static class CedarWriter
                 break;
             case NodeAccess access:
                 WriteNode(builder, access.Arg, PrecAccess);
-                if (CanWriteIdentifier(access.Attribute.Value))
+                if (access.Attribute is NodeValue { Value: CedarString staticAttr })
                 {
-                    builder.Append('.');
-                    builder.Append(access.Attribute.Value);
+                    if (CanWriteIdentifier(staticAttr.Value))
+                    {
+                        builder.Append('.');
+                        builder.Append(staticAttr.Value);
+                    }
+                    else
+                    {
+                        builder.Append('[');
+                        builder.Append(staticAttr.MarshalCedar());
+                        builder.Append(']');
+                    }
                 }
                 else
                 {
                     builder.Append('[');
-                    builder.Append(access.Attribute.MarshalCedar());
+                    WriteNode(builder, access.Attribute);
                     builder.Append(']');
                 }
 

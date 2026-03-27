@@ -45,14 +45,15 @@ internal static class NodeJsonModel
             {
                 ["Var"] = n.Name.Value
             },
-            NodeAccess n => new JsonObject
+            NodeAccess { Attribute: NodeValue { Value: CedarString attr } } n => new JsonObject
             {
                 ["."] = new JsonObject
                 {
                     ["left"] = FromAst(n.Arg),
-                    ["attr"] = n.Attribute.Value
+                    ["attr"] = attr.Value
                 }
             },
+            NodeAccess => throw new InvalidOperationException("Cannot serialize NodeAccess with non-literal attribute expression to Cedar JSON."),
             NodeHas n => new JsonObject
             {
                 ["has"] = new JsonObject
@@ -148,7 +149,7 @@ internal static class NodeJsonModel
             "isEmpty" => ReadUnary(valueNode, static arg => new NodeIsEmpty(arg)),
             "Value" => new NodeValue(ReadCedarValue(valueNode)),
             "Var" => new NodeVariable(new CedarString(ReadVariableName(valueNode))),
-            "." => ReadStr(valueNode, static (arg, attr) => new NodeAccess(arg, new CedarString(attr))),
+            "." => ReadStr(valueNode, static (arg, attr) => new NodeAccess(arg, new NodeValue(new CedarString(attr)))),
             "has" => ReadStr(valueNode, static (arg, attr) => new NodeHas(arg, new CedarString(attr))),
             "like" => ReadLike(valueNode),
             "if-then-else" => ReadIfThenElse(valueNode),

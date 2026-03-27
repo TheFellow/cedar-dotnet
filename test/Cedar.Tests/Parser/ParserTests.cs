@@ -231,7 +231,9 @@ public sealed class ParserTests
 
         NodeAccess access = Assert.IsType<NodeAccess>(Assert.Single(policy.Conditions));
         Assert.IsType<NodeVariable>(access.Arg);
-        Assert.Equal("env", access.Attribute.Value);
+        NodeValue attribute = Assert.IsType<NodeValue>(access.Attribute);
+        CedarString value = Assert.IsType<CedarString>(attribute.Value);
+        Assert.Equal("env", value.Value);
     }
 
     [Fact]

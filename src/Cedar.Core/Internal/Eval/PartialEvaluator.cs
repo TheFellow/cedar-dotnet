@@ -252,11 +252,12 @@ internal static class PartialEvaluator
     {
         return node switch
         {
-            NodeAccess access => TryPartial(
+            NodeAccess access => TryPartialBinary(
                 env,
-                [access.Arg],
-                values => new AttributeAccessEvaluator(new LiteralEvaluator(values[0]), access.Attribute),
-                nodes => new NodeAccess(nodes[0], access.Attribute)),
+                access.Arg,
+                access.Attribute,
+                static (left, right) => new AttributeAccessEvaluator(left, right),
+                static (left, right) => new NodeAccess(left, right)),
             NodeHas has => TryPartial(
                 env,
                 [has.Arg],

@@ -2,11 +2,17 @@ using Cedar.Types;
 
 namespace Cedar.Core.Internal.Eval.Evaluators;
 
-internal sealed class AttributeAccessEvaluator(IEvaluator value, CedarString attribute) : IEvaluator
+internal sealed class AttributeAccessEvaluator(IEvaluator value, IEvaluator attributeExpr) : IEvaluator
 {
     public ICedarData Eval(EvalEnv env)
     {
         ICedarData source = value.Eval(env);
+        ICedarData attrValue = attributeExpr.Eval(env);
+
+        if (attrValue is not CedarString attribute)
+        {
+            throw new EvalException($"attribute key must be a string, got {EvalErrors.TypeName(attrValue)}");
+        }
 
         return source switch
         {
