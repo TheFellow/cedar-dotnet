@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Cedar.Ast\Cedar.Ast.csproj" />
     <ProjectReference Include="..\..\src\Cedar.Core\Cedar.Core.csproj" />
+    <ProjectReference Include="..\..\src\Cedar.Schema\Cedar.Schema.csproj" />
     <ProjectReference Include="..\..\src\Cedar.Types\Cedar.Types.csproj" />
   </ItemGroup>
 </Project>

@@ -10,6 +10,7 @@ using System.Text.Json;
 using Cedar.Ast.Internal;
 using Cedar.Core;
 using Cedar.Core.Internal.Parser;
+using Cedar.Schema;
 using Cedar.Types;
 
 namespace Cedar.Conformance;
@@ -76,7 +77,9 @@ public static class CorpusTestData
             byte[] entitiesBytes = ReadRequiredFile(files, entitiesPath);
 
             PolicySet policySet = BuildPolicySet(policyText);
-            EntityMap entityMap = ParseEntityMap(entitiesBytes);
+            EntityMap entityMap = scenarioRoot.TryGetProperty("schema", out JsonElement schemaElement)
+                ? ParseEntityMapWithSchema(entitiesBytes, ReadRequiredTextFile(files, GetSchemaPath(schemaElement)), GetSchemaPath(schemaElement))
+                : ParseEntityMap(entitiesBytes);
 
             JsonElement requestsElement = GetRequiredProperty(scenarioRoot, "requests", JsonValueKind.Array);
             int requestIndex = 0;
@@ -220,6 +223,16 @@ public static class CorpusTestData
         }
 
         return new EntityMap(entities);
+    }
+
+    private static EntityMap ParseEntityMapWithSchema(byte[] entityJson, string schemaText, string schemaPath)
+    {
+        ArgumentNullException.ThrowIfNull(entityJson);
+        ArgumentNullException.ThrowIfNull(schemaText);
+        ArgumentNullException.ThrowIfNull(schemaPath);
+
+        SchemaDocument schema = SchemaDocument.UnmarshalCedar(schemaText, schemaPath);
+        return SchemaGuidedEntityParser.ParseEntityMap(entityJson, schema);
     }
 
     private static Entity ParseEntity(JsonElement element)
@@ -506,6 +519,16 @@ public static class CorpusTestData
     {
         JsonElement value = GetRequiredProperty(objectElement, propertyName, JsonValueKind.String);
         return value.GetString() ?? string.Empty;
+    }
+
+    private static string GetSchemaPath(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidDataException($"Property 'schema' must be 'String', got '{element.ValueKind}'.");
+        }
+
+        return element.GetString() ?? string.Empty;
     }
 
     private static byte[] ReadRequiredFile(IReadOnlyDictionary<string, byte[]> files, string path)
