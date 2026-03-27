@@ -129,25 +129,25 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
     private static CedarDatetime CreateFromParts(int year, int month, int day, int hour, int minute, int second, int millisecond, long offsetMilliseconds)
     {
-        try
-        {
-            long milliseconds = GregorianDateTime.ToUnixMilliseconds(year, month, day, hour, minute, second, millisecond);
+        // Compute entirely in Int128 so that boundary dates with timezone offsets
+        // are handled correctly. The offset must be applied before range-checking,
+        // otherwise a pre-offset value that exceeds long range would be rejected
+        // even if the final UTC result fits (e.g. +292278994-08-17T08:12:55.807+0100).
+        long days = GregorianDateTime.DaysFromCivil(year, month, day);
+        Int128 totalMs =
+            (Int128)days * CedarConsts.MillisPerDay
+            + hour * (long)CedarConsts.MillisPerHour
+            + minute * (long)CedarConsts.MillisPerMinute
+            + second * (long)CedarConsts.MillisPerSecond
+            + millisecond
+            - offsetMilliseconds;
 
-            // Use 128-bit arithmetic to avoid overflow on boundary values.
-            // Go uses int64 throughout and relies on its own overflow checks;
-            // we mirror that by computing in wider precision then range-checking.
-            Int128 wideResult = (Int128)milliseconds - (Int128)offsetMilliseconds;
-            if (wideResult < long.MinValue || wideResult > long.MaxValue)
-            {
-                throw new FormatException("Timestamp is out of range.");
-            }
-
-            return new CedarDatetime((long)wideResult);
-        }
-        catch (OverflowException)
+        if (totalMs < long.MinValue || totalMs > long.MaxValue)
         {
             throw new FormatException("Timestamp is out of range.");
         }
+
+        return new CedarDatetime((long)totalMs);
     }
 
     private static string FormatYear(int year)
