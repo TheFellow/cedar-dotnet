@@ -160,4 +160,39 @@ public sealed class PolicyJsonTests
 
         Assert.Equal(CedarWriter.Write(Assert.Single(CedarParser.ParsePolicies(cedar))), reparsed.MarshalCedar());
     }
+
+    [Fact]
+    public void MarshalJson_EmptyRecord_PreservesRecordDiscriminator()
+    {
+        string json = Policy.UnmarshalCedar("permit(principal, action, resource) when { {} };").MarshalJson();
+
+        Assert.Contains("\"Record\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"pairs\":[]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RoundTrip_EmptyRecord_PreservesStructure()
+    {
+        const string cedar = "permit(principal, action, resource) when { {} };";
+        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
+
+        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
+        Policy roundTripped = Policy.UnmarshalJson(json);
+
+        Assert.Equal(expected, roundTripped.MarshalCedar());
+    }
+
+    [Fact]
+    public void RoundTrip_RecordWithExtensionCallValues_PreservesExtensionCalls()
+    {
+        const string cedar = "permit(principal, action, resource) when { {d: duration(\"1h\"), dt: datetime(\"2024-01-01T00:00:00Z\")} };";
+        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
+
+        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
+        Policy roundTripped = Policy.UnmarshalJson(json);
+
+        Assert.Contains("\"duration\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"datetime\"", json, StringComparison.Ordinal);
+        Assert.Equal(expected, roundTripped.MarshalCedar());
+    }
 }
