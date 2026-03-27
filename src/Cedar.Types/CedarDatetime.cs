@@ -132,7 +132,17 @@ public sealed record CedarDatetime(long Value) : CedarValue
         try
         {
             long milliseconds = GregorianDateTime.ToUnixMilliseconds(year, month, day, hour, minute, second, millisecond);
-            return new CedarDatetime(checked(milliseconds - offsetMilliseconds));
+
+            // Use 128-bit arithmetic to avoid overflow on boundary values.
+            // Go uses int64 throughout and relies on its own overflow checks;
+            // we mirror that by computing in wider precision then range-checking.
+            Int128 wideResult = (Int128)milliseconds - (Int128)offsetMilliseconds;
+            if (wideResult < long.MinValue || wideResult > long.MaxValue)
+            {
+                throw new FormatException("Timestamp is out of range.");
+            }
+
+            return new CedarDatetime((long)wideResult);
         }
         catch (OverflowException)
         {

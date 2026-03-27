@@ -35,10 +35,23 @@ public sealed class CedarDatetimeTests
 
     [Theory]
     [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
+    [InlineData("+000000010-01-01", "datetime(\"0010-01-01T00:00:00.000Z\")")]
+    [InlineData("+000001970-06-15", "datetime(\"1970-06-15T00:00:00.000Z\")")]
+    [InlineData("+000009999-12-31", "datetime(\"9999-12-31T00:00:00.000Z\")")]
     [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+    [InlineData("+000100000-06-15", "datetime(\"+000100000-06-15T00:00:00.000Z\")")]
+    [InlineData("+001000000-12-31", "datetime(\"+001000000-12-31T00:00:00.000Z\")")]
     [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+    [InlineData("-000001000-06-15", "datetime(\"-000001000-06-15T00:00:00.000Z\")")]
+    [InlineData("-000010000-12-31", "datetime(\"-000010000-12-31T00:00:00.000Z\")")]
+    [InlineData("+000010000-01-01T12:30:45.123Z", "datetime(\"+000010000-01-01T12:30:45.123Z\")")]
+    [InlineData("-000000100-01-01T00:00:00.001Z", "datetime(\"-000000100-01-01T00:00:00.001Z\")")]
     [InlineData("+292278994-08-17T07:12:55.807Z", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+    [InlineData("+292278994-08-17T06:12:55.807-0100", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+    [InlineData("+292278994-08-17T08:12:55.807+0100", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
     [InlineData("-292275055-05-17T16:47:04.192Z", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+    [InlineData("-292275055-05-17T15:47:04.192-0100", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+    [InlineData("-292275055-05-17T17:47:04.192+0100", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
     public void ParseAcceptsExpandedYearForms(string input, string expected)
     {
         CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
@@ -80,11 +93,18 @@ public sealed class CedarDatetimeTests
     [Theory]
     [InlineData("+")]
     [InlineData("-")]
+    [InlineData("+12345678")]
     [InlineData("+1234-01-01")]
     [InlineData("+00000000a-01-01")]
     [InlineData("-abcdefghi-01-01")]
+    [InlineData("+12345678A-01-01")]
     [InlineData("1972-02-29T10:00:00-1000x")]
     [InlineData("+292278994-08-17T07:12:55.808Z")]
+    [InlineData("+292278994-08-17T06:12:55.808-0100")]
+    [InlineData("+292278994-08-17T08:12:55.808+0100")]
+    [InlineData("-292275055-05-17T16:47:04.191Z")]
+    [InlineData("-292275055-05-17T15:47:04.191-0100")]
+    [InlineData("-292275055-05-17T17:47:04.191+0100")]
     public void ParseRejectsInvalidExpandedYearInputs(string input)
     {
         Assert.Throws<FormatException>(() => CedarDatetime.Parse(input));
@@ -94,7 +114,11 @@ public sealed class CedarDatetimeTests
     [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
     [InlineData("9999-12-31T00:00:00.000Z", "datetime(\"9999-12-31T00:00:00.000Z\")")]
     [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+    [InlineData("+000100000-06-15T00:00:00.000Z", "datetime(\"+000100000-06-15T00:00:00.000Z\")")]
+    [InlineData("+001000000-12-31T00:00:00.000Z", "datetime(\"+001000000-12-31T00:00:00.000Z\")")]
     [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+    [InlineData("-000000100-06-15T00:00:00.000Z", "datetime(\"-000000100-06-15T00:00:00.000Z\")")]
+    [InlineData("-000010000-12-31T00:00:00.000Z", "datetime(\"-000010000-12-31T00:00:00.000Z\")")]
     public void MarshalCedarUsesExpandedYearFormattingWhenNeeded(string input, string expected)
     {
         CedarAssert.CedarText(CedarDatetime.Parse(input), expected);

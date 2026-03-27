@@ -23,12 +23,21 @@ internal static class GregorianDateTime
     {
         long days = DaysFromCivil(year, month, day);
 
-        return checked(
-            days * CedarConsts.MillisPerDay
+        // Use Int128 to avoid silent wraparound on boundary dates
+        // (e.g. year -292275055 with millisecond precision near long.MinValue).
+        Int128 result =
+            (Int128)days * CedarConsts.MillisPerDay
             + (hour * CedarConsts.MillisPerHour)
             + (minute * CedarConsts.MillisPerMinute)
             + (second * CedarConsts.MillisPerSecond)
-            + millisecond);
+            + millisecond;
+
+        if (result < long.MinValue || result > long.MaxValue)
+        {
+            throw new OverflowException();
+        }
+
+        return (long)result;
     }
 
     public static GregorianDateTimeParts FromUnixMilliseconds(long value)

@@ -1,0 +1,298 @@
+exit_code: 0
+timed_out: False
+stdout:
+2a36626	2026-01-29T11:41:32-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+2a36626 2026-01-29T11:41:32-08:00
+
+Merge pull request #127 from strongdm/rfc-110-expanded-year
+
+types: add support RFC 110 expanded year format
+
+OK
+
+   1 | # Semport: Next New Commit to Process
+   2 | 
+   3 | **Short SHA:** 2a36626
+   4 | **Timestamp:** 2026-01-29T11:41:32-08:00
+   5 | 
+   6 | ## Commit Message
+   7 | 
+   8 | Merge pull request #127 from strongdm/rfc-110-expanded-year
+   9 | 
+  10 | types: add support RFC 110 expanded year format
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 2a3662681af2bcddbeaad8e871a565f532198cbf
+Merge: 77d5543 c1177bf
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Thu Jan 29 11:41:32 2026 -0800
+
+    Merge pull request #127 from strongdm/rfc-110-expanded-year
+    
+    types: add support RFC 110 expanded year format
+
+exit_code: 0
+timed_out: False
+stdout:
+commit c1177bf8516de5f9d7251b2dfdc4b762444dafa5
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Wed Jan 28 15:14:36 2026 -0800
+
+    types: add support RFC 110 expanded year format
+    
+    This change adds support for the nine-digit expanded year datetime format specified in RFC 110, allowing exotic datetimes far in the past or future to be represented in Cedar policies and entities.
+    
+    Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+diff --git a/types/datetime.go b/types/datetime.go
+index fa5f94c..d96a5ac 100644
+--- a/types/datetime.go
++++ b/types/datetime.go
+@@ -12,13 +12,23 @@ import (
+ 
+ var errDatetime = internal.ErrDatetime
+ 
++// maxDatetime is the highest possible timestamp that will fit in 64 bits of millisecond-precision space.
++var maxDatetime = time.Date(292278994, 8, 17, 7, 12, 55, 807*1e6, time.UTC)
++
++// minDatetime is the lowest possible timestamp that will fit in 64 bits of millisecond-precision space.
++var minDatetime = time.Date(-292275055, 5, 17, 16, 47, 04, 192*1e6, time.UTC)
++
+ // Datetime represents a Cedar datetime value
+ type Datetime struct {
+ 	// value is a timestamp in milliseconds
+ 	value int64
+ }
+ 
+-// NewDatetime returns a Cedar Datetime from a Go time.Time value
++// NewDatetime returns a Cedar Datetime from a Go time.Time value.
++//
++// The provided time.Time is truncated to millisecond precision. The result is
++// undefined if the Unix time in milliseconds cannot be represented by an int64
++// (a date more than 292 million years before or after 1970).
+ func NewDatetime(t time.Time) Datetime {
+ 	return Datetime{value: t.UnixMilli()}
+ }
+@@ -29,6 +39,41 @@ func NewDatetimeFromMillis(ms int64) Datetime {
+ 	return Datetime{value: ms}
+ }
+ 
++func expectChar(s string, c uint8) (string, error) {
++	if len(s) == 0 {
++		return "", fmt.Errorf("%w: unexpected EOF", errDatetime)
++	} else if s[0] != c {
++		return "", fmt.Errorf("%w: unexpected character %c", errDatetime, s[0])
++	}
++	return s[1:], nil
++}
++
++func parseUint(s string, chars int, maxValue uint, label string) (uint, string, error) {
++	if len(s) < chars {
++		return 0, "", fmt.Errorf("%w: unexpected EOF", errDatetime)
++	}
++	v, err := strconv.ParseUint(s[0:chars], 10, 0)
++	if err != nil {
++		return 0, "", fmt.Errorf("%w: invalid %v", errDatetime, label)
++	} else if v > uint64(maxValue) {
++		return 0, "", fmt.Errorf("%w: %v is greater than %v", errDatetime, label, maxValue)
++	}
++	return uint(v), s[chars:], nil
++}
++
++// checkValidDay ensures that the given day is valid for the given month in the given year.
++func checkValidDay(year int, month, day uint) error {
++	t := time.Date(year, time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
++
++	// Don't allow wrapping: https://github.com/cedar-policy/rfcs/pull/94
++	_, tmonth, tday := t.Date()
++	if time.Month(month) != tmonth || int(day) != tday {
++		return fmt.Errorf("%w: invalid date", errDatetime)
++	}
++
++	return nil
++}
++
+ // ParseDatetime returns a Cedar datetime when the argument provided
+ // represents a compatible datetime or an error
+ //
+@@ -39,186 +84,149 @@ func NewDatetimeFromMillis(ms int64) Datetime {
+ // - "YYYY-MM-DDThh:mm:ss.SSSZ" (date and time with millisecond, UTC)
+ // - "YYYY-MM-DDThh:mm:ss(+/-)hhmm" (date and time, time zone offset)
+ // - "YYYY-MM-DDThh:mm:ss.SSS(+/-)hhmm" (date and time with millisecond, time zone offset)
++//
++// Cedar RFC 110 extends this with ISO 8601 expanded year format:
++//
++// - "(+/-)YYYYYYYYY-MM-DD" (9-digit year, date only)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ssZ" (9-digit year, date and time, UTC)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss.SSSZ" (9-digit year with millisecond, UTC)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss(+/-)hhmm" (9-digit year with time zone offset)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss.SSS(+/-)hhmm" (9-digit year with millisecond and offset)
+ func ParseDatetime(s string) (Datetime, error) {
+ 	var (
+-		year, month, day, hour, minute, second, milli int
+-		offset                                        time.Duration
++		year                                    int
++		month, day, hour, minute, second, milli uint
++		offset                                  time.Duration
+ 	)
+ 
+-	length := len(s)
+-	if length < 10 {
+-		return Datetime{}, fmt.Errorf("%w: string too short", errDatetime)
++	if len(s) == 0 {
++		return Datetime{}, fmt.Errorf("%w: unexpected EOF", errDatetime)
+ 	}
+ 
+-	// Date: YYYY-MM-DD
+-	// YYYY is at offset 0
+-	// MM is at offset 5
+-	// DD is at offset 8
+-	// - is at 4 and 7
+-	// YYYY
+-	if !unicode.IsDigit(rune(s[0])) || !unicode.IsDigit(rune(s[1])) || !unicode.IsDigit(rune(s[2])) || !unicode.IsDigit(rune(s[3])) {
++	// Check if this is an expanded year format (starts with + or -)
++	yearSign := 1
++	yearLength := 4
++	yearMax := uint(9999)
++	if s[0] == '+' || s[0] == '-' {
++		yearLength = 9
++		yearMax = 999999999
++		if s[0] == '-' {
++			yearSign = -1
+[... 379 lines omitted ...]
+-			{"2023-02-28T23:59:60Z", "error parsing datetime value: second is out of range"},
+-			{"2023-02-28T23:60:59Z", "error parsing datetime value: minute is out of range"},
+-			{"1970-01-01T25:00:00Z", "error parsing datetime value: hour is out of range"},
+-			{"1970-12-32T:00:00Z", "error parsing datetime value: day is out of range"},
+-			{"1970-13-01T00:00:00Z", "error parsing datetime value: month is out of range"},
+-
+-			{"1970-01-01T00:00:00+2400", "error parsing datetime value: time zone offset hours are out of range"},
+-			{"1970-01-01T00:00:00-2400", "error parsing datetime value: time zone offset hours are out of range"},
+-			{"1970-01-01T00:00:00+2360", "error parsing datetime value: time zone offset minutes are out of range"},
+-			{"1970-01-01T00:00:00-2360", "error parsing datetime value: time zone offset minutes are out of range"},
++			{"2024-02-29T23:59:60Z", "error parsing datetime value: second is greater than 59"},
++			{"2023-02-28T23:59:60Z", "error parsing datetime value: second is greater than 59"},
++			{"2023-02-28T23:60:59Z", "error parsing datetime value: minute is greater than 59"},
++			{"1970-01-01T25:00:00Z", "error parsing datetime value: hour is greater than 23"},
++			{"1970-12-32T:00:00Z", "error parsing datetime value: day is greater than 31"},
++			{"1970-13-01T00:00:00Z", "error parsing datetime value: month is greater than 12"},
++
++			{"1970-01-01T00:00:00+2400", "error parsing datetime value: offset hours is greater than 23"},
++			{"1970-01-01T00:00:00-2400", "error parsing datetime value: offset hours is greater than 23"},
++			{"1970-01-01T00:00:00+2360", "error parsing datetime value: offset minutes is greater than 59"},
++			{"1970-01-01T00:00:00-2360", "error parsing datetime value: offset minutes is greater than 59"},
++
++			{"+", "error parsing datetime value: unexpected EOF"},
++			{"-", "error parsing datetime value: unexpected EOF"},
++			{"+12345678", "error parsing datetime value: unexpected EOF"},
++			{"+1234-01-01", "error parsing datetime value: invalid year"},
++			{"+00000000a-01-01", "error parsing datetime value: invalid year"},
++			{"-abcdefghi-01-01", "error parsing datetime value: invalid year"},
++			{"+12345678A-01-01", "error parsing datetime value: invalid year"},
++
++			{"1972-02-29T10:00:00-1000x", "error parsing datetime value: unexpected additional characters"},
++
++			{"+292278994-08-17T07:12:55.808Z", "error parsing datetime value: timestamp out of range"},
++			{"+292278994-08-17T06:12:55.808-0100", "error parsing datetime value: timestamp out of range"},
++			{"+292278994-08-17T08:12:55.808+0100", "error parsing datetime value: timestamp out of range"},
++			{"-292275055-05-17T16:47:04.191Z", "error parsing datetime value: timestamp out of range"},
++			{"-292275055-05-17T15:47:04.191-0100", "error parsing datetime value: timestamp out of range"},
++			{"-292275055-05-17T17:47:04.191+0100", "error parsing datetime value: timestamp out of range"},
+ 		}
+ 		for ti, tt := range tests {
+ 			tt := tt
+@@ -219,24 +249,66 @@ func TestDatetime(t *testing.T) {
+ 
+ 	t.Run("MarshalCedar", func(t *testing.T) {
+ 		t.Parallel()
+-		testutil.Equals(t, string(types.NewDatetime(time.UnixMilli(42)).MarshalCedar()), `datetime("1970-01-01T00:00:00.042Z")`)
++		tests := []struct {
++			year     int
++			month    int
++			day      int
++			expected string
++		}{
++			{0, 1, 1, `datetime("0000-01-01T00:00:00.000Z")`},
++			{1970, 1, 1, `datetime("1970-01-01T00:00:00.000Z")`},
++			{9999, 12, 31, `datetime("9999-12-31T00:00:00.000Z")`},
++			{10000, 1, 1, `datetime("+000010000-01-01T00:00:00.000Z")`},
++			{100000, 6, 15, `datetime("+000100000-06-15T00:00:00.000Z")`},
++			{1000000, 12, 31, `datetime("+001000000-12-31T00:00:00.000Z")`},
++			{-1, 1, 1, `datetime("-000000001-01-01T00:00:00.000Z")`},
++			{-100, 6, 15, `datetime("-000000100-06-15T00:00:00.000Z")`},
++			{-10000, 12, 31, `datetime("-000010000-12-31T00:00:00.000Z")`},
++		}
++		for ti, tt := range tests {
++			tt := tt
++			t.Run(fmt.Sprintf("%d_year=%d", ti, tt.year), func(t *testing.T) {
++				t.Parallel()
++				dt := types.NewDatetime(time.Date(tt.year, time.Month(tt.month), tt.day, 0, 0, 0, 0, time.UTC))
++				testutil.Equals(t, dt.MarshalCedar(), []byte(tt.expected))
++			})
++		}
+ 	})
+ 
+ 	t.Run("MarshalJSON", func(t *testing.T) {
+ 		t.Parallel()
+-		expected := `{
+-			"__extn": {
+-				"fn": "datetime",
+-				"arg": "1970-01-01T00:00:00.042Z"
+-			}
+-		}`
+-		dt1 := types.NewDatetime(time.UnixMilli(42))
+-		testutil.JSONMarshalsTo(t, dt1, expected)
+-
+-		var dt2 types.Datetime
+-		err := json.Unmarshal([]byte(expected), &dt2)
+-		testutil.OK(t, err)
+-		testutil.Equals(t, dt1, dt2)
++		t.Run("FourDigitYear", func(t *testing.T) {
++			expected := `{
++				"__extn": {
++					"fn": "datetime",
++					"arg": "1970-01-01T00:00:00.042Z"
++				}
++			}`
++			dt1 := types.NewDatetime(time.UnixMilli(42))
++			testutil.JSONMarshalsTo(t, dt1, expected)
++
++			var dt2 types.Datetime
++			err := json.Unmarshal([]byte(expected), &dt2)
++			testutil.OK(t, err)
++			testutil.Equals(t, dt1, dt2)
++		})
++
++		t.Run("FiveDigitYear", func(t *testing.T) {
++			t.Parallel()
++			dt := types.NewDatetime(time.Date(10000, 1, 1, 0, 0, 0, 42000000, time.UTC))
++			expected := `{
++				"__extn": {
++					"fn": "datetime",
++					"arg": "+000010000-01-01T00:00:00.042Z"
++				}
++			}`
++			testutil.JSONMarshalsTo(t, dt, expected)
++
++			var dt2 types.Datetime
++			err := json.Unmarshal([]byte(expected), &dt2)
++			testutil.OK(t, err)
++			testutil.Equals(t, dt, dt2)
++		})
+ 	})
+ 
+ 	t.Run("UnmarshalJSON/error", func(t *testing.T) {
+@@ -245,4 +317,5 @@ func TestDatetime(t *testing.T) {
+ 		err := json.Unmarshal([]byte("{}"), &dt2)
+ 		testutil.Error(t, err)
+ 	})
++
+ }
+
+OK

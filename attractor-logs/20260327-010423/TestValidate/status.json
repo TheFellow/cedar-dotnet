@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "Validation completed and written to \u0060.ai/semport_validation_report.md\u0060.\n\nResult: **FAIL**\n\nSummary:\n- \u0060dotnet build cedar-dotnet.sln\u0060: passed, **0 warnings**\n- \u0060dotnet test test/Cedar.Tests/\u0060: **failed** \u2014 804 passed, 4 failed\n- \u0060dotnet test test/Cedar.Schema.Tests/\u0060: passed \u2014 35 passed\n- \u0060dotnet test test/Cedar.Batch.Tests/\u0060: passed \u2014 16 passed\n- \u0060dotnet test test/Cedar.Experimental.Tests/\u0060: passed \u2014 28 passed\n\nOverall totals:\n- Passed: 883\n- Failed: 4\n- Skipped: 0\n- Total: 887\n\nThe 4 failures are all in the newly added datetime parity cases.",
+    "last_stage": "TestValidate"
+  },
+  "failure_reason": "",
+  "notes": "Stage completed: TestValidate",
+  "outcome": "success",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}
