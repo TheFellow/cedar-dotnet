@@ -98,6 +98,59 @@ public sealed class SchemaWriterTests
     }
 
     [Fact]
+    public void MarshalCedar_QuotesReservedKeywordAttributeName()
+    {
+        SchemaDocument document = new()
+        {
+            GlobalNamespace = new NamespaceDecl
+            {
+                Entities = new Dictionary<Ident, EntityDecl>
+                {
+                    [new Ident("User")] = new()
+                    {
+                        Shape = new RecordType
+                        {
+                            Attributes = new Dictionary<string, AttributeDecl>
+                            {
+                                ["true"] = new() { Type = new TypeRef("String") }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        string cedar = document.MarshalCedar();
+
+        Assert.Contains("\"true\": String", cedar);
+
+        SchemaDocument roundTripped = SchemaDocument.UnmarshalCedar(cedar);
+        Assert.True(roundTripped.GlobalNamespace.Entities[new Ident("User")].Shape!.Attributes.ContainsKey("true"));
+    }
+
+    [Fact]
+    public void MarshalCedar_QuotesReservedKeywordActionName()
+    {
+        SchemaDocument document = new()
+        {
+            GlobalNamespace = new NamespaceDecl
+            {
+                Actions = new Dictionary<string, ActionDecl>
+                {
+                    ["true"] = new()
+                }
+            }
+        };
+
+        string cedar = document.MarshalCedar();
+
+        Assert.Contains("action \"true\";", cedar);
+
+        SchemaDocument roundTripped = SchemaDocument.UnmarshalCedar(cedar);
+        Assert.True(roundTripped.GlobalNamespace.Actions.ContainsKey("true"));
+    }
+
+    [Fact]
     public void MarshalCedar_SortsAnnotationsByKey()
     {
         SchemaDocument document = new()
