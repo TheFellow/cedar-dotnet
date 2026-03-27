@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cedar.Batch\Cedar.Batch.csproj" />
+    <ProjectReference Include="..\..\src\Cedar.Experimental\Cedar.Experimental.csproj" />
+    <ProjectReference Include="..\..\src\Cedar.Core\Cedar.Core.csproj" />
+    <ProjectReference Include="..\..\src\Cedar.Ast\Cedar.Ast.csproj" />
+    <ProjectReference Include="..\..\src\Cedar.Types\Cedar.Types.csproj" />
+  </ItemGroup>
+</Project>

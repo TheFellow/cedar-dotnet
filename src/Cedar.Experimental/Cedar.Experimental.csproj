@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PackageId>Cedar.Schema</PackageId>
+    <PackageId>Cedar.Experimental</PackageId>
     <Version>0.1.0</Version>
     <Authors>TheFellow</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -8,10 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Cedar.Schema.Tests" />
+    <InternalsVisibleTo Include="Cedar.Experimental.Tests" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cedar.Types\Cedar.Types.csproj" />
+    <ProjectReference Include="..\Cedar.Core\Cedar.Core.csproj" />
+    <ProjectReference Include="..\Cedar.Ast\Cedar.Ast.csproj" />
   </ItemGroup>
 </Project>

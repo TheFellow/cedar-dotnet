@@ -1,4 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Cedar.Types</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>TheFellow</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/TheFellow/cedar-dotnet</RepositoryUrl>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="..\Cedar.Core\Internal\Consts\CedarConsts.cs" Link="Internal\Consts\CedarConsts.cs" />
     <Compile Include="..\Cedar.Core\Internal\MapSet\ImmutableMapSet.cs" Link="Internal\MapSet\ImmutableMapSet.cs" />

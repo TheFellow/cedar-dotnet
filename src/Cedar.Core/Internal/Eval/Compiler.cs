@@ -25,6 +25,7 @@ internal static class Compiler
             NodeIfThenElse conditional => new ConditionalEvaluator(ToEval(conditional.If), ToEval(conditional.Then), ToEval(conditional.Else)),
             NodeIs isNode => new IsEvaluator(ToEval(isNode.Left), isNode.EntityType),
             NodeIsIn isIn => new IsInEvaluator(ToEval(isIn.Left), isIn.EntityType, ToEval(isIn.Entity)),
+            NodeExtensionCall call when call.Name == PartialEvaluator.PartialErrorExtensionName => new PartialErrorEvaluator(ToEval(call.Args[0])),
             NodeExtensionCall call => new ExtensionEvaluator(call.Name, CompileArgs(call.Args)),
             NodeValue value => new LiteralEvaluator(value.Value),
             NodeRecord record => new RecordLiteralEvaluator(CompileRecordElements(record.Elements)),
