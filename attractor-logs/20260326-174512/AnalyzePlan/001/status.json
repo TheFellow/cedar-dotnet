@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "Now I have a complete picture. Let me analyze the commit semantically and check the C# project\u0027s current state:",
+    "last_stage": "AnalyzePlan"
+  },
+  "failure_reason": "Coding agent session hit turn limits before completion",
+  "notes": "",
+  "outcome": "fail",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}

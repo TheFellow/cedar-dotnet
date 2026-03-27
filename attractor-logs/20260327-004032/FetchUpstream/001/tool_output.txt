@@ -1,0 +1,29 @@
+exit_code: 0
+timed_out: False
+stdout:
+588e988	2026-01-29T10:44:14-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+archives
+ledger.py
+ledger.tsv
+README.md
+semport.dot
+
+exit_code: 0
+timed_out: False
+stdout:
+588e988
+2026-01-29T10:44:14-08:00
+types: correctly interpret the timezone offset field
+
+An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+
+Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+exit_code: 0
+timed_out: False
+
+OK

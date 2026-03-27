@@ -1,0 +1,870 @@
+exit_code: 0
+timed_out: False
+stdout:
+588e988	2026-01-29T10:44:14-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+archives
+ledger.py
+ledger.tsv
+README.md
+semport.dot
+
+exit_code: 0
+timed_out: False
+stdout:
+588e988
+2026-01-29T10:44:14-08:00
+types: correctly interpret the timezone offset field
+
+An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+
+Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+exit_code: 0
+timed_out: False
+
+OK
+
+   1 | 588e988	2026-01-29T10:44:14-08:00
+   2 | 
+   3 | types: correctly interpret the timezone offset field
+   4 | 
+   5 | An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+   6 | 
+   7 | Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 588e9888ab0441b2297062edc9543bd05072f490
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Thu Jan 29 10:21:23 2026 -0800
+
+    types: correctly interpret the timezone offset field
+    
+    An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+    
+    Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+diff --git a/types/datetime.go b/types/datetime.go
+index c4dd02f..fa5f94c 100644
+--- a/types/datetime.go
++++ b/types/datetime.go
+@@ -218,7 +218,7 @@ func ParseDatetime(s string) (Datetime, error) {
+ 		return Datetime{}, fmt.Errorf("%w: invalid date", errDatetime)
+ 	}
+ 
+-	t = t.Add(offset)
++	t = t.Add(-offset)
+ 	return Datetime{value: t.UnixMilli()}, nil
+ }
+ 
+diff --git a/types/datetime_test.go b/types/datetime_test.go
+index bcc3fd0..b83cd35 100644
+--- a/types/datetime_test.go
++++ b/types/datetime_test.go
+@@ -33,17 +33,17 @@ func TestDatetime(t *testing.T) {
+ 			{"1970-01-01T00:00:00.010Z", "1970-01-01T00:00:00.010Z"},
+ 			{"1970-01-01T00:00:00.100Z", "1970-01-01T00:00:00.100Z"},
+ 
+-			{"1970-01-01T00:00:00+0001", "1970-01-01T00:01:00.000Z"},
+-			{"1970-01-01T00:00:00+0010", "1970-01-01T00:10:00.000Z"},
+-			{"1970-01-01T00:00:00+0100", "1970-01-01T01:00:00.000Z"},
+-			{"1970-01-01T00:00:00+1000", "1970-01-01T10:00:00.000Z"},
++			{"1970-01-01T00:00:00+0001", "1969-12-31T23:59:00.000Z"},
++			{"1970-01-01T00:00:00+0010", "1969-12-31T23:50:00.000Z"},
++			{"1970-01-01T00:00:00+0100", "1969-12-31T23:00:00.000Z"},
++			{"1970-01-01T00:00:00+1000", "1969-12-31T14:00:00.000Z"},
+ 
+-			{"1970-01-01T00:01:00-0001", "1970-01-01T00:00:00.000Z"},
+-			{"1970-01-01T00:10:00-0010", "1970-01-01T00:00:00.000Z"},
+-			{"1970-01-01T01:00:00-0100", "1970-01-01T00:00:00.000Z"},
+-			{"1970-01-01T10:00:00-1000", "1970-01-01T00:00:00.000Z"},
++			{"1970-01-01T00:00:00-0001", "1970-01-01T00:01:00.000Z"},
++			{"1970-01-01T00:00:00-0010", "1970-01-01T00:10:00.000Z"},
++			{"1970-01-01T00:00:00-0100", "1970-01-01T01:00:00.000Z"},
++			{"1970-01-01T00:00:00-1000", "1970-01-01T10:00:00.000Z"},
+ 
+-			{"1972-02-29T10:00:00-1000", "1972-02-29T00:00:00.000Z"},
++			{"1972-02-29T10:00:00+1000", "1972-02-29T00:00:00.000Z"},
+ 		}
+ 		for ti, tt := range tests {
+ 			tt := tt
+
+OK
+
+   1 | PORT
+   2 | 
+   3 | ## Commit
+   4 | 588e988 — types: correctly interpret the timezone offset field
+   5 | 
+   6 | ## Semantic Analysis
+   7 | A one-character bug fix in datetime parsing: when converting a timezone-offset datetime to UTC, the offset was being **added** instead of **subtracted**.
+   8 | 
+   9 | UTC = local_time - offset
+  10 | 
+  11 | So `1970-01-01T00:00:00+0100` should yield `1969-12-31T23:00:00Z` (subtract 1 hour), not `1970-01-01T01:00:00Z`.
+  12 | 
+  13 | The Go fix is simply `t.Add(-offset)` instead of `t.Add(offset)` in `types/datetime.go` line ~221.
+  14 | 
+  15 | This is a correctness bug that will affect any C# code that manually parses datetime strings with timezone offsets and converts them to UTC milliseconds (Unix epoch).
+  16 | 
+  17 | ## Port Tasks
+  18 | 
+  19 | ### 1. Find the C# datetime parser
+  20 | - Target: `src/Cedar.Types/` — look for a `Datetime` or `CedarDatetime` type, specifically where a string like `"1970-01-01T00:00:00+0100"` is parsed and converted to UTC milliseconds.
+  21 | - Search for the offset application logic (e.g. `+ offset`, `AddMinutes`, `AddHours`, `TimeSpan` arithmetic applied to a parsed time).
+  22 | 
+  23 | ### 2. Fix the offset sign
+  24 | - Wherever the parsed timezone offset is applied to convert local→UTC, negate it.
+  25 | - Example: if the code does `parsedTime + offset` → change to `parsedTime - offset`.
+  26 | - Equivalent .NET patterns to look for:
+  27 |   - `dateTime.Add(offset)` → `dateTime.Add(-offset)` / `dateTime.Subtract(offset)`
+  28 |   - `dateTime.AddMinutes(offsetMinutes)` → `dateTime.AddMinutes(-offsetMinutes)`
+  29 |   - `dateTime + timeSpan` → `dateTime - timeSpan`
+  30 |   - `DateTimeOffset` construction where offset is applied manually
+  31 | 
+  32 | ### 3. Add/fix regression tests in Cedar.Tests
+  33 | - Target: `test/Cedar.Tests/` — find the datetime parsing test class.
+  34 | - Add (or correct) test cases mirroring the Go test updates:
+  35 |   - `"1970-01-01T00:00:00+0001"` → `-60_000 ms` (i.e. `1969-12-31T23:59:00Z`)
+  36 |   - `"1970-01-01T00:00:00+0010"` → `-600_000 ms`
+  37 |   - `"1970-01-01T00:00:00+0100"` → `-3_600_000 ms`
+  38 |   - `"1970-01-01T00:00:00+1000"` → `-36_000_000 ms`
+  39 |   - `"1970-01-01T00:00:00-0001"` → `+60_000 ms`
+  40 |   - `"1970-01-01T00:00:00-0010"` → `+600_000 ms`
+  41 |   - `"1970-01-01T00:00:00-0100"` → `+3_600_000 ms`
+  42 |   - `"1970-01-01T00:00:00-1000"` → `+36_000_000 ms`
+  43 |   - `"1972-02-29T10:00:00+1000"` → `1972-02-29T00:00:00Z`
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/Values.cs:97:    public static Node Datetime(string value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/Values.cs:99:        return Value(CedarDatetime.Parse(value));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/Values.cs:102:    public static Node Datetime(DateTimeOffset value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/Values.cs:104:        return Value(CedarDatetime.FromDateTimeOffset(value));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/Values.cs:112:    public static Node Duration(TimeSpan value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/Values.cs:114:        return Value(new CedarDuration(value.Ticks / TimeSpan.TicksPerMillisecond));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/ExtensionOperators.cs:52:    public static Node Offset(this Node lhs, Node rhs)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/ExtensionOperators.cs:54:        return Operators.ExtensionCall("offset", lhs, rhs);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/ExtensionOperators.cs:152:    public static Node Datetime(Node rhs)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/ExtensionOperators.cs:154:        return Operators.ExtensionCall("datetime", rhs);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarHash.cs:10:    private const ulong OffsetBasis = 14695981039346656037UL;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarHash.cs:98:        ulong hash = OffsetBasis;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDuration.cs:92:    public TimeSpan ToTimeSpan()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDuration.cs:94:        return TimeSpan.FromMilliseconds(Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarPattern.cs:196:    private static bool MatchChunk(string chunk, string value, int offset, out int nextOffset)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarPattern.cs:198:        nextOffset = offset;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarPattern.cs:200:        if (offset + chunk.Length > value.Length)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarPattern.cs:207:            if (chunk[index] != value[offset + index])
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarPattern.cs:213:        nextOffset += chunk.Length;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:6:public sealed record CedarDatetime(long Value) : CedarValue
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:8:    public static CedarDatetime Parse(string value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:14:            throw new FormatException("Datetime values must contain at least a full date.");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:27:            return new CedarDatetime(new DateTimeOffset(year, month, day, 0, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:32:            throw new FormatException("Datetime values must contain a full time component.");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:58:        int trailerOffset = 19;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:68:            trailerOffset = 23;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:71:        if (value.Length == trailerOffset)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:73:            throw new FormatException("Datetime values must include a time zone designator.");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:76:        TimeSpan offset = value[trailerOffset] switch
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:78:            'Z' => ReadUtcTrailer(value, trailerOffset),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:79:            '+' => ReadOffset(value, trailerOffset, 1),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:80:            '-' => ReadOffset(value, trailerOffset, -1),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:84:        DateTimeOffset timestamp = new(year, month, day, hour, minute, second, milliseconds, TimeSpan.Zero);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:85:        return new CedarDatetime(timestamp.ToUnixTimeMilliseconds() + (long)offset.TotalMilliseconds);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:88:    public static CedarDatetime FromDateTimeOffset(DateTimeOffset value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:90:        return new CedarDatetime(value.ToUnixTimeMilliseconds());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:93:    public DateTimeOffset ToDateTimeOffset()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:95:        return DateTimeOffset.FromUnixTimeMilliseconds(Value).ToUniversalTime();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:100:        return "datetime(\"" + ToDateTimeOffset().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture) + "\")";
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:105:        return CedarHash.ForInt64(nameof(CedarDatetime), Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:116:    private static int ParseDigits(string value, int offset, int length, string component)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:118:        if (value.Length < offset + length)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:123:        ReadOnlySpan<char> span = value.AsSpan(offset, length);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:135:    private static TimeSpan ReadUtcTrailer(string value, int offset)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:137:        if (value.Length != offset + 1)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:142:        return TimeSpan.Zero;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:145:    private static TimeSpan ReadOffset(string value, int offset, int sign)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:147:        if (value.Length != offset + 5)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:149:            throw new FormatException("Time zone offsets must use the +hhmm or -hhmm form.");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:152:        int hours = ParseDigits(value, offset + 1, 2, "time zone hour");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:153:        int minutes = ParseDigits(value, offset + 3, 2, "time zone minute");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:157:            throw new FormatException("Time zone offset hours are out of range.");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:162:            throw new FormatException("Time zone offset minutes are out of range.");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:165:        TimeSpan magnitude = new(hours, minutes, 0);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:166:        return TimeSpan.FromTicks(sign * magnitude.Ticks);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:176:        int daysInMonth = DateTime.DaysInMonth(year, month);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Position.cs:3:public readonly record struct Position(string Filename, int Offset, int Line, int Column);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Schema/Internal/SchemaTokenizer.cs:290:internal readonly record struct SchemaPosition(string Filename, int Offset, int Line, int Column);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:8:internal static class DatetimeExtensions
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:12:        CedarDatetime value = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:14:        return new CedarDatetime(millis);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:19:        CedarDatetime value = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:23:    public static ICedarData Offset(ICedarData[] args)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:25:        CedarDatetime datetime = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:30:            return new CedarDatetime(checked(datetime.Value + duration.Value));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:34:            throw new EvalException($"{EvalErrors.Overflow} while attempting to compute datetime offset");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:40:        CedarDatetime left = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:41:        CedarDatetime right = TypeConversion.ValueToDatetime(args[1]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:49:            throw new EvalException($"{EvalErrors.Overflow} while attempting to compute datetime duration");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:55:        DateTimeOffset value = TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:56:        return new CedarLong(DateTime.DaysInMonth(value.Year, value.Month));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:61:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Year);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:66:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Month);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:71:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Day);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:76:        DayOfWeek day = TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().DayOfWeek;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:82:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().DayOfYear);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:87:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Hour);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:92:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Minute);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:97:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Second);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:102:        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Millisecond);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:14:        ["datetime"] = new ExtensionDefinition(1, false, ConstructorExtensions.Datetime),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:25:        ["toDate"] = new ExtensionDefinition(1, true, DatetimeExtensions.ToDate),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:26:        ["toTime"] = new ExtensionDefinition(1, true, DatetimeExtensions.ToTime),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:27:        ["offset"] = new ExtensionDefinition(2, true, DatetimeExtensions.Offset),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:28:        ["durationSince"] = new ExtensionDefinition(2, true, DatetimeExtensions.DurationSince),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:29:        ["daysInMonth"] = new ExtensionDefinition(1, true, DatetimeExtensions.DaysInMonth),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:30:        ["year"] = new ExtensionDefinition(1, true, DatetimeExtensions.Year),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:31:        ["month"] = new ExtensionDefinition(1, true, DatetimeExtensions.Month),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:32:        ["day"] = new ExtensionDefinition(1, true, DatetimeExtensions.Day),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:33:        ["dayOfWeek"] = new ExtensionDefinition(1, true, DatetimeExtensions.DayOfWeek),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:34:        ["dayOfYear"] = new ExtensionDefinition(1, true, DatetimeExtensions.DayOfYear),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:35:        ["hour"] = new ExtensionDefinition(1, true, DatetimeExtensions.Hour),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:36:        ["minute"] = new ExtensionDefinition(1, true, DatetimeExtensions.Minute),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:37:        ["second"] = new ExtensionDefinition(1, true, DatetimeExtensions.Second),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:38:        ["millisecond"] = new ExtensionDefinition(1, true, DatetimeExtensions.Millisecond),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ConstructorExtensions.cs:19:    public static ICedarData Datetime(ICedarData[] args)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/ConstructorExtensions.cs:21:        return Parse(args[0], CedarDatetime.Parse);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:52:            case CedarDatetime datetime:
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:53:                WriteExtension(writer, "datetime", datetime.MarshalCedar()[10..^2]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:158:            "datetime" => CedarDatetime.Parse(argument),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/TypeConversion.cs:78:    public static CedarDatetime ValueToDatetime(ICedarData value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/TypeConversion.cs:80:        if (value is CedarDatetime d)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/TypeConversion.cs:85:        throw new EvalException($"expected datetime, got {TypeName(value)}");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/TypeConversion.cs:116:            CedarDatetime => "datetime",
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/EvalErrors.cs:22:            CedarDatetime => "datetime",
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/Evaluators/ComparisonEvaluators.cs:63:            (CedarDatetime leftDatetime, CedarDatetime rightDatetime) => leftDatetime.Value.CompareTo(rightDatetime.Value),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Eval/Evaluators/ComparisonEvaluators.cs:81:        return value is CedarLong or CedarString or CedarDecimal or CedarDatetime or CedarDuration;
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:443:                "datetime" => CedarDatetime.Parse(arg),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/SchemaParserTests.cs:93:            		created: datetime
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/SchemaParserTests.cs:106:        Assert.Equal("datetime", SchemaAssert.RequireTypeRef(nested.Attributes["created"].Type).Name);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/SchemaJsonTests.cs:49:                        "stamp": { "type": "Extension", "name": "datetime" }
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/SchemaJsonTests.cs:62:        Assert.Contains("stamp: datetime", cedar, StringComparison.Ordinal);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:97:                [new CedarString("expires")] = CedarDatetime.Parse("1970-01-01T00:00:00.042Z")
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:8:public sealed class CedarDatetimeTests
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:13:        CedarDatetime value = new(42);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:21:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:27:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:01:01Z"), "datetime(\"1970-01-01T01:01:01.000Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:33:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:37:    public void ParseAddsPositiveOffset()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:39:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00+0100"), "datetime(\"1970-01-01T01:00:00.000Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:43:    public void ParseAppliesNegativeOffset()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:45:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:00:00-0100"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:51:        Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:57:        Assert.Throws<FormatException>(() => CedarDatetime.Parse("2024-02-30T00:00:00Z"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:61:    public void ParseRejectsInvalidTimeZone()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:63:        Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01-01T00:00:00V"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:69:        CedarAssert.Equal(new CedarDatetime(42), CedarDatetime.Parse("1970-01-01T00:00:00.042Z"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:75:        CedarAssert.NotEqual(new CedarDatetime(42), new CedarDatetime(43));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:81:        CedarAssert.HashStable(new CedarDatetime(1234));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:85:    public void JsonRoundTripUsesDatetimeExtension()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:87:        CedarDatetime expected = CedarDatetime.Parse("1970-01-01T00:00:00.042Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:92:        Assert.Equal("{\"__extn\":{\"fn\":\"datetime\",\"arg\":\"1970-01-01T00:00:00.042Z\"}}", json);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:93:        CedarAssert.Equal(expected, Assert.IsType<CedarDatetime>(actual));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Core/DiagnosticTests.cs:26:        Assert.Equal(12, position.Offset);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Parser/PropertyTests.cs:80:                "datetime(\"2024-01-01T00:00:00Z\")",
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:166:    public void DatetimeFromStringCreatesDatetimeValueNode()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:168:        NodeValue node = Assert.IsType<NodeValue>(Datetime("2020-01-02T03:04:05.006Z").Inner);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:170:        CedarDatetime value = Assert.IsType<CedarDatetime>(node.Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:171:        Assert.Equal("datetime(" + '"' + "2020-01-02T03:04:05.006Z" + '"' + ")", value.MarshalCedar());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:175:    public void DatetimeFromDateTimeOffsetCreatesDatetimeValueNode()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:177:        DateTimeOffset timestamp = new(2020, 1, 2, 3, 4, 5, 6, TimeSpan.Zero);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:179:        NodeValue node = Assert.IsType<NodeValue>(Datetime(timestamp).Inner);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:181:        CedarDatetime value = Assert.IsType<CedarDatetime>(node.Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/VariableAndValueTests.cs:182:        Assert.Equal("datetime(" + '"' + "2020-01-02T03:04:05.006Z" + '"' + ")", value.MarshalCedar());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:202:    public void DatetimeExtensionOperatorsCreateExtensionCalls()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:204:        Node datetime = Datetime("2020-01-02T03:04:05.006Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:206:        AssertExtensionCall(datetime.Offset(Duration("1h")), "offset", 2);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:207:        AssertExtensionCall(datetime.DaysInMonth(), "daysInMonth", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:208:        AssertExtensionCall(datetime.Year(), "year", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:209:        AssertExtensionCall(datetime.Month(), "month", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:210:        AssertExtensionCall(datetime.Day(), "day", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:211:        AssertExtensionCall(datetime.DayOfWeek(), "dayOfWeek", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:212:        AssertExtensionCall(datetime.DayOfYear(), "dayOfYear", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:213:        AssertExtensionCall(datetime.Hour(), "hour", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:214:        AssertExtensionCall(datetime.Minute(), "minute", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:215:        AssertExtensionCall(datetime.Second(), "second", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:216:        AssertExtensionCall(datetime.Millisecond(), "millisecond", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:217:        AssertExtensionCall(datetime.ToDate(), "toDate", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:218:        AssertExtensionCall(datetime.ToTime(), "toTime", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Ast/OperatorTests.cs:238:        AssertExtensionCall(Datetime(String("2020-01-02T03:04:05Z")), "datetime", 1);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:46:    public void Datetime_ValidString_ReturnsDatetime()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:48:        ICedarData result = Invoke("datetime", new CedarString("2024-01-01T00:00:00Z"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:49:        Assert.IsType<CedarDatetime>(result);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:181:    // --- Datetime functions ---
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:186:        CedarDatetime dt = CedarDatetime.Parse("2024-06-15T13:30:45Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:188:        CedarDatetime date = Assert.IsType<CedarDatetime>(result);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:189:        System.DateTimeOffset dto = date.ToDateTimeOffset();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:198:        CedarDatetime dt = CedarDatetime.Parse("2024-06-15T13:30:45Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:205:    public void Offset_AddsDuration()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:207:        CedarDatetime dt = CedarDatetime.Parse("2024-01-01T00:00:00Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:209:        ICedarData result = Invoke("offset", dt, dur);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:210:        CedarDatetime offsetDt = Assert.IsType<CedarDatetime>(result);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:211:        Assert.Equal(dt.Value + dur.Value, offsetDt.Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:217:        CedarDatetime dt1 = CedarDatetime.Parse("2024-01-02T00:00:00Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/ExtensionTests.cs:218:        CedarDatetime dt2 = CedarDatetime.Parse("2024-01-01T00:00:00Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/TypeConversionTests.cs:131:    public void ValueToDatetime_Normal_ReturnsDatetime()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/TypeConversionTests.cs:133:        CedarDatetime dt = CedarDatetime.Parse("2024-01-01T00:00:00Z");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/TypeConversionTests.cs:134:        CedarDatetime result = TypeConversion.ValueToDatetime(dt);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/TypeConversionTests.cs:139:    public void ValueToDatetime_WrongType_ThrowsEvalException()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/TypeConversionTests.cs:141:        Assert.Throws<EvalException>(() => TypeConversion.ValueToDatetime(CedarBool.True));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/DiagnosticTests.cs:65:        Assert.Equal(10, reason.Position.Offset);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Eval/DiagnosticTests.cs:77:        Assert.Equal(20, error.Position.Offset);
+
+  70 | 
+  71 |         if (value.Length == trailerOffset)
+  72 |         {
+  73 |             throw new FormatException("Datetime values must include a time zone designator.");
+  74 |         }
+  75 | 
+  76 |         TimeSpan offset = value[trailerOffset] switch
+  77 |         {
+  78 |             'Z' => ReadUtcTrailer(value, trailerOffset),
+  79 |             '+' => ReadOffset(value, trailerOffset, 1),
+  80 |             '-' => ReadOffset(value, trailerOffset, -1),
+  81 |             _ => throw new FormatException("Invalid time zone designator.")
+  82 |         };
+  83 | 
+  84 |         DateTimeOffset timestamp = new(year, month, day, hour, minute, second, milliseconds, TimeSpan.Zero);
+  85 |         return new CedarDatetime(timestamp.ToUnixTimeMilliseconds() + (long)offset.TotalMilliseconds);
+  86 |     }
+  87 | 
+  88 |     public static CedarDatetime FromDateTimeOffset(DateTimeOffset value)
+  89 |     {
+  90 |         return new CedarDatetime(value.ToUnixTimeMilliseconds());
+  91 |     }
+  92 | 
+  93 |     public DateTimeOffset ToDateTimeOffset()
+  94 |     {
+
+ 145 |     private static TimeSpan ReadOffset(string value, int offset, int sign)
+ 146 |     {
+ 147 |         if (value.Length != offset + 5)
+ 148 |         {
+ 149 |             throw new FormatException("Time zone offsets must use the +hhmm or -hhmm form.");
+ 150 |         }
+ 151 | 
+ 152 |         int hours = ParseDigits(value, offset + 1, 2, "time zone hour");
+ 153 |         int minutes = ParseDigits(value, offset + 3, 2, "time zone minute");
+ 154 | 
+ 155 |         if (hours > 23)
+ 156 |         {
+ 157 |             throw new FormatException("Time zone offset hours are out of range.");
+ 158 |         }
+ 159 | 
+ 160 |         if (minutes > 59)
+ 161 |         {
+ 162 |             throw new FormatException("Time zone offset minutes are out of range.");
+ 163 |         }
+ 164 | 
+ 165 |         TimeSpan magnitude = new(hours, minutes, 0);
+ 166 |         return TimeSpan.FromTicks(sign * magnitude.Ticks);
+ 167 |     }
+ 168 | 
+ 169 |     private static void ValidateDate(int year, int month, int day)
+
+  30 |     [Fact]
+  31 |     public void ParseAcceptsMillisecondPrecision()
+  32 |     {
+  33 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
+  34 |     }
+  35 | 
+  36 |     [Fact]
+  37 |     public void ParseAddsPositiveOffset()
+  38 |     {
+  39 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00+0100"), "datetime(\"1970-01-01T01:00:00.000Z\")");
+  40 |     }
+  41 | 
+  42 |     [Fact]
+  43 |     public void ParseAppliesNegativeOffset()
+  44 |     {
+  45 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:00:00-0100"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+  46 |     }
+  47 | 
+  48 |     [Fact]
+  49 |     public void ParseRejectsShortInput()
+
+OK
+
+   1 | PORT
+   2 | 
+   3 | ## Upstream commit
+   4 | - Short SHA: `588e988`
+   5 | - Summary: `types: correctly interpret the timezone offset field`
+   6 | 
+   7 | ## Decision
+   8 | This must be ported. The C# implementation has the same semantic bug as the Go code fixed upstream: it currently applies the parsed timezone offset in the wrong direction when converting a local datetime-with-offset into UTC Unix milliseconds.
+   9 | 
+  10 | ## Relevant upstream references
+  11 | From `git -C inspiration/cedar-go show 588e988`:
+  12 | - Go source: `types/datetime.go:218`
+  13 |   - changed from `t = t.Add(offset)` to `t = t.Add(-offset)`
+  14 | - Go tests: `types/datetime_test.go:33-49`
+  15 |   - expected UTC outputs for `+hhmm` and `-hhmm` offsets were inverted and corrected
+  16 | 
+  17 | ## Concrete C# targets
+  18 | 
+  19 | ### 1. Primary implementation file
+  20 | - `src/Cedar.Types/CedarDatetime.cs:76-85`
+  21 |   - `Parse(string value)` reads the timezone trailer and then computes the Unix milliseconds
+  22 |   - current code:
+  23 |     - `src/Cedar.Types/CedarDatetime.cs:76-80` parses `Z`, `+`, `-`
+  24 |     - `src/Cedar.Types/CedarDatetime.cs:84-85` creates a UTC `DateTimeOffset` and then returns:
+  25 |       - `timestamp.ToUnixTimeMilliseconds() + (long)offset.TotalMilliseconds`
+  26 |   - This `+` is the bug. It should subtract the offset when converting local time to UTC.
+  27 | 
+  28 | ### 2. Offset parsing helper
+  29 | - `src/Cedar.Types/CedarDatetime.cs:145-166`
+  30 |   - `ReadOffset(string value, int offset, int sign)` returns a signed `TimeSpan`
+  31 |   - This helper appears correct as-is:
+  32 |     - `'+' => ReadOffset(..., 1)`
+  33 |     - `'-' => ReadOffset(..., -1)`
+  34 |     - signed result returned via `TimeSpan.FromTicks(sign * magnitude.Ticks)`
+  35 |   - No change expected here unless implementation agent chooses to refactor for clarity.
+  36 | 
+  37 | ### 3. Regression test file
+  38 | - `test/Cedar.Tests/Types/CedarDatetimeTests.cs:36-45`
+  39 |   - existing tests currently encode the buggy behavior:
+  40 |     - `ParseAddsPositiveOffset` at `:37-40`
+  41 |     - `ParseAppliesNegativeOffset` at `:43-45`
+  42 |   - These expectations must be updated and expanded to cover the full upstream matrix.
+  43 | 
+  44 | ## Exact C# change to make
+  45 | In:
+  46 | - `src/Cedar.Types/CedarDatetime.cs:85`
+  47 | 
+  48 | Change semantic operation from:
+  49 | - `UTC millis = local millis + offset millis`
+  50 | 
+  51 | to:
+  52 | - `UTC millis = local millis - offset millis`
+  53 | 
+  54 | Practical code forms that are correct:
+  55 | - `timestamp.ToUnixTimeMilliseconds() - (long)offset.TotalMilliseconds`
+  56 | 
+  57 | Avoid changing the public API or the `CedarDatetime` representation; this is a localized correctness fix.
+  58 | 
+  59 | ## Why this is the right mapping
+  60 | Current C# flow:
+  61 | 1. Parse date/time components as a naive local wall clock
+  62 | 2. Parse timezone trailer into signed `TimeSpan offset`
+  63 | 3. Build `DateTimeOffset(..., TimeSpan.Zero)` as if the wall-clock time were UTC
+  64 | 4. Manually adjust to actual UTC
+  65 | 
+  66 | Given that flow, the adjustment must be:
+  67 | - `utc = local - offset`
+  68 | 
+  69 | Examples:
+  70 | - `1970-01-01T00:00:00+0100`
+  71 |   - local time is 1 hour ahead of UTC
+  72 |   - UTC must be `1969-12-31T23:00:00Z`
+  73 | - `1970-01-01T00:00:00-0100`
+  74 |   - local time is 1 hour behind UTC
+  75 |   - UTC must be `1970-01-01T01:00:00Z`
+  76 | 
+  77 | ## Test updates required
+  78 | Primary file:
+  79 | - `test/Cedar.Tests/Types/CedarDatetimeTests.cs`
+  80 | 
+  81 | Minimum required updates:
+  82 | 1. Replace the two existing offset assertions with corrected expectations.
+  83 | 2. Add regression cases matching the upstream Go test coverage.
+  84 | 
+  85 | Recommended xUnit shape:
+  86 | - Prefer a `[Theory]` with `[InlineData]` for the offset matrix
+  87 | - If keeping local style consistency is preferred, multiple `[Fact]` tests are also acceptable
+  88 | 
+  89 | ### Required regression cases
+  90 | Add assertions equivalent to:
+  91 | - `"1970-01-01T00:00:00+0001"` -> `datetime("1969-12-31T23:59:00.000Z")`
+  92 | - `"1970-01-01T00:00:00+0010"` -> `datetime("1969-12-31T23:50:00.000Z")`
+  93 | - `"1970-01-01T00:00:00+0100"` -> `datetime("1969-12-31T23:00:00.000Z")`
+  94 | - `"1970-01-01T00:00:00+1000"` -> `datetime("1969-12-31T14:00:00.000Z")`
+  95 | - `"1970-01-01T00:00:00-0001"` -> `datetime("1970-01-01T00:01:00.000Z")`
+  96 | - `"1970-01-01T00:00:00-0010"` -> `datetime("1970-01-01T00:10:00.000Z")`
+  97 | - `"1970-01-01T00:00:00-0100"` -> `datetime("1970-01-01T01:00:00.000Z")`
+  98 | - `"1970-01-01T00:00:00-1000"` -> `datetime("1970-01-01T10:00:00.000Z")`
+  99 | - `"1972-02-29T10:00:00+1000"` -> `datetime("1972-02-29T00:00:00.000Z")`
+ 100 | 
+ 101 | ## Acceptance criteria
+ 102 | Implementation is complete when all of the following are true:
+ 103 | 1. `src/Cedar.Types/CedarDatetime.cs:85` applies timezone offsets with subtraction semantics.
+ 104 | 2. `CedarDatetime.Parse("1970-01-01T00:00:00+0100")` produces `1969-12-31T23:00:00.000Z`.
+ 105 | 3. `CedarDatetime.Parse("1970-01-01T00:00:00-0100")` produces `1970-01-01T01:00:00.000Z`.
+ 106 | 4. All 9 upstream-equivalent regression cases are covered in `test/Cedar.Tests/Types/CedarDatetimeTests.cs`.
+ 107 | 5. Existing non-offset behavior remains unchanged:
+ 108 |    - date-only parsing still works
+ 109 |    - `Z` timezone parsing still works
+ 110 |    - millisecond parsing still works
+ 111 |    - invalid timezone format still throws `FormatException`
+ 112 | 6. No API surface changes are introduced.
+ 113 | 
+ 114 | ## Go -> C# idiom mapping for this port
+ 115 | - Go `Datetime` value type -> C# `sealed record CedarDatetime(long Value)`
+ 116 | - Go `ParseDatetime(s) (Datetime, error)` -> C# `CedarDatetime.Parse(string)` throwing `FormatException`
+ 117 | - Go `time.Duration` offset arithmetic -> C# `TimeSpan` arithmetic / millisecond arithmetic
+ 118 | - Go `t.Add(-offset)` -> C# either:
+ 119 |   - `timestamp - offset`, or
+ 120 |   - `timestamp.ToUnixTimeMilliseconds() - (long)offset.TotalMilliseconds`
+ 121 | - Go table-driven tests -> xUnit `[Theory]` + `[InlineData]` or a loop over test data in a single `[Fact]`
+ 122 | 
+ 123 | ## Notes for implementer
+ 124 | - The bug is localized; do not refactor unrelated datetime APIs.
+ 125 | - `ReadOffset` already returns a signed `TimeSpan`; the sign inversion should happen only at the UTC conversion point.
+ 126 | - Because `CedarDatetime` stores Unix milliseconds, downstream consumers like JSON serialization and evaluator extension functions should pick up the fix automatically without further code changes.
+
+   1 | using System;
+   2 | using System.Globalization;
+   3 | 
+   4 | namespace Cedar.Types;
+   5 | 
+   6 | public sealed record CedarDatetime(long Value) : CedarValue
+   7 | {
+   8 |     public static CedarDatetime Parse(string value)
+   9 |     {
+  10 |         ArgumentNullException.ThrowIfNull(value);
+  11 | 
+  12 |         if (value.Length < 10)
+  13 |         {
+  14 |             throw new FormatException("Datetime values must contain at least a full date.");
+  15 |         }
+  16 | 
+  17 |         int year = ParseDigits(value, 0, 4, "year");
+  18 |         ExpectCharacter(value, 4, '-');
+  19 |         int month = ParseDigits(value, 5, 2, "month");
+  20 |         ExpectCharacter(value, 7, '-');
+  21 |         int day = ParseDigits(value, 8, 2, "day");
+  22 | 
+  23 |         ValidateDate(year, month, day);
+  24 | 
+  25 |         if (value.Length == 10)
+  26 |         {
+  27 |             return new CedarDatetime(new DateTimeOffset(year, month, day, 0, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds());
+  28 |         }
+  29 | 
+  30 |         if (value.Length < 20)
+  31 |         {
+  32 |             throw new FormatException("Datetime values must contain a full time component.");
+  33 |         }
+  34 | 
+  35 |         ExpectCharacter(value, 10, 'T');
+  36 |         int hour = ParseDigits(value, 11, 2, "hour");
+  37 |         ExpectCharacter(value, 13, ':');
+  38 |         int minute = ParseDigits(value, 14, 2, "minute");
+  39 |         ExpectCharacter(value, 16, ':');
+  40 |         int second = ParseDigits(value, 17, 2, "second");
+  41 | 
+  42 |         if (hour > 23)
+  43 |         {
+  44 |             throw new FormatException("Hour is out of range.");
+  45 |         }
+  46 | 
+  47 |         if (minute > 59)
+  48 |         {
+  49 |             throw new FormatException("Minute is out of range.");
+  50 |         }
+  51 | 
+  52 |         if (second > 59)
+  53 |         {
+  54 |             throw new FormatException("Second is out of range.");
+  55 |         }
+  56 | 
+  57 |         int milliseconds = 0;
+  58 |         int trailerOffset = 19;
+  59 | 
+  60 |         if (value[19] == '.')
+  61 |         {
+  62 |             if (value.Length < 23)
+  63 |             {
+  64 |                 throw new FormatException("Millisecond component is invalid.");
+  65 |             }
+  66 | 
+  67 |             milliseconds = ParseDigits(value, 20, 3, "millisecond");
+  68 |             trailerOffset = 23;
+  69 |         }
+  70 | 
+  71 |         if (value.Length == trailerOffset)
+  72 |         {
+  73 |             throw new FormatException("Datetime values must include a time zone designator.");
+  74 |         }
+  75 | 
+  76 |         TimeSpan offset = value[trailerOffset] switch
+  77 |         {
+  78 |             'Z' => ReadUtcTrailer(value, trailerOffset),
+  79 |             '+' => ReadOffset(value, trailerOffset, 1),
+  80 |             '-' => ReadOffset(value, trailerOffset, -1),
+  81 |             _ => throw new FormatException("Invalid time zone designator.")
+  82 |         };
+  83 | 
+  84 |         DateTimeOffset timestamp = new(year, month, day, hour, minute, second, milliseconds, TimeSpan.Zero);
+  85 |         return new CedarDatetime(timestamp.ToUnixTimeMilliseconds() + (long)offset.TotalMilliseconds);
+  86 |     }
+  87 | 
+  88 |     public static CedarDatetime FromDateTimeOffset(DateTimeOffset value)
+  89 |     {
+  90 |         return new CedarDatetime(value.ToUnixTimeMilliseconds());
+  91 |     }
+  92 | 
+  93 |     public DateTimeOffset ToDateTimeOffset()
+  94 |     {
+  95 |         return DateTimeOffset.FromUnixTimeMilliseconds(Value).ToUniversalTime();
+  96 |     }
+  97 | 
+  98 |     public override string MarshalCedar()
+  99 |     {
+ 100 |         return "datetime(\"" + ToDateTimeOffset().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture) + "\")";
+ 101 |     }
+ 102 | 
+ 103 |     public override int GetHashCode()
+ 104 |     {
+ 105 |         return CedarHash.ForInt64(nameof(CedarDatetime), Value);
+ 106 |     }
+ 107 | 
+ 108 |     private static void ExpectCharacter(string value, int index, char expected)
+ 109 |     {
+ 110 |         if (value.Length <= index || value[index] != expected)
+ 111 |         {
+ 112 |             throw new FormatException($"Expected '{expected}' at position {index}.");
+ 113 |         }
+ 114 |     }
+ 115 | 
+ 116 |     private static int ParseDigits(string value, int offset, int length, string component)
+ 117 |     {
+ 118 |         if (value.Length < offset + length)
+ 119 |         {
+ 120 |             throw new FormatException($"Invalid {component} component.");
+ 121 |         }
+ 122 | 
+ 123 |         ReadOnlySpan<char> span = value.AsSpan(offset, length);
+ 124 |         foreach (char character in span)
+ 125 |         {
+ 126 |             if (!char.IsAsciiDigit(character))
+ 127 |             {
+ 128 |                 throw new FormatException($"Invalid {component} component.");
+ 129 |             }
+ 130 |         }
+ 131 | 
+ 132 |         return int.Parse(span, NumberStyles.None, CultureInfo.InvariantCulture);
+ 133 |     }
+ 134 | 
+ 135 |     private static TimeSpan ReadUtcTrailer(string value, int offset)
+ 136 |     {
+ 137 |         if (value.Length != offset + 1)
+ 138 |         {
+ 139 |             throw new FormatException("Unexpected trailing characters after the time zone designator.");
+ 140 |         }
+ 141 | 
+ 142 |         return TimeSpan.Zero;
+ 143 |     }
+ 144 | 
+ 145 |     private static TimeSpan ReadOffset(string value, int offset, int sign)
+ 146 |     {
+ 147 |         if (value.Length != offset + 5)
+ 148 |         {
+ 149 |             throw new FormatException("Time zone offsets must use the +hhmm or -hhmm form.");
+ 150 |         }
+ 151 | 
+ 152 |         int hours = ParseDigits(value, offset + 1, 2, "time zone hour");
+ 153 |         int minutes = ParseDigits(value, offset + 3, 2, "time zone minute");
+ 154 | 
+ 155 |         if (hours > 23)
+ 156 |         {
+ 157 |             throw new FormatException("Time zone offset hours are out of range.");
+ 158 |         }
+ 159 | 
+ 160 |         if (minutes > 59)
+ 161 |         {
+ 162 |             throw new FormatException("Time zone offset minutes are out of range.");
+ 163 |         }
+ 164 | 
+ 165 |         TimeSpan magnitude = new(hours, minutes, 0);
+ 166 |         return TimeSpan.FromTicks(sign * magnitude.Ticks);
+ 167 |     }
+ 168 | 
+ 169 |     private static void ValidateDate(int year, int month, int day)
+ 170 |     {
+ 171 |         if (month is < 1 or > 12)
+ 172 |         {
+ 173 |             throw new FormatException("Month is out of range.");
+ 174 |         }
+ 175 | 
+ 176 |         int daysInMonth = DateTime.DaysInMonth(year, month);
+ 177 |         if (day is < 1 or > 31)
+ 178 |         {
+ 179 |             throw new FormatException("Day is out of range.");
+ 180 |         }
+ 181 | 
+ 182 |         if (day > daysInMonth)
+ 183 |         {
+ 184 |             throw new FormatException("Date is invalid.");
+ 185 |         }
+ 186 |     }
+ 187 | }
+
+   1 | using System;
+   2 | using Cedar.Tests.TestSupport;
+   3 | using Cedar.Types;
+   4 | using Xunit;
+   5 | 
+   6 | namespace Cedar.Tests.Types;
+   7 | 
+   8 | public sealed class CedarDatetimeTests
+   9 | {
+  10 |     [Fact]
+  11 |     public void ConstructorStoresMilliseconds()
+  12 |     {
+  13 |         CedarDatetime value = new(42);
+  14 | 
+  15 |         Assert.Equal(42, value.Value);
+  16 |     }
+  17 | 
+  18 |     [Fact]
+  19 |     public void ParseAcceptsDateOnlyForm()
+  20 |     {
+  21 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+  22 |     }
+  23 | 
+  24 |     [Fact]
+  25 |     public void ParseAcceptsZuluTime()
+  26 |     {
+  27 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:01:01Z"), "datetime(\"1970-01-01T01:01:01.000Z\")");
+  28 |     }
+  29 | 
+  30 |     [Fact]
+  31 |     public void ParseAcceptsMillisecondPrecision()
+  32 |     {
+  33 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
+  34 |     }
+  35 | 
+  36 |     [Fact]
+  37 |     public void ParseAddsPositiveOffset()
+  38 |     {
+  39 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00+0100"), "datetime(\"1970-01-01T01:00:00.000Z\")");
+  40 |     }
+  41 | 
+  42 |     [Fact]
+  43 |     public void ParseAppliesNegativeOffset()
+  44 |     {
+  45 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:00:00-0100"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+  46 |     }
+  47 | 
+  48 |     [Fact]
+  49 |     public void ParseRejectsShortInput()
+  50 |     {
+  51 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01"));
+  52 |     }
+  53 | 
+  54 |     [Fact]
+  55 |     public void ParseRejectsInvalidDate()
+  56 |     {
+  57 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse("2024-02-30T00:00:00Z"));
+  58 |     }
+  59 | 
+  60 |     [Fact]
+  61 |     public void ParseRejectsInvalidTimeZone()
+  62 |     {
+  63 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01-01T00:00:00V"));
+  64 |     }
+  65 | 
+  66 |     [Fact]
+  67 |     public void EqualValuesAreEqual()
+  68 |     {
+  69 |         CedarAssert.Equal(new CedarDatetime(42), CedarDatetime.Parse("1970-01-01T00:00:00.042Z"));
+  70 |     }
+  71 | 
+  72 |     [Fact]
+  73 |     public void DifferentValuesAreNotEqual()
+  74 |     {
+  75 |         CedarAssert.NotEqual(new CedarDatetime(42), new CedarDatetime(43));
+  76 |     }
+  77 | 
+  78 |     [Fact]
+  79 |     public void HashCodeIsStable()
+  80 |     {
+  81 |         CedarAssert.HashStable(new CedarDatetime(1234));
+  82 |     }
+  83 | 
+  84 |     [Fact]
+  85 |     public void JsonRoundTripUsesDatetimeExtension()
+  86 |     {
+  87 |         CedarDatetime expected = CedarDatetime.Parse("1970-01-01T00:00:00.042Z");
+  88 | 
+  89 |         string json = CedarJson.SerializeData(expected);
+  90 |         ICedarData actual = CedarJson.DeserializeData(json);
+  91 | 
+  92 |         Assert.Equal("{\"__extn\":{\"fn\":\"datetime\",\"arg\":\"1970-01-01T00:00:00.042Z\"}}", json);
+  93 |         CedarAssert.Equal(expected, Assert.IsType<CedarDatetime>(actual));
+  94 |     }
+  95 | }
+
+OK
+
+exit_code: 0
+timed_out: False
+stdout:
+$ dotnet build
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Cedar.Types -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/bin/Debug/net10.0/Cedar.Types.dll
+  Cedar.Core -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/bin/Debug/net10.0/Cedar.Core.dll
+  Cedar.Schema -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Schema/bin/Debug/net10.0/Cedar.Schema.dll
+  Cedar.Ast -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/bin/Debug/net10.0/Cedar.Ast.dll
+  Cedar.Schema.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/Cedar.Schema.Tests.dll
+  Cedar.Experimental -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Experimental/bin/Debug/net10.0/Cedar.Experimental.dll
+  Cedar.Batch -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Batch/bin/Debug/net10.0/Cedar.Batch.dll
+  Cedar.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/Cedar.Tests.dll
+  Cedar.Conformance -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/Cedar.Conformance.dll
+  Cedar.Experimental.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/Cedar.Experimental.Tests.dll
+  Cedar.Benchmarks -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Cedar.Benchmarks.dll
+  Cedar.Batch.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/Cedar.Batch.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.78
+
+OK
+
+exit_code: 0
+timed_out: False
+stdout:
+
+[change] Updated test/Cedar.Tests/Types/CedarDatetimeTests.cs to assert corrected UTC offset semantics and added upstream-equivalent regression matrix.
+$ dotnet build
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Cedar.Types -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/bin/Debug/net10.0/Cedar.Types.dll
+  Cedar.Schema -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Schema/bin/Debug/net10.0/Cedar.Schema.dll
+  Cedar.Core -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/bin/Debug/net10.0/Cedar.Core.dll
+  Cedar.Ast -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Ast/bin/Debug/net10.0/Cedar.Ast.dll
+  Cedar.Schema.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/Cedar.Schema.Tests.dll
+  Cedar.Batch -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Batch/bin/Debug/net10.0/Cedar.Batch.dll
+  Cedar.Experimental -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Experimental/bin/Debug/net10.0/Cedar.Experimental.dll
+  Cedar.Conformance -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/Cedar.Conformance.dll
+  Cedar.Benchmarks -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Cedar.Benchmarks.dll
+  Cedar.Batch.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/Cedar.Batch.Tests.dll
+  Cedar.Experimental.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/Cedar.Experimental.Tests.dll
+  Cedar.Tests -> /Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/Cedar.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.94
+
+exit_code: 0
+timed_out: False

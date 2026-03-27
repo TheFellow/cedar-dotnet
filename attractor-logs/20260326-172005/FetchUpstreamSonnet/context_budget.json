@@ -1,0 +1,21 @@
+{
+  "char_budget": 3200,
+  "char_budget_used": 284,
+  "excluded_keys": [],
+  "fidelity_mode": "compact",
+  "fresh_session": true,
+  "included_keys": [
+    "graph.goal",
+    "current_node",
+    "graph.context_fidelity_default",
+    "graph.context_thread_default",
+    "graph.default_max_retry",
+    "graph.label",
+    "graph.rankdir",
+    "outcome",
+    "node.Start.visit_count",
+    "node.visit_count"
+  ],
+  "token_budget": 800,
+  "truncated_keys": []
+}

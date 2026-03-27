@@ -172,6 +172,15 @@ public sealed class VariableAndValueTests
     }
 
     [Fact]
+    public void DatetimeFromExpandedYearStringCreatesDatetimeValueNode()
+    {
+        NodeValue node = Assert.IsType<NodeValue>(Datetime("+000010000-01-01T00:00:00.000Z").Inner);
+
+        CedarDatetime value = Assert.IsType<CedarDatetime>(node.Value);
+        Assert.Equal("datetime(" + '"' + "+000010000-01-01T00:00:00.000Z" + '"' + ")", value.MarshalCedar());
+    }
+
+    [Fact]
     public void DatetimeFromDateTimeOffsetCreatesDatetimeValueNode()
     {
         DateTimeOffset timestamp = new(2020, 1, 2, 3, 4, 5, 6, TimeSpan.Zero);

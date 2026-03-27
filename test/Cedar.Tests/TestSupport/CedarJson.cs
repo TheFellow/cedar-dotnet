@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Cedar.Core.Internal.Json;
 using Cedar.Types;
@@ -8,7 +9,10 @@ internal static class CedarJson
 {
     public static JsonSerializerOptions CreateOptions()
     {
-        JsonSerializerOptions options = new();
+        JsonSerializerOptions options = new()
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
         options.Converters.Add(new CedarValueJsonConverter());
         options.Converters.Add(new EntityUidJsonConverter());
         options.Converters.Add(new EntityJsonConverter());

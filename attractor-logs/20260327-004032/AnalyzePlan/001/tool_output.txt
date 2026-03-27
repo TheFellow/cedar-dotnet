@@ -1,0 +1,97 @@
+exit_code: 0
+timed_out: False
+stdout:
+588e988	2026-01-29T10:44:14-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+archives
+ledger.py
+ledger.tsv
+README.md
+semport.dot
+
+exit_code: 0
+timed_out: False
+stdout:
+588e988
+2026-01-29T10:44:14-08:00
+types: correctly interpret the timezone offset field
+
+An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+
+Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+exit_code: 0
+timed_out: False
+
+OK
+
+   1 | 588e988	2026-01-29T10:44:14-08:00
+   2 | 
+   3 | types: correctly interpret the timezone offset field
+   4 | 
+   5 | An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+   6 | 
+   7 | Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 588e9888ab0441b2297062edc9543bd05072f490
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Thu Jan 29 10:21:23 2026 -0800
+
+    types: correctly interpret the timezone offset field
+    
+    An offset of +0100 indicates that 1 hour should be _subtracted_ from the time in order to produce UTC rather than added.
+    
+    Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+diff --git a/types/datetime.go b/types/datetime.go
+index c4dd02f..fa5f94c 100644
+--- a/types/datetime.go
++++ b/types/datetime.go
+@@ -218,7 +218,7 @@ func ParseDatetime(s string) (Datetime, error) {
+ 		return Datetime{}, fmt.Errorf("%w: invalid date", errDatetime)
+ 	}
+ 
+-	t = t.Add(offset)
++	t = t.Add(-offset)
+ 	return Datetime{value: t.UnixMilli()}, nil
+ }
+ 
+diff --git a/types/datetime_test.go b/types/datetime_test.go
+index bcc3fd0..b83cd35 100644
+--- a/types/datetime_test.go
++++ b/types/datetime_test.go
+@@ -33,17 +33,17 @@ func TestDatetime(t *testing.T) {
+ 			{"1970-01-01T00:00:00.010Z", "1970-01-01T00:00:00.010Z"},
+ 			{"1970-01-01T00:00:00.100Z", "1970-01-01T00:00:00.100Z"},
+ 
+-			{"1970-01-01T00:00:00+0001", "1970-01-01T00:01:00.000Z"},
+-			{"1970-01-01T00:00:00+0010", "1970-01-01T00:10:00.000Z"},
+-			{"1970-01-01T00:00:00+0100", "1970-01-01T01:00:00.000Z"},
+-			{"1970-01-01T00:00:00+1000", "1970-01-01T10:00:00.000Z"},
++			{"1970-01-01T00:00:00+0001", "1969-12-31T23:59:00.000Z"},
++			{"1970-01-01T00:00:00+0010", "1969-12-31T23:50:00.000Z"},
++			{"1970-01-01T00:00:00+0100", "1969-12-31T23:00:00.000Z"},
++			{"1970-01-01T00:00:00+1000", "1969-12-31T14:00:00.000Z"},
+ 
+-			{"1970-01-01T00:01:00-0001", "1970-01-01T00:00:00.000Z"},
+-			{"1970-01-01T00:10:00-0010", "1970-01-01T00:00:00.000Z"},
+-			{"1970-01-01T01:00:00-0100", "1970-01-01T00:00:00.000Z"},
+-			{"1970-01-01T10:00:00-1000", "1970-01-01T00:00:00.000Z"},
++			{"1970-01-01T00:00:00-0001", "1970-01-01T00:01:00.000Z"},
++			{"1970-01-01T00:00:00-0010", "1970-01-01T00:10:00.000Z"},
++			{"1970-01-01T00:00:00-0100", "1970-01-01T01:00:00.000Z"},
++			{"1970-01-01T00:00:00-1000", "1970-01-01T10:00:00.000Z"},
+ 
+-			{"1972-02-29T10:00:00-1000", "1972-02-29T00:00:00.000Z"},
++			{"1972-02-29T10:00:00+1000", "1972-02-29T00:00:00.000Z"},
+ 		}
+ 		for ti, tt := range tests {
+ 			tt := tt
+
+OK

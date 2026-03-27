@@ -1,0 +1,1039 @@
+exit_code: 0
+timed_out: False
+stdout:
+77d5543	2026-01-06T10:44:30-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+77d5543
+2026-01-06T10:44:30-08:00
+Merge pull request #126 from cedar-policy/support-binary-marshaler
+Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+exit_code: 0
+timed_out: False
+stdout:
+Merge pull request #126 from cedar-policy/support-binary-marshaler
+
+Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+OK
+
+   1 | ## Earliest 'new' commit to process
+   2 | 
+   3 | **Short SHA:** 77d5543
+   4 | **Timestamp:** 2026-01-06T10:44:30-08:00
+   5 | 
+   6 | ### Commit Message
+   7 | 
+   8 | Merge pull request #126 from cedar-policy/support-binary-marshaler
+   9 | 
+  10 | Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 77d55438b7f6f77f52291d735c3013585738d26e
+Merge: ed96495 69d8817
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:44:30 2026 -0800
+
+    Merge pull request #126 from cedar-policy/support-binary-marshaler
+    
+    Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 69d88179a624a8ee182af185fbab587aa90c9417
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:42:04 2026 -0800
+
+    Update README.md
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/README.md b/README.md
+index 412d696..47b6596 100644
+--- a/README.md
++++ b/README.md
+@@ -143,6 +143,11 @@ If you're looking to integrate Cedar into a production system, please be sure th
+ 
+ ## Change log
+ 
++### 1.4.0
++#### New Features
++- Add an `UnmarshalCedar` method on `types.EntityUID`s
++- Implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces for `types.EntityUID`s
++
+ ### 1.2.5
+ #### New Features
+ - Adds experimental support for parsing Cedar schema in both Cedar and JSON formats
+
+exit_code: 0
+timed_out: False
+stdout:
+69d8817 Update README.md
+d0c6fa8 types: Add'l requested test case
+6b16a01 types: Match interface signature
+6f35f02 types: Test both marshalling funcs and complete code coverage
+60b4b94 types: Address PR feedback
+4ddef61 types: Use the MarshalCedar format and have simple parser to unpack it
+199384b Reshaped for code coverage
+6772b71 types: Add MarshalBinary and UnmarshalBinary methods to EntityUID with tests
+77d5543 Merge pull request #126 from cedar-policy/support-binary-marshaler
+69d8817 Update README.md
+d0c6fa8 types: Add'l requested test case
+6b16a01 types: Match interface signature
+6f35f02 types: Test both marshalling funcs and complete code coverage
+60b4b94 types: Address PR feedback
+4ddef61 types: Use the MarshalCedar format and have simple parser to unpack it
+199384b Reshaped for code coverage
+6772b71 types: Add MarshalBinary and UnmarshalBinary methods to EntityUID with tests
+ed96495 Merge pull request #122 from jaredzhou/extended_has
+fa3f642 Merge branch 'extended_has' of github.com:jaredzhou/cedar-go into extended_has
+651810b fix lint and add mashal  back test
+3944232 Merge branch 'main' into extended_has
+4eb9960 add feature: extended has
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 6772b71384c0be82daa17184f624083bc2411c87
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Mon Jan 5 16:19:30 2026 -0800
+
+    types: Add MarshalBinary and UnmarshalBinary methods to EntityUID with tests
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/types/entity_uid.go b/types/entity_uid.go
+index 2ee36e2..a450ea9 100644
+--- a/types/entity_uid.go
++++ b/types/entity_uid.go
+@@ -74,6 +74,18 @@ func (e EntityUID) MarshalJSON() ([]byte, error) {
+ 	})
+ }
+ 
++func (e EntityUID) MarshalBinary() ([]byte, error) {
++	jsonBytes, err := e.MarshalJSON()
++	if err != nil {
++		return nil, err
++	}
++	return jsonBytes, nil
++}
++
++func (e *EntityUID) UnmarshalBinary(data []byte) error {
++	return e.UnmarshalJSON(data)
++}
++
+ func (e EntityUID) hash() uint64 {
+ 	h := fnv.New64()
+ 	_, _ = h.Write([]byte(e.Type))
+diff --git a/types/entity_uid_test.go b/types/entity_uid_test.go
+index a8588e8..cfb0e5b 100644
+--- a/types/entity_uid_test.go
++++ b/types/entity_uid_test.go
+@@ -30,6 +30,24 @@ func TestEntity(t *testing.T) {
+ 		t.Parallel()
+ 		testutil.Equals(t, string(types.EntityUID{"type", "id"}.MarshalCedar()), `type::"id"`)
+ 	})
++
++	t.Run("MarshalBinary round trip", func(t *testing.T) {
++		t.Parallel()
++
++		uid := types.NewEntityUID("namespace::type", "id")
++		gotBin, err := uid.MarshalBinary()
++		testutil.OK(t, err)
++
++		wantBin := []byte(`{"__entity":{"type":"namespace::type","id":"id"}}`)
++		testutil.Equals(t, gotBin, wantBin)
++
++		want := types.EntityUID{Type: "namespace::type", ID: "id"}
++		got := types.EntityUID{}
++		err = got.UnmarshalBinary(gotBin)
++		testutil.OK(t, err)
++		testutil.Equals(t, got, want)
++		testutil.FatalIf(t, !uid.Equal(got), "expected %v to not equal %v", got, want)
++	})
+ }
+ 
+ func TestEntityUIDSet(t *testing.T) {
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 4ddef61ef90bf5aa8679ca7cb95c3eb8a416f3f0
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Mon Jan 5 17:43:37 2026 -0800
+
+    types: Use the MarshalCedar format and have simple parser to unpack it
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+ types/entity_uid.go      | 24 +++++++++++++++++++++---
+ types/entity_uid_test.go | 45 +++++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 60 insertions(+), 9 deletions(-)
+
+commit 6b16a018c8846d68504067654e91f856a5fa2932
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:24:25 2026 -0800
+
+    types: Match interface signature
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+ types/entity_uid.go      |  4 ++--
+ types/entity_uid_test.go | 26 ++++++++++++++++++++------
+ 2 files changed, 22 insertions(+), 8 deletions(-)
+
+commit d0c6fa8ed41bab7f4dc875489dcfbeab5b626b96
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:35:11 2026 -0800
+
+    types: Add'l requested test case
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+ types/entity_uid_test.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 4ddef61ef90bf5aa8679ca7cb95c3eb8a416f3f0
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Mon Jan 5 17:43:37 2026 -0800
+
+    types: Use the MarshalCedar format and have simple parser to unpack it
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/types/entity_uid.go b/types/entity_uid.go
+index 0d9ab0c..028599b 100644
+--- a/types/entity_uid.go
++++ b/types/entity_uid.go
+@@ -2,8 +2,10 @@ package types
+ 
+ import (
+ 	"encoding/json"
++	"errors"
+ 	"hash/fnv"
+ 	"strconv"
++	"strings"
+ 
+ 	"github.com/cedar-policy/cedar-go/internal/mapset"
+ )
+@@ -46,6 +48,22 @@ func (e EntityUID) MarshalCedar() []byte {
+ 	return []byte(e.String())
+ }
+ 
++var errInvalidUID = errors.New("invalid EntityUID")
++
++// UnmarshalCedar parses a Cedar language representation of an EntityUID.
++func (e *EntityUID) UnmarshalCedar(data []byte) error {
++	s := string(data)
++	idx := strings.LastIndex(s, "::\"")
++
++	if idx <= 0 || !strings.HasSuffix(s, "\"") {
++		return errInvalidUID
++	}
++	typ := EntityType(s[:idx])
++	id := String(s[idx+3 : len(s)-1])
++	*e = NewEntityUID(typ, id)
++	return nil
++}
++
+ func (e *EntityUID) UnmarshalJSON(b []byte) error {
+ 	// TODO: review after adding support for schemas
+ 	var res entityValueJSON
+@@ -74,12 +92,12 @@ func (e EntityUID) MarshalJSON() ([]byte, error) {
+ 	})
+ }
+ 
+-func (e EntityUID) MarshalBinary() ([]byte, error) {
+-	return e.MarshalJSON()
++func (e EntityUID) MarshalBinary() []byte {
++	return e.MarshalCedar()
+ }
+ 
+ func (e *EntityUID) UnmarshalBinary(data []byte) error {
+-	return e.UnmarshalJSON(data)
++	return e.UnmarshalCedar(data)
+ }
+ 
+ func (e EntityUID) hash() uint64 {
+diff --git a/types/entity_uid_test.go b/types/entity_uid_test.go
+index cfb0e5b..ac05bfe 100644
+--- a/types/entity_uid_test.go
++++ b/types/entity_uid_test.go
+@@ -26,28 +26,61 @@ func TestEntity(t *testing.T) {
+ 		testutil.Equals(t, types.EntityUID{Type: "namespace::type", ID: "id"}.String(), `namespace::type::"id"`)
+ 	})
+ 
+-	t.Run("MarshalCedar", func(t *testing.T) {
++	t.Run("MarshalCedar round trip", func(t *testing.T) {
+ 		t.Parallel()
+-		testutil.Equals(t, string(types.EntityUID{"type", "id"}.MarshalCedar()), `type::"id"`)
++		gotBin := types.NewEntityUID("type", "id").MarshalCedar()
++		wantBin := []byte(`type::"id"`)
++		testutil.Equals(t, gotBin, wantBin)
++
++		want := types.NewEntityUID("type", "id")
++		got := types.EntityUID{}
++		err := got.UnmarshalCedar(gotBin)
++		testutil.OK(t, err)
++		testutil.Equals(t, got, want)
+ 	})
+ 
+ 	t.Run("MarshalBinary round trip", func(t *testing.T) {
+ 		t.Parallel()
+ 
+ 		uid := types.NewEntityUID("namespace::type", "id")
+-		gotBin, err := uid.MarshalBinary()
+-		testutil.OK(t, err)
++		gotBin := uid.MarshalBinary()
+ 
+-		wantBin := []byte(`{"__entity":{"type":"namespace::type","id":"id"}}`)
++		wantBin := []byte(`namespace::type::"id"`)
+ 		testutil.Equals(t, gotBin, wantBin)
+ 
+ 		want := types.EntityUID{Type: "namespace::type", ID: "id"}
+ 		got := types.EntityUID{}
+-		err = got.UnmarshalBinary(gotBin)
++		err := got.UnmarshalBinary(gotBin)
+ 		testutil.OK(t, err)
+ 		testutil.Equals(t, got, want)
+ 		testutil.FatalIf(t, !uid.Equal(got), "expected %v to not equal %v", got, want)
+ 	})
++
++	t.Run("UnmarshalCedar invalid", func(t *testing.T) {
++		t.Parallel()
++
++		tests := []struct {
++			name  string
++			input string
++		}{
++			{"unquoted string", `Type::id`},
++			{"missing double colon", `Type"id"`},
++			{"missing a quote at beginning", `Type::id"`},
++			{"missing a quote at end", `Type::"id`},
++			{"empty input", ``},
++			{"just quoted string", `"id"`},
++			{"missing namespace", `::"id"`},
++		}
++
++		for _, tt := range tests {
++			t.Run(tt.name, func(t *testing.T) {
++				t.Parallel()
++				var got types.EntityUID
++				err := got.UnmarshalCedar([]byte(tt.input))
++				testutil.FatalIf(t, err == nil, "expected error for input %q, got nil", tt.input)
++			})
++		}
++	})
+ }
+ 
+ func TestEntityUIDSet(t *testing.T) {
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 6b16a018c8846d68504067654e91f856a5fa2932
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:24:25 2026 -0800
+
+    types: Match interface signature
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/types/entity_uid.go b/types/entity_uid.go
+index 0dca5b2..d7ec5d3 100644
+--- a/types/entity_uid.go
++++ b/types/entity_uid.go
+@@ -108,8 +108,8 @@ func (e EntityUID) MarshalJSON() ([]byte, error) {
+ 	})
+ }
+ 
+-func (e EntityUID) MarshalBinary() []byte {
+-	return e.MarshalCedar()
++func (e EntityUID) MarshalBinary() ([]byte, error) {
++	return e.MarshalCedar(), nil
+ }
+ 
+ func (e *EntityUID) UnmarshalBinary(data []byte) error {
+diff --git a/types/entity_uid_test.go b/types/entity_uid_test.go
+index 83ce5a3..180c55d 100644
+--- a/types/entity_uid_test.go
++++ b/types/entity_uid_test.go
+@@ -39,11 +39,24 @@ func TestEntity(t *testing.T) {
+ 			{"Super", "*", `Super::"*"`},
+ 		}
+ 		marshalFuncs := []struct {
+-			name string
+-			fn   func(types.EntityUID) []byte
++			name      string
++			marshal   func(types.EntityUID) ([]byte, error)
++			unmarshal func([]byte, *types.EntityUID) error
+ 		}{
+-			{"MarshalBinary", func(uid types.EntityUID) []byte { return uid.MarshalBinary() }},
+-			{"MarshalCedar", func(uid types.EntityUID) []byte { return uid.MarshalCedar() }},
++			{
++				name:    "MarshalBinary",
++				marshal: func(uid types.EntityUID) ([]byte, error) { return uid.MarshalBinary() },
++				unmarshal: func(bin []byte, uid *types.EntityUID) error {
++					return uid.UnmarshalBinary(bin)
++				},
++			},
++			{
++				name:    "MarshalCedar",
++				marshal: func(uid types.EntityUID) ([]byte, error) { return uid.MarshalCedar(), nil },
++				unmarshal: func(bin []byte, uid *types.EntityUID) error {
++					return (uid).UnmarshalCedar(bin)
++				},
++			},
+ 		}
+ 
+ 		for _, marshalFunc := range marshalFuncs {
+@@ -53,14 +66,15 @@ func TestEntity(t *testing.T) {
+ 					t.Run(testCase.bin, func(t *testing.T) {
+ 						t.Parallel()
+ 						uid := types.NewEntityUID(cedar.EntityType(testCase.typ), cedar.String(testCase.id))
+-						gotBin := marshalFunc.fn(uid)
++						gotBin, err := marshalFunc.marshal(uid)
++						testutil.OK(t, err)
+ 
+ 						wantBin := []byte(testCase.bin)
+ 						testutil.Equals(t, gotBin, wantBin)
+ 
+ 						want := types.NewEntityUID(cedar.EntityType(testCase.typ), cedar.String(testCase.id))
+ 						got := types.EntityUID{}
+-						err := got.UnmarshalBinary(gotBin)
++						err = marshalFunc.unmarshal(gotBin, &got)
+ 						testutil.OK(t, err)
+ 						testutil.Equals(t, got.String(), want.String())
+ 						testutil.FatalIf(t, !uid.Equal(got), "expected %v to not equal %v", got, want)
+
+OK
+
+   1 | PORT
+   2 | 
+   3 | ## Commit Summary
+   4 | **SHA:** 77d5543  
+   5 | **Date:** 2026-01-06T10:44:30-08:00  
+   6 | **PR:** #126 — Add `UnmarshalCedar` as well as `MarshalBinary`/`UnmarshalBinary` to `EntityUID`
+   7 | 
+   8 | ## Semantic Analysis
+   9 | 
+  10 | The PR adds three capabilities to `EntityUID` in cedar-go:
+  11 | 
+  12 | 1. **`UnmarshalCedar([]byte) error`** — Parses Cedar text format (`Namespace::Type::"id"`) back into an `EntityUID`. Uses `strings.LastIndex` to find the last `::\"` separator. This is a genuinely new semantic operation not previously available. Parser rules:
+  13 |    - Find last occurrence of `::"` in the string
+  14 |    - Index must be > 0 (type part is non-empty)
+  15 |    - String must end with `"`
+  16 |    - Everything before `::\"` is the `EntityType`; everything between `::\"` and the trailing `"` is the `id`
+  17 | 
+  18 | 2. **`MarshalBinary() ([]byte, error)`** — Delegates entirely to `MarshalCedar()`, returning Cedar text format. Satisfies Go's `encoding.BinaryMarshaler` interface.
+  19 | 
+  20 | 3. **`UnmarshalBinary([]byte) error`** — Delegates entirely to `UnmarshalCedar()`. Satisfies Go's `encoding.BinaryUnmarshaler` interface.
+  21 | 
+  22 | ### What to Port
+  23 | - The Go `encoding.BinaryMarshaler`/`encoding.BinaryUnmarshaler` interfaces have no .NET equivalent — skip those wrappers.
+  24 | - **Port `UnmarshalCedar` as a static `TryParse` method** on `EntityUid` in `Cedar.Types`. This is a real semantic gap: Cedar already has `MarshalCedar()` (i.e., `ToString()` producing `Type::"id"` format), but no round-trip parse from that format.
+  25 | - **No changes needed to `MarshalCedar`** — C# `EntityUid` already serializes to Cedar text format via its `ToString()` or equivalent.
+  26 | 
+  27 | ### Go source reference
+  28 | - `inspiration/cedar-go/types/entity_uid.go` — `UnmarshalCedar` method (lines ~48–63 in final state)
+  29 | - `inspiration/cedar-go/types/entity_uid_test.go` — round-trip and invalid-input test cases
+  30 | 
+  31 | ## Concrete Port Tasks
+  32 | 
+  33 | ### 1. Add `EntityUid.TryParseCedar(string, out EntityUid)` to `Cedar.Types`
+  34 | 
+  35 | **C# target file:** `src/Cedar.Types/EntityUid.cs` (find the `EntityUid` record/struct)
+  36 | 
+  37 | Implement a static `TryParse` that mirrors the Go logic:
+  38 | ```csharp
+  39 | public static bool TryParseCedar(string input, out EntityUid result)
+  40 | {
+  41 |     // Find last occurrence of "::\""
+  42 |     int idx = input.LastIndexOf("::\"");
+  43 |     if (idx <= 0 || !input.EndsWith('"'))
+  44 |     {
+  45 |         result = default;
+  46 |         return false;
+  47 |     }
+  48 |     var type = new EntityType(input[..idx]);
+  49 |     var id = new EntityId(input[(idx + 3)..^1]);
+  50 |     result = new EntityUid(type, id);
+  51 |     return true;
+  52 | }
+  53 | ```
+  54 | 
+  55 | Edge cases to handle (from Go tests):
+  56 | - `Type::id` — unquoted id → fail (no `::\"`)
+  57 | - `Type"id"` — missing double colon → fail
+  58 | - `Type::id"` — missing opening quote → fail (no `::\"`)
+  59 | - `Type::"id` — missing closing `"` → fail (`!EndsWith('"')`)
+  60 | - `` (empty) → fail
+  61 | - `"id"` — no type part → fail (idx <= 0)
+  62 | - `::"id"` — empty type → fail (idx == 0, idx <= 0)
+  63 | 
+  64 | ### 2. Add `ParseCedar(string)` throwing overload (optional convenience)
+  65 | 
+  66 | ```csharp
+  67 | public static EntityUid ParseCedar(string input) =>
+  68 |     TryParseCedar(input, out var result)
+  69 |         ? result
+  70 |         : throw new FormatException($"Invalid Cedar EntityUID: '{input}'");
+  71 | ```
+  72 | 
+  73 | ### 3. Add xUnit tests in `Cedar.Tests`
+  74 | 
+  75 | **C# target file:** `test/Cedar.Tests/EntityUidTests.cs` (or create if absent)
+  76 | 
+  77 | Tests to add:
+  78 | - Round-trip: `EntityUid.TryParseCedar(uid.ToCedarString(), out var parsed)` → parsed equals original
+  79 | - Valid cases: simple type, namespaced type (`Namespace::Type::"id"`)
+  80 | - Invalid cases matching Go test table: unquoted id, missing `::`, missing open quote, missing close quote, empty string, no type part, empty type
+  81 | 
+  82 | ### 4. No changes to MarshalCedar / serialization
+  83 | The existing Cedar text format output is already correct. No changes needed to JSON serialization.
+  84 | 
+  85 | ## Files to Touch
+  86 | | File | Action |
+  87 | |------|--------|
+  88 | | `src/Cedar.Types/EntityUid.cs` | Add `TryParseCedar` and `ParseCedar` static methods |
+  89 | | `test/Cedar.Tests/EntityUidTests.cs` | Add round-trip and invalid-input tests |
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./src/Cedar.Types/EntityUid.cs:5:public sealed record EntityUid : ICedarData
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:232:        EntityUid uid = ParseEntityUid(GetRequiredProperty(element, "uid", JsonValueKind.Object));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:253:        List<EntityUid> values = [];
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:269:        EntityUid principal = ParseEntityUid(GetRequiredProperty(element, "principal", JsonValueKind.Object));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:270:        EntityUid action = ParseEntityUid(GetRequiredProperty(element, "action", JsonValueKind.Object));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:271:        EntityUid resource = ParseEntityUid(GetRequiredProperty(element, "resource", JsonValueKind.Object));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:363:        if (TryParseEntityUid(element, out EntityUid? uid))
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:382:    private static EntityUid ParseEntityUid(JsonElement element)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:384:        if (!TryParseEntityUid(element, out EntityUid? uid))
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:392:    private static bool TryParseEntityUid(JsonElement element, out EntityUid? uid)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/CorpusTestData.cs:423:        uid = new EntityUid(new EntityType(type), new CedarString(id));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/PartialEvaluationTests.cs:13:    private static readonly EntityUid Alice = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/PartialEvaluationTests.cs:14:    private static readonly EntityUid Bob = new(new EntityType("User"), new CedarString("bob"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/PartialEvaluationTests.cs:15:    private static readonly EntityUid Read = new(new EntityType("Action"), new CedarString("read"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/PartialEvaluationTests.cs:16:    private static readonly EntityUid Doc1 = new(new EntityType("Document"), new CedarString("doc1"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:13:    private static readonly EntityUid Alice = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:14:    private static readonly EntityUid Read = new(new EntityType("Action"), new CedarString("read"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:15:    private static readonly EntityUid Doc1 = new(new EntityType("Document"), new CedarString("doc1"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:16:    private static readonly EntityUid Group = new(new EntityType("Group"), new CedarString("admins"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:17:    private static readonly EntityUid Tagged = new(new EntityType("Service"), new CedarString("svc"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:38:            Values.EntityUid(Tagged).HasTag(Values.String("critical")),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/NodeEvaluationTests.cs:63:            Values.EntityUid(Alice).IsIn(new EntityType("User"), Values.EntityUid(Group)),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:24:        EntityUid group = new(new EntityType("Group"), new CedarString("admins"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:25:        EntityUid alice = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:26:        EntityUid bob = new(new EntityType("User"), new CedarString("bob"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:44:        EntityUid quoted = new(new EntityType("User"), new CedarString("alice\"ops"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:56:        EntityUid user = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:57:        EntityUid group = new(new EntityType("Group"), new CedarString("admins"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:74:            new Entity(new EntityUid(new EntityType("TypeA"), new CedarString("a1")), new EntityUidSet(), new CedarRecord(), new CedarRecord()),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:75:            new Entity(new EntityUid(new EntityType("TypeB"), new CedarString("b1")), new EntityUidSet(), new CedarRecord(), new CedarRecord())
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/DotWriterTests.cs:86:        EntityUid group = new(new EntityType("Group"), new CedarString("admins"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:14:    private static readonly EntityUid Alice = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:15:    private static readonly EntityUid Bob = new(new EntityType("User"), new CedarString("bob"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:16:    private static readonly EntityUid Read = new(new EntityType("Action"), new CedarString("read"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:17:    private static readonly EntityUid Write = new(new EntityType("Action"), new CedarString("write"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:18:    private static readonly EntityUid Doc1 = new(new EntityType("Document"), new CedarString("doc1"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:19:    private static readonly EntityUid Doc2 = new(new EntityType("Document"), new CedarString("doc2"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:20:    private static readonly EntityUid Doc3 = new(new EntityType("Document"), new CedarString("doc3"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/TestSupport/CedarJson.cs:39:    public static string SerializeEntityUid(EntityUid uid)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/TestSupport/CedarJson.cs:44:    public static EntityUid DeserializeEntityUid(string json)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/TestSupport/CedarJson.cs:46:        return JsonSerializer.Deserialize<EntityUid>(json, CreateOptions())!;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarRecordTests.cs:30:        EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarRecordTests.cs:37:        Assert.Equal(uid, Assert.IsType<EntityUid>(value));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarRecordTests.cs:132:            [new CedarString("owner")] = new EntityUid(new EntityType("User"), new CedarString("alice"))
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:8:public sealed class EntityUidTests
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:13:        EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:22:        EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:30:        EntityUid uid = new(new EntityType("User"), new CedarString("a\"b"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:38:        Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), new EntityUid(new EntityType("User"), new CedarString("alice")));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:44:        Assert.NotEqual(new EntityUid(new EntityType("User"), new CedarString("alice")), new EntityUid(new EntityType("Action"), new CedarString("alice")));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:50:        EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+
+[WARNING: Tool output was truncated. First 367386 characters were removed.]
+
+ities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/ja/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/it/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/cs/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/ru/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/pt-BR/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/de/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/ko/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/fr/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/es/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/tr/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Perfolizer.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.CodeAnalysis.CSharp.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pl/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ja/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/it/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/cs/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ru/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/de/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ko/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/fr/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/es/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/tr/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hans/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hant/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pl/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ja/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ru/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pt-BR/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ko/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/tr/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.CodeAnalysis.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/it/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/cs/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/de/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/fr/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/es/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.Tracing.TraceEvent.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.FastSerialization.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/System.Management.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win/lib/net9.0/System.Management.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/System.CodeDom.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/TraceReloggerLib.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Dia2Lib.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/amd64/msdia140.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/amd64/KernelTraceControl.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/x86/msdia140.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/x86/KernelTraceControl.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/x86/KernelTraceControl.Win61.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/arm64/msdia140.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/arm64/KernelTraceControl.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.Runtime.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.NETCore.Client.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Iced.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Gee.External.Capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/osx-x64/native/libcapstone.dylib
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-arm/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-arm64/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-x86/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win-x86/native/capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/osx-arm64/native/libcapstone.dylib
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win-x64/native/capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-x64/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win-arm64/native/capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/CommandLine.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Logging.Abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Primitives.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Logging.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Options.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.DependencyInjection.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/zh-Hans/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/zh-Hant/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/pl/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/ja/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/it/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/cs/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/ru/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/pt-BR/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/de/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/ko/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/fr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/es/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/tr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/zh-Hans/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/zh-Hant/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/pl/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/ja/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/it/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/cs/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/ru/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/pt-BR/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/de/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/ko/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/fr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/es/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/tr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/FSharp.Core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/FSharp.Core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.DotNet.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net9.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Conformance/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityUid.cs:7:    public EntityUid(EntityType type, CedarString id)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityUid.cs:14:    public EntityType Type { get; }
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityUid.cs:23:    public override string ToString()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/EntityUidJsonConverter.cs:66:        value = new EntityUid(new EntityType(typeElement.GetString()!), new CedarString(idElement.GetString()!));
+
+   1 | using System;
+   2 | 
+   3 | namespace Cedar.Types;
+   4 | 
+   5 | public sealed record EntityUid : ICedarData
+   6 | {
+   7 |     public EntityUid(EntityType type, CedarString id)
+   8 |     {
+   9 |         ArgumentNullException.ThrowIfNull(id);
+  10 |         Type = type;
+  11 |         Id = id;
+  12 |     }
+  13 | 
+  14 |     public EntityType Type { get; }
+  15 | 
+  16 |     public CedarString Id { get; }
+  17 | 
+  18 |     public string MarshalCedar()
+  19 |     {
+  20 |         return Type.Value + "::" + Id.MarshalCedar();
+  21 |     }
+  22 | 
+  23 |     public override string ToString()
+  24 |     {
+  25 |         return MarshalCedar();
+  26 |     }
+  27 | 
+  28 |     public override int GetHashCode()
+  29 |     {
+  30 |         return CedarHash.ForStringPair(nameof(EntityUid), Type.Value, Id.Value);
+  31 |     }
+  32 | }
+
+   1 | using Cedar.Core.Internal.Json;
+   2 | using Cedar.Tests.TestSupport;
+   3 | using Cedar.Types;
+   4 | using Xunit;
+   5 | 
+   6 | namespace Cedar.Tests.Types;
+   7 | 
+   8 | public sealed class EntityUidTests
+   9 | {
+  10 |     [Fact]
+  11 |     public void ConstructorStoresTypeAndId()
+  12 |     {
+  13 |         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+  14 | 
+  15 |         Assert.Equal("User", uid.Type.Value);
+  16 |         Assert.Equal("alice", uid.Id.Value);
+  17 |     }
+  18 | 
+  19 |     [Fact]
+  20 |     public void MarshalCedarFormatsSimpleUid()
+  21 |     {
+  22 |         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+  23 | 
+  24 |         Assert.Equal("User::\"alice\"", uid.MarshalCedar());
+  25 |     }
+  26 | 
+  27 |     [Fact]
+  28 |     public void MarshalCedarEscapesIdentifierText()
+  29 |     {
+  30 |         EntityUid uid = new(new EntityType("User"), new CedarString("a\"b"));
+  31 | 
+  32 |         Assert.Equal("User::\"a\\\"b\"", uid.MarshalCedar());
+  33 |     }
+  34 | 
+  35 |     [Fact]
+  36 |     public void EqualValuesAreEqual()
+  37 |     {
+  38 |         Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), new EntityUid(new EntityType("User"), new CedarString("alice")));
+  39 |     }
+  40 | 
+  41 |     [Fact]
+  42 |     public void DifferentTypesAreNotEqual()
+  43 |     {
+  44 |         Assert.NotEqual(new EntityUid(new EntityType("User"), new CedarString("alice")), new EntityUid(new EntityType("Action"), new CedarString("alice")));
+  45 |     }
+  46 | 
+  47 |     [Fact]
+  48 |     public void HashCodeIsStable()
+  49 |     {
+  50 |         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+  51 | 
+  52 |         Assert.Equal(uid.GetHashCode(), uid.GetHashCode());
+  53 |     }
+  54 | 
+  55 |     [Fact]
+  56 |     public void DeserializeReadsExplicitEntityForm()
+  57 |     {
+  58 |         EntityUid uid = CedarJson.DeserializeEntityUid("{\"__entity\":{\"type\":\"User\",\"id\":\"alice\"}}");
+  59 | 
+  60 |         Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), uid);
+  61 |     }
+  62 | 
+  63 |     [Fact]
+  64 |     public void DeserializeReadsImplicitEntityForm()
+  65 |     {
+  66 |         EntityUid uid = CedarJson.DeserializeEntityUid("{\"type\":\"User\",\"id\":\"alice\"}");
+  67 | 
+  68 |         Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), uid);
+  69 |     }
+  70 | 
+  71 |     [Fact]
+  72 |     public void SerializeUsesExplicitEntityForm()
+  73 |     {
+  74 |         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+  75 | 
+  76 |         Assert.Equal("{\"__entity\":{\"type\":\"User\",\"id\":\"alice\"}}", CedarJson.SerializeEntityUid(uid));
+  77 |     }
+  78 | 
+  79 |     [Fact]
+  80 |     public void ValueConverterReadsEntityUidIntoCedarData()
+  81 |     {
+  82 |         ICedarData actual = CedarJson.DeserializeData("{\"__entity\":{\"type\":\"User\",\"id\":\"alice\"}}");
+  83 | 
+  84 |         Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), Assert.IsType<EntityUid>(actual));
+  85 |     }
+  86 | 
+  87 |     [Fact]
+  88 |     public void EntityUidCanRoundTripInsideSet()
+  89 |     {
+  90 |         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+  91 |         CedarSet set = new(uid);
+  92 | 
+  93 |         ICedarData actual = CedarJson.DeserializeData(CedarJson.SerializeData(set));
+  94 | 
+  95 |         CedarAssert.Equal(set, Assert.IsType<CedarSet>(actual));
+  96 |     }
+  97 | 
+  98 |     [Fact]
+  99 |     public void ToStringMatchesMarshalCedar()
+ 100 |     {
+ 101 |         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
+ 102 | 
+ 103 |         Assert.Equal(uid.MarshalCedar(), uid.ToString());
+ 104 |     }
+ 105 | }
+
+ 388 | 
+ 389 |         return uid!;
+ 390 |     }
+ 391 | 
+ 392 |     private static bool TryParseEntityUid(JsonElement element, out EntityUid? uid)
+ 393 |     {
+ 394 |         uid = null;
+ 395 |         if (element.ValueKind != JsonValueKind.Object)
+ 396 |         {
+ 397 |             return false;
+ 398 |         }
+ 399 | 
+ 400 |         JsonElement payload = element;
+ 401 |         if (element.TryGetProperty("__entity", out JsonElement explicitEntity))
+ 402 |         {
+ 403 |             if (explicitEntity.ValueKind != JsonValueKind.Object)
+ 404 |             {
+ 405 |                 return false;
+ 406 |             }
+ 407 | 
+ 408 |             payload = explicitEntity;
+ 409 |         }
+ 410 | 
+ 411 |         if (!payload.TryGetProperty("type", out JsonElement typeElement) || typeElement.ValueKind != JsonValueKind.String)
+ 412 |         {
+ 413 |             return false;
+ 414 |         }
+ 415 | 
+ 416 |         if (!payload.TryGetProperty("id", out JsonElement idElement) || idElement.ValueKind != JsonValueKind.String)
+ 417 |         {
+ 418 |             return false;
+ 419 |         }
+ 420 | 
+ 421 |         string type = typeElement.GetString() ?? string.Empty;
+ 422 |         string id = idElement.GetString() ?? string.Empty;
+ 423 |         uid = new EntityUid(new EntityType(type), new CedarString(id));
+ 424 |         return true;
+ 425 |     }
+ 426 | 
+ 427 |     private static bool TryParseExtension(JsonElement element, out ICedarData? value)
+ 428 |     {
+ 429 |         value = null;
+ 430 |         if (!TryGetExtensionPayload(element, out JsonElement payload))
+ 431 |         {
+ 432 |             return false;
+
+  55 | 
+  56 |         if (!payload.TryGetProperty("type", out JsonElement typeElement) || typeElement.ValueKind != JsonValueKind.String)
+  57 |         {
+  58 |             return false;
+  59 |         }
+  60 | 
+  61 |         if (!payload.TryGetProperty("id", out JsonElement idElement) || idElement.ValueKind != JsonValueKind.String)
+  62 |         {
+  63 |             return false;
+  64 |         }
+  65 | 
+  66 |         value = new EntityUid(new EntityType(typeElement.GetString()!), new CedarString(idElement.GetString()!));
+  67 |         return true;
+  68 |     }
+  69 | 
+  70 |     internal static void WriteExplicit(Utf8JsonWriter writer, EntityUid value)
+  71 |     {
+  72 |         writer.WriteStartObject();
+  73 |         writer.WritePropertyName("__entity");
+  74 |         WritePayload(writer, value);
+  75 |         writer.WriteEndObject();
+  76 |     }
+  77 | 
+  78 |     internal static void WriteImplicit(Utf8JsonWriter writer, EntityUid value)
+  79 |     {
+  80 |         WritePayload(writer, value);
+  81 |     }
+  82 | 
+  83 |     private static void WritePayload(Utf8JsonWriter writer, EntityUid value)
+  84 |     {
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarSet.cs:67:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarSet.cs:79:            builder.Append(CedarData.MarshalCedar(_orderedValues[index]));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarValue.cs:5:    public abstract string MarshalCedar();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarValue.cs:9:        return MarshalCedar();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarString.cs:6:public sealed record CedarString(string Value) : CedarValue
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarString.cs:8:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarRecord.cs:51:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarRecord.cs:64:            builder.Append(entry.Key.MarshalCedar());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarRecord.cs:66:            builder.Append(CedarData.MarshalCedar(entry.Value));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDuration.cs:97:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarLong.cs:7:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDecimal.cs:86:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarPattern.cs:126:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/ICedarData.cs:5:    string MarshalCedar();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarIpAddress.cs:108:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:98:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarBool.cs:9:    public override string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityUid.cs:18:    public string MarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityUid.cs:20:        return Type.Value + "::" + Id.MarshalCedar();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityUid.cs:25:        return MarshalCedar();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/Internal/CedarData.cs:24:    public static string MarshalCedar(ICedarData value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/Internal/CedarData.cs:27:        return value.MarshalCedar();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/Internal/CedarData.cs:43:        return StringComparer.Ordinal.Compare(MarshalCedar(left), MarshalCedar(right));
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/EntityType.cs:5:public readonly record struct EntityType
+
+   1 | using System.Globalization;
+   2 | using System.Text;
+   3 | 
+   4 | namespace Cedar.Types;
+   5 | 
+   6 | public sealed record CedarString(string Value) : CedarValue
+   7 | {
+   8 |     public override string MarshalCedar()
+   9 |     {
+  10 |         return "\"" + Escape(Value) + "\"";
+  11 |     }
+  12 | 
+  13 |     public override int GetHashCode()
+  14 |     {
+  15 |         return CedarHash.ForString(nameof(CedarString), Value);
+  16 |     }
+  17 | 
+  18 |     internal static string Escape(string value)
+  19 |     {
+  20 |         StringBuilder builder = new();
+  21 |         bool isFirst = true;
+  22 | 
+  23 |         foreach (Rune rune in value.EnumerateRunes())
+  24 |         {
+  25 |             builder.Append(EscapeRune(rune, isFirst));
+  26 |             isFirst = false;
+  27 |         }
+  28 | 
+  29 |         return builder.ToString();
+  30 |     }
+  31 | 
+  32 |     private static string EscapeRune(Rune rune, bool escapeGraphemeExtend)
+  33 |     {
+  34 |         return rune.Value switch
+  35 |         {
+  36 |             0x00 => @"\0",
+  37 |             0x09 => @"\t",
+  38 |             0x0D => @"\r",
+  39 |             0x0A => @"\n",
+  40 |             0x5C => @"\\",
+  41 |             0x22 => "\\\"",
+  42 |             0x27 => @"\'",
+  43 |             _ when escapeGraphemeExtend && IsGraphemeExtend(rune) => UnicodeEscape(rune),
+  44 |             _ when NeedsUnicodeEscape(rune) => UnicodeEscape(rune),
+  45 |             _ => rune.ToString()
+  46 |         };
+  47 |     }
+  48 | 
+  49 |     private static bool IsGraphemeExtend(Rune rune)
+  50 |     {
+  51 |         UnicodeCategory category = Rune.GetUnicodeCategory(rune);
+  52 |         return category is UnicodeCategory.NonSpacingMark or UnicodeCategory.EnclosingMark;
+  53 |     }
+  54 | 
+  55 |     private static bool NeedsUnicodeEscape(Rune rune)
+  56 |     {
+  57 |         UnicodeCategory category = Rune.GetUnicodeCategory(rune);
+  58 | 
+  59 |         return category is UnicodeCategory.Control
+  60 |             or UnicodeCategory.Format
+
+   1 | using System;
+   2 | 
+   3 | namespace Cedar.Types;
+   4 | 
+   5 | public readonly record struct EntityType
+   6 | {
+   7 |     public EntityType(string value)
+   8 |     {
+   9 |         ArgumentNullException.ThrowIfNull(value);
+  10 |         Value = value;
+  11 |     }
+  12 | 
+  13 |     public string Value { get; }
+  14 | 
+  15 |     public override string ToString()
+  16 |     {
+  17 |         return Value;
+  18 |     }
+  19 | }
+
+OK

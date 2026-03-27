@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "Done. \u0060.ai/semport_plan_finalized.md\u0060 is written with:\n\n- concrete file:line targets\n- exact APIs to add\n- acceptance criteria\n- Go\u2192C# idiom mapping\n- explicit scope guardrails\n- minimal file touch list\n\nKey implementation targets:\n- \u0060src/Cedar.Types/EntityUid.cs:5-31\u0060\n- \u0060test/Cedar.Tests/Types/EntityUidTests.cs:8-104\u0060",
+    "last_stage": "FinalizePlan"
+  },
+  "failure_reason": "",
+  "notes": "Stage completed: FinalizePlan",
+  "outcome": "success",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}

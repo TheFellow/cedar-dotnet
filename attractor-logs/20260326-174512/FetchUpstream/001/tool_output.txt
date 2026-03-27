@@ -1,0 +1,15 @@
+exit_code: 0
+timed_out: False
+stdout:
+77d5543	2026-01-06T10:44:30-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+77d5543
+2026-01-06T10:44:30-08:00
+Merge pull request #126 from cedar-policy/support-binary-marshaler
+
+Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+OK

@@ -1,0 +1,13 @@
+{
+  "callCount": 1,
+  "perNode": [
+    {
+      "costMicrodollars": 246849,
+      "inputTokens": 363,
+      "nodeId": "FetchUpstreamSonnet",
+      "outputTokens": 16384
+    }
+  ],
+  "totalCostMicrodollars": 246849,
+  "totalCostUsd": 0.246849
+}

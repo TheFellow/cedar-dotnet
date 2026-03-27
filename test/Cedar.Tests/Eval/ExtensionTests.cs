@@ -221,6 +221,23 @@ public sealed class ExtensionTests
         Assert.Equal(86400000L, duration.Value);
     }
 
+    [Fact]
+    public void DatetimeComponentFunctionsSupportExpandedYearValues()
+    {
+        CedarDatetime dt = CedarDatetime.Parse("+000010000-06-15T13:30:45.006Z");
+
+        Assert.Equal(new CedarLong(30), Invoke("daysInMonth", dt));
+        Assert.Equal(new CedarLong(10000), Invoke("year", dt));
+        Assert.Equal(new CedarLong(6), Invoke("month", dt));
+        Assert.Equal(new CedarLong(15), Invoke("day", dt));
+        Assert.Equal(new CedarLong(4), Invoke("dayOfWeek", dt));
+        Assert.Equal(new CedarLong(167), Invoke("dayOfYear", dt));
+        Assert.Equal(new CedarLong(13), Invoke("hour", dt));
+        Assert.Equal(new CedarLong(30), Invoke("minute", dt));
+        Assert.Equal(new CedarLong(45), Invoke("second", dt));
+        Assert.Equal(new CedarLong(6), Invoke("millisecond", dt));
+    }
+
     // --- Duration functions ---
 
     [Fact]

@@ -1,0 +1,418 @@
+exit_code: 0
+timed_out: False
+stdout:
+77d5543	2026-01-06T10:44:30-08:00	new
+
+exit_code: 0
+timed_out: False
+stdout:
+77d5543
+2026-01-06T10:44:30-08:00
+Merge pull request #126 from cedar-policy/support-binary-marshaler
+Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+exit_code: 0
+timed_out: False
+stdout:
+Merge pull request #126 from cedar-policy/support-binary-marshaler
+
+Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+OK
+
+   1 | ## Earliest 'new' commit to process
+   2 | 
+   3 | **Short SHA:** 77d5543
+   4 | **Timestamp:** 2026-01-06T10:44:30-08:00
+   5 | 
+   6 | ### Commit Message
+   7 | 
+   8 | Merge pull request #126 from cedar-policy/support-binary-marshaler
+   9 | 
+  10 | Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 77d55438b7f6f77f52291d735c3013585738d26e
+Merge: ed96495 69d8817
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:44:30 2026 -0800
+
+    Merge pull request #126 from cedar-policy/support-binary-marshaler
+    
+    Add UnmarshalCedar as well as MarshalBinary and UnmarshalBinary methods to EntityUID (implement encoding binary marshaler interfaces)
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 69d88179a624a8ee182af185fbab587aa90c9417
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:42:04 2026 -0800
+
+    Update README.md
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/README.md b/README.md
+index 412d696..47b6596 100644
+--- a/README.md
++++ b/README.md
+@@ -143,6 +143,11 @@ If you're looking to integrate Cedar into a production system, please be sure th
+ 
+ ## Change log
+ 
++### 1.4.0
++#### New Features
++- Add an `UnmarshalCedar` method on `types.EntityUID`s
++- Implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces for `types.EntityUID`s
++
+ ### 1.2.5
+ #### New Features
+ - Adds experimental support for parsing Cedar schema in both Cedar and JSON formats
+
+exit_code: 0
+timed_out: False
+stdout:
+69d8817 Update README.md
+d0c6fa8 types: Add'l requested test case
+6b16a01 types: Match interface signature
+6f35f02 types: Test both marshalling funcs and complete code coverage
+60b4b94 types: Address PR feedback
+4ddef61 types: Use the MarshalCedar format and have simple parser to unpack it
+199384b Reshaped for code coverage
+6772b71 types: Add MarshalBinary and UnmarshalBinary methods to EntityUID with tests
+77d5543 Merge pull request #126 from cedar-policy/support-binary-marshaler
+69d8817 Update README.md
+d0c6fa8 types: Add'l requested test case
+6b16a01 types: Match interface signature
+6f35f02 types: Test both marshalling funcs and complete code coverage
+60b4b94 types: Address PR feedback
+4ddef61 types: Use the MarshalCedar format and have simple parser to unpack it
+199384b Reshaped for code coverage
+6772b71 types: Add MarshalBinary and UnmarshalBinary methods to EntityUID with tests
+ed96495 Merge pull request #122 from jaredzhou/extended_has
+fa3f642 Merge branch 'extended_has' of github.com:jaredzhou/cedar-go into extended_has
+651810b fix lint and add mashal  back test
+3944232 Merge branch 'main' into extended_has
+4eb9960 add feature: extended has
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 6772b71384c0be82daa17184f624083bc2411c87
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Mon Jan 5 16:19:30 2026 -0800
+
+    types: Add MarshalBinary and UnmarshalBinary methods to EntityUID with tests
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/types/entity_uid.go b/types/entity_uid.go
+index 2ee36e2..a450ea9 100644
+--- a/types/entity_uid.go
++++ b/types/entity_uid.go
+@@ -74,6 +74,18 @@ func (e EntityUID) MarshalJSON() ([]byte, error) {
+ 	})
+ }
+ 
++func (e EntityUID) MarshalBinary() ([]byte, error) {
++	jsonBytes, err := e.MarshalJSON()
++	if err != nil {
++		return nil, err
++	}
++	return jsonBytes, nil
++}
++
++func (e *EntityUID) UnmarshalBinary(data []byte) error {
++	return e.UnmarshalJSON(data)
++}
++
+ func (e EntityUID) hash() uint64 {
+ 	h := fnv.New64()
+ 	_, _ = h.Write([]byte(e.Type))
+diff --git a/types/entity_uid_test.go b/types/entity_uid_test.go
+index a8588e8..cfb0e5b 100644
+--- a/types/entity_uid_test.go
++++ b/types/entity_uid_test.go
+@@ -30,6 +30,24 @@ func TestEntity(t *testing.T) {
+ 		t.Parallel()
+ 		testutil.Equals(t, string(types.EntityUID{"type", "id"}.MarshalCedar()), `type::"id"`)
+ 	})
++
++	t.Run("MarshalBinary round trip", func(t *testing.T) {
++		t.Parallel()
++
++		uid := types.NewEntityUID("namespace::type", "id")
++		gotBin, err := uid.MarshalBinary()
++		testutil.OK(t, err)
++
++		wantBin := []byte(`{"__entity":{"type":"namespace::type","id":"id"}}`)
++		testutil.Equals(t, gotBin, wantBin)
++
++		want := types.EntityUID{Type: "namespace::type", ID: "id"}
++		got := types.EntityUID{}
++		err = got.UnmarshalBinary(gotBin)
++		testutil.OK(t, err)
++		testutil.Equals(t, got, want)
++		testutil.FatalIf(t, !uid.Equal(got), "expected %v to not equal %v", got, want)
++	})
+ }
+ 
+ func TestEntityUIDSet(t *testing.T) {
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 4ddef61ef90bf5aa8679ca7cb95c3eb8a416f3f0
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Mon Jan 5 17:43:37 2026 -0800
+
+    types: Use the MarshalCedar format and have simple parser to unpack it
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+ types/entity_uid.go      | 24 +++++++++++++++++++++---
+ types/entity_uid_test.go | 45 +++++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 60 insertions(+), 9 deletions(-)
+
+commit 6b16a018c8846d68504067654e91f856a5fa2932
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:24:25 2026 -0800
+
+    types: Match interface signature
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+ types/entity_uid.go      |  4 ++--
+ types/entity_uid_test.go | 26 ++++++++++++++++++++------
+ 2 files changed, 22 insertions(+), 8 deletions(-)
+
+commit d0c6fa8ed41bab7f4dc875489dcfbeab5b626b96
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:35:11 2026 -0800
+
+    types: Add'l requested test case
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+ types/entity_uid_test.go | 1 +
+ 1 file changed, 1 insertion(+)
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 4ddef61ef90bf5aa8679ca7cb95c3eb8a416f3f0
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Mon Jan 5 17:43:37 2026 -0800
+
+    types: Use the MarshalCedar format and have simple parser to unpack it
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/types/entity_uid.go b/types/entity_uid.go
+index 0d9ab0c..028599b 100644
+--- a/types/entity_uid.go
++++ b/types/entity_uid.go
+@@ -2,8 +2,10 @@ package types
+ 
+ import (
+ 	"encoding/json"
++	"errors"
+ 	"hash/fnv"
+ 	"strconv"
++	"strings"
+ 
+ 	"github.com/cedar-policy/cedar-go/internal/mapset"
+ )
+@@ -46,6 +48,22 @@ func (e EntityUID) MarshalCedar() []byte {
+ 	return []byte(e.String())
+ }
+ 
++var errInvalidUID = errors.New("invalid EntityUID")
++
++// UnmarshalCedar parses a Cedar language representation of an EntityUID.
++func (e *EntityUID) UnmarshalCedar(data []byte) error {
++	s := string(data)
++	idx := strings.LastIndex(s, "::\"")
++
++	if idx <= 0 || !strings.HasSuffix(s, "\"") {
++		return errInvalidUID
++	}
++	typ := EntityType(s[:idx])
++	id := String(s[idx+3 : len(s)-1])
++	*e = NewEntityUID(typ, id)
++	return nil
++}
++
+ func (e *EntityUID) UnmarshalJSON(b []byte) error {
+ 	// TODO: review after adding support for schemas
+ 	var res entityValueJSON
+@@ -74,12 +92,12 @@ func (e EntityUID) MarshalJSON() ([]byte, error) {
+ 	})
+ }
+ 
+-func (e EntityUID) MarshalBinary() ([]byte, error) {
+-	return e.MarshalJSON()
++func (e EntityUID) MarshalBinary() []byte {
++	return e.MarshalCedar()
+ }
+ 
+ func (e *EntityUID) UnmarshalBinary(data []byte) error {
+-	return e.UnmarshalJSON(data)
++	return e.UnmarshalCedar(data)
+ }
+ 
+ func (e EntityUID) hash() uint64 {
+diff --git a/types/entity_uid_test.go b/types/entity_uid_test.go
+index cfb0e5b..ac05bfe 100644
+--- a/types/entity_uid_test.go
++++ b/types/entity_uid_test.go
+@@ -26,28 +26,61 @@ func TestEntity(t *testing.T) {
+ 		testutil.Equals(t, types.EntityUID{Type: "namespace::type", ID: "id"}.String(), `namespace::type::"id"`)
+ 	})
+ 
+-	t.Run("MarshalCedar", func(t *testing.T) {
++	t.Run("MarshalCedar round trip", func(t *testing.T) {
+ 		t.Parallel()
+-		testutil.Equals(t, string(types.EntityUID{"type", "id"}.MarshalCedar()), `type::"id"`)
++		gotBin := types.NewEntityUID("type", "id").MarshalCedar()
++		wantBin := []byte(`type::"id"`)
++		testutil.Equals(t, gotBin, wantBin)
++
++		want := types.NewEntityUID("type", "id")
++		got := types.EntityUID{}
++		err := got.UnmarshalCedar(gotBin)
++		testutil.OK(t, err)
++		testutil.Equals(t, got, want)
+ 	})
+ 
+ 	t.Run("MarshalBinary round trip", func(t *testing.T) {
+ 		t.Parallel()
+ 
+ 		uid := types.NewEntityUID("namespace::type", "id")
+-		gotBin, err := uid.MarshalBinary()
+-		testutil.OK(t, err)
++		gotBin := uid.MarshalBinary()
+ 
+-		wantBin := []byte(`{"__entity":{"type":"namespace::type","id":"id"}}`)
++		wantBin := []byte(`namespace::type::"id"`)
+ 		testutil.Equals(t, gotBin, wantBin)
+ 
+ 		want := types.EntityUID{Type: "namespace::type", ID: "id"}
+ 		got := types.EntityUID{}
+-		err = got.UnmarshalBinary(gotBin)
++		err := got.UnmarshalBinary(gotBin)
+ 		testutil.OK(t, err)
+ 		testutil.Equals(t, got, want)
+ 		testutil.FatalIf(t, !uid.Equal(got), "expected %v to not equal %v", got, want)
+ 	})
++
++	t.Run("UnmarshalCedar invalid", func(t *testing.T) {
++		t.Parallel()
++
++		tests := []struct {
++			name  string
++			input string
++		}{
++			{"unquoted string", `Type::id`},
++			{"missing double colon", `Type"id"`},
++			{"missing a quote at beginning", `Type::id"`},
++			{"missing a quote at end", `Type::"id`},
++			{"empty input", ``},
++			{"just quoted string", `"id"`},
++			{"missing namespace", `::"id"`},
++		}
++
++		for _, tt := range tests {
++			t.Run(tt.name, func(t *testing.T) {
++				t.Parallel()
++				var got types.EntityUID
++				err := got.UnmarshalCedar([]byte(tt.input))
++				testutil.FatalIf(t, err == nil, "expected error for input %q, got nil", tt.input)
++			})
++		}
++	})
+ }
+ 
+ func TestEntityUIDSet(t *testing.T) {
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 6b16a018c8846d68504067654e91f856a5fa2932
+Author: Ryan Harris <ryan.harris@strongdm.com>
+Date:   Tue Jan 6 10:24:25 2026 -0800
+
+    types: Match interface signature
+    
+    Signed-off-by: Ryan Harris <ryan.harris@strongdm.com>
+
+diff --git a/types/entity_uid.go b/types/entity_uid.go
+index 0dca5b2..d7ec5d3 100644
+--- a/types/entity_uid.go
++++ b/types/entity_uid.go
+@@ -108,8 +108,8 @@ func (e EntityUID) MarshalJSON() ([]byte, error) {
+ 	})
+ }
+ 
+-func (e EntityUID) MarshalBinary() []byte {
+-	return e.MarshalCedar()
++func (e EntityUID) MarshalBinary() ([]byte, error) {
++	return e.MarshalCedar(), nil
+ }
+ 
+ func (e *EntityUID) UnmarshalBinary(data []byte) error {
+diff --git a/types/entity_uid_test.go b/types/entity_uid_test.go
+index 83ce5a3..180c55d 100644
+--- a/types/entity_uid_test.go
++++ b/types/entity_uid_test.go
+@@ -39,11 +39,24 @@ func TestEntity(t *testing.T) {
+ 			{"Super", "*", `Super::"*"`},
+ 		}
+ 		marshalFuncs := []struct {
+-			name string
+-			fn   func(types.EntityUID) []byte
++			name      string
++			marshal   func(types.EntityUID) ([]byte, error)
++			unmarshal func([]byte, *types.EntityUID) error
+ 		}{
+-			{"MarshalBinary", func(uid types.EntityUID) []byte { return uid.MarshalBinary() }},
+-			{"MarshalCedar", func(uid types.EntityUID) []byte { return uid.MarshalCedar() }},
++			{
++				name:    "MarshalBinary",
++				marshal: func(uid types.EntityUID) ([]byte, error) { return uid.MarshalBinary() },
++				unmarshal: func(bin []byte, uid *types.EntityUID) error {
++					return uid.UnmarshalBinary(bin)
++				},
++			},
++			{
++				name:    "MarshalCedar",
++				marshal: func(uid types.EntityUID) ([]byte, error) { return uid.MarshalCedar(), nil },
++				unmarshal: func(bin []byte, uid *types.EntityUID) error {
++					return (uid).UnmarshalCedar(bin)
++				},
++			},
+ 		}
+ 
+ 		for _, marshalFunc := range marshalFuncs {
+@@ -53,14 +66,15 @@ func TestEntity(t *testing.T) {
+ 					t.Run(testCase.bin, func(t *testing.T) {
+ 						t.Parallel()
+ 						uid := types.NewEntityUID(cedar.EntityType(testCase.typ), cedar.String(testCase.id))
+-						gotBin := marshalFunc.fn(uid)
++						gotBin, err := marshalFunc.marshal(uid)
++						testutil.OK(t, err)
+ 
+ 						wantBin := []byte(testCase.bin)
+ 						testutil.Equals(t, gotBin, wantBin)
+ 
+ 						want := types.NewEntityUID(cedar.EntityType(testCase.typ), cedar.String(testCase.id))
+ 						got := types.EntityUID{}
+-						err := got.UnmarshalBinary(gotBin)
++						err = marshalFunc.unmarshal(gotBin, &got)
+ 						testutil.OK(t, err)
+ 						testutil.Equals(t, got.String(), want.String())
+ 						testutil.FatalIf(t, !uid.Equal(got), "expected %v to not equal %v", got, want)
+
+OK

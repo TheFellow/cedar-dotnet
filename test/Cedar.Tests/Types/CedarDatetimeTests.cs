@@ -34,6 +34,17 @@ public sealed class CedarDatetimeTests
     }
 
     [Theory]
+    [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
+    [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+    [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+    [InlineData("+292278994-08-17T07:12:55.807Z", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+    [InlineData("-292275055-05-17T16:47:04.192Z", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+    public void ParseAcceptsExpandedYearForms(string input, string expected)
+    {
+        CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
+    }
+
+    [Theory]
     [InlineData("1970-01-01T00:00:00+0001", "datetime(\"1969-12-31T23:59:00.000Z\")")]
     [InlineData("1970-01-01T00:00:00+0010", "datetime(\"1969-12-31T23:50:00.000Z\")")]
     [InlineData("1970-01-01T00:00:00+0100", "datetime(\"1969-12-31T23:00:00.000Z\")")]
@@ -66,6 +77,29 @@ public sealed class CedarDatetimeTests
         Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01-01T00:00:00V"));
     }
 
+    [Theory]
+    [InlineData("+")]
+    [InlineData("-")]
+    [InlineData("+1234-01-01")]
+    [InlineData("+00000000a-01-01")]
+    [InlineData("-abcdefghi-01-01")]
+    [InlineData("1972-02-29T10:00:00-1000x")]
+    [InlineData("+292278994-08-17T07:12:55.808Z")]
+    public void ParseRejectsInvalidExpandedYearInputs(string input)
+    {
+        Assert.Throws<FormatException>(() => CedarDatetime.Parse(input));
+    }
+
+    [Theory]
+    [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
+    [InlineData("9999-12-31T00:00:00.000Z", "datetime(\"9999-12-31T00:00:00.000Z\")")]
+    [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+    [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+    public void MarshalCedarUsesExpandedYearFormattingWhenNeeded(string input, string expected)
+    {
+        CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
+    }
+
     [Fact]
     public void EqualValuesAreEqual()
     {
@@ -93,6 +127,18 @@ public sealed class CedarDatetimeTests
         ICedarData actual = CedarJson.DeserializeData(json);
 
         Assert.Equal("{\"__extn\":{\"fn\":\"datetime\",\"arg\":\"1970-01-01T00:00:00.042Z\"}}", json);
+        CedarAssert.Equal(expected, Assert.IsType<CedarDatetime>(actual));
+    }
+
+    [Fact]
+    public void JsonRoundTripUsesExpandedYearDatetimeExtension()
+    {
+        CedarDatetime expected = CedarDatetime.Parse("+000010000-01-01T00:00:00.042Z");
+
+        string json = CedarJson.SerializeData(expected);
+        ICedarData actual = CedarJson.DeserializeData(json);
+
+        Assert.Equal("{\"__extn\":{\"fn\":\"datetime\",\"arg\":\"+000010000-01-01T00:00:00.042Z\"}}", json);
         CedarAssert.Equal(expected, Assert.IsType<CedarDatetime>(actual));
     }
 }

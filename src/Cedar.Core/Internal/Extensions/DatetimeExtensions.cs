@@ -1,6 +1,7 @@
 using System;
 using Cedar.Core.Internal.Consts;
 using Cedar.Core.Internal.Eval;
+using Cedar.Internal.DateTimeSupport;
 using Cedar.Types;
 
 namespace Cedar.Core.Internal.Extensions;
@@ -52,53 +53,52 @@ internal static class DatetimeExtensions
 
     public static ICedarData DaysInMonth(ICedarData[] args)
     {
-        DateTimeOffset value = TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset();
-        return new CedarLong(DateTime.DaysInMonth(value.Year, value.Month));
+        GregorianDateTimeParts value = GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value);
+        return new CedarLong(GregorianDateTime.DaysInMonth(value.Year, value.Month));
     }
 
     public static ICedarData Year(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Year);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Year);
     }
 
     public static ICedarData Month(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Month);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Month);
     }
 
     public static ICedarData Day(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Day);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Day);
     }
 
     public static ICedarData DayOfWeek(ICedarData[] args)
     {
-        DayOfWeek day = TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().DayOfWeek;
-        return new CedarLong(day == System.DayOfWeek.Sunday ? 7 : (int)day);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).IsoDayOfWeek);
     }
 
     public static ICedarData DayOfYear(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().DayOfYear);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).DayOfYear);
     }
 
     public static ICedarData Hour(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Hour);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Hour);
     }
 
     public static ICedarData Minute(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Minute);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Minute);
     }
 
     public static ICedarData Second(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Second);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Second);
     }
 
     public static ICedarData Millisecond(ICedarData[] args)
     {
-        return new CedarLong(TypeConversion.ValueToDatetime(args[0]).ToDateTimeOffset().Millisecond);
+        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Millisecond);
     }
 }
