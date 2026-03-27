@@ -33,16 +33,19 @@ public sealed class CedarDatetimeTests
         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
     }
 
-    [Fact]
-    public void ParseAddsPositiveOffset()
+    [Theory]
+    [InlineData("1970-01-01T00:00:00+0001", "datetime(\"1969-12-31T23:59:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00+0010", "datetime(\"1969-12-31T23:50:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00+0100", "datetime(\"1969-12-31T23:00:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00+1000", "datetime(\"1969-12-31T14:00:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00-0001", "datetime(\"1970-01-01T00:01:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00-0010", "datetime(\"1970-01-01T00:10:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00-0100", "datetime(\"1970-01-01T01:00:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00-1000", "datetime(\"1970-01-01T10:00:00.000Z\")")]
+    [InlineData("1972-02-29T10:00:00+1000", "datetime(\"1972-02-29T00:00:00.000Z\")")]
+    public void ParseAppliesTimezoneOffsetsUsingUtcSemantics(string input, string expected)
     {
-        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00+0100"), "datetime(\"1970-01-01T01:00:00.000Z\")");
-    }
-
-    [Fact]
-    public void ParseAppliesNegativeOffset()
-    {
-        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:00:00-0100"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+        CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
     }
 
     [Fact]

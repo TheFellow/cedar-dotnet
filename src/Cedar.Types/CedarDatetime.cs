@@ -82,7 +82,7 @@ public sealed record CedarDatetime(long Value) : CedarValue
         };
 
         DateTimeOffset timestamp = new(year, month, day, hour, minute, second, milliseconds, TimeSpan.Zero);
-        return new CedarDatetime(timestamp.ToUnixTimeMilliseconds() + (long)offset.TotalMilliseconds);
+        return new CedarDatetime(timestamp.ToUnixTimeMilliseconds() - (long)offset.TotalMilliseconds);
     }
 
     public static CedarDatetime FromDateTimeOffset(DateTimeOffset value)
