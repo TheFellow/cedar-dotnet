@@ -6,6 +6,22 @@ namespace Cedar.Schema.Tests;
 
 public sealed class SchemaParserTests
 {
+    public static TheoryData<string, string> DuplicateDeclarationCases =>
+        new()
+        {
+            { "duplicate entity", "entity User; entity User;" },
+            { "duplicate entity in namespace", "namespace Foo { entity User; entity User; }" },
+            { "duplicate enum", "entity Status enum [\"a\"]; entity Status enum [\"b\"];" },
+            { "duplicate action", "action view; action view;" },
+            { "duplicate action in namespace", "namespace Foo { action view; action view; }" },
+            { "duplicate common type", "type Ctx = { x: Long }; type Ctx = { y: Long };" },
+            { "duplicate namespace", "namespace Foo { entity A; }\nnamespace Foo { entity B; }" },
+            { "entity conflicts with enum", "entity User; entity User enum [\"a\"];" },
+            { "enum conflicts with entity", "entity User enum [\"a\"]; entity User;" },
+            { "duplicate multi-name entity", "entity A, A { };" },
+            { "duplicate multi-name action", "action read, read;" }
+        };
+
     [Fact]
     public void UnmarshalCedar_ParsesEmptyDocument()
     {
@@ -211,5 +227,14 @@ public sealed class SchemaParserTests
         AggregateException exception = Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar("namespace Foo::__cedar {}"));
 
         Assert.Contains("expected identifier after '::'", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [MemberData(nameof(DuplicateDeclarationCases))]
+    public void UnmarshalCedar_RejectsDuplicateDeclarations(string _, string cedar)
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
+
+        Assert.Contains("declared twice", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
     }
 }
