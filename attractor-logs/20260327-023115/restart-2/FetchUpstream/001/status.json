@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "Done. The earliest \u0027new\u0027 commit has been written to \u0060.ai/semport_new_commits.md\u0060:\n\n- **Short SHA:** \u0060db1d330\u0060\n- **Date:** \u00602026-02-09T10:32:46-08:00\u0060\n- **Summary:** \u0060schema: create a public schema parser and programmatic construction implementation\u0060\n\nThis commit replaces the experimental schema package in cedar-go with a new public schema API supporting both human-readable (\u0060.cedarschema\u0060) and JSON formats, programmatic AST construction via \u0060schema/ast\u0060, and type resolution via \u0060schema/resolved\u0060. The key changes include a cleaner type hierarchy and new public methods (\u0060UnmarshalCedar\u0060, \u0060MarshalCedar\u0060, \u0060UnmarshalJSON\u0060, \u0060MarshalJSON\u0060, \u0060Resolve\u0060) on the top-level \u0060schema.Schema\u0060 type.",
+    "last_stage": "FetchUpstream"
+  },
+  "failure_reason": "",
+  "notes": "Stage completed: FetchUpstream",
+  "outcome": "success",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}

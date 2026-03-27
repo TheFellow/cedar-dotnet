@@ -1,0 +1,23 @@
+exit_code: 0
+timed_out: False
+stdout:
+841e864	2026-02-09T10:32:46-08:00	new
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./semport/ledger.tsv
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./semport/semport.dot
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./semport/README.md
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/./semport/ledger.py
+
+exit_code: 0
+timed_out: False
+stdout:
+841e864
+2026-02-09T10:32:46-08:00
+schema: re-type Entity.Shape and other misc type cleanups
+
+Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+exit_code: 0
+timed_out: False
+
+OK

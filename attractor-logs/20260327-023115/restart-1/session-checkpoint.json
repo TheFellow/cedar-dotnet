@@ -1,0 +1,1232 @@
+{
+  "version": 1,
+  "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+  "providerId": "anthropic",
+  "model": "claude-sonnet-4-6",
+  "workingDirectory": "/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet",
+  "state": "Idle",
+  "userInstructions": null,
+  "awaitingInputRequested": false,
+  "currentDepth": 0,
+  "history": [
+    {
+      "case": "user",
+      "content": "## Pipeline Goal\nWe want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n## Task\nOur goal is: We want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n---\n\n**CRITICAL: Use semport/ledger.py for all ledger operations to ensure proper chronological ordering. Ledger entries MUST always use short git hashes (7 characters, e.g. from \u0060git rev-parse --short\u0060).**\n\n1. Run \u0060python3 semport/ledger.py earliest\u0060 to get the chronologically earliest commit with disposition=\u0027new\u0027\n2. If a commit is found, write ONLY that single commit (shortsha, iso8601, and full commit message from git show) to .ai/semport_new_commits.md and you are done.\n3. If NO \u0027new\u0027 commits exist:\n   a. Ensure inspiration/cedar-go exists (clone from https://github.com/cedar-policy/cedar-go.git if missing)\n   b. Run \u0060git -C inspiration/cedar-go fetch origin \u0026\u0026 git -C inspiration/cedar-go checkout main \u0026\u0026 git -C inspiration/cedar-go pull origin main\u0060 to get latest\n   c. Use git log to find commits newer than the latest in ledger.tsv, capturing a short hash for each commit (e.g. \u0060git -C inspiration/cedar-go log --format=\u0027%%h %%cI\u0027 \u003Clatest_sha\u003E..HEAD\u0060)\n   d. Add new commits using \u0060python3 semport/ledger.py add \u003Cshortsha\u003E \u003Ctimestamp\u003E\u0060\n   e. Run \u0060python3 semport/ledger.py sort\u0060 to maintain chronological order\n   f. Then run \u0060python3 semport/ledger.py earliest\u0060 to get the first new commit\n   g. If a new commit is found after fetching, write it to .ai/semport_new_commits.md\n   h. If still no new commits after fetching, remove .ai/semport_new_commits.md if it exists (rm -f)\n\nIMPORTANT: If there IS a commit to process, .ai/semport_new_commits.md must exist when you finish. If there is NOT, .ai/semport_new_commits.md must NOT exist.\n",
+      "toolCalls": [],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:04.669688Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_019n1mCb8g43aQWrvxzGatdD",
+          "name": "shell",
+          "arguments": "{\u0022command\u0022:\u0022python3 semport/ledger.py earliest\u0022,\u0022description\u0022:\u0022Get earliest \u0027new\u0027 commit from ledger\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": "Let me start by running the ledger.py script to find the earliest \u0027new\u0027 commit.",
+      "usage": {
+        "inputTokens": 9,
+        "outputTokens": 116,
+        "reasoningTokens": null,
+        "cacheReadTokens": 3083,
+        "cacheWriteTokens": 0,
+        "totalTokens": 125
+      },
+      "timestamp": "2026-03-27T02:32:08.313306Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_019n1mCb8g43aQWrvxzGatdD",
+          "content": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\t2026-02-09T10:32:46-08:00\tnew",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:08.416777Z"
+    },
+    {
+      "case": "assistant",
+      "content": "A \u0027new\u0027 commit was found. Now I\u0027ll get the full commit details.",
+      "toolCalls": [
+        {
+          "id": "toolu_01AMt1mXnog9xHSLcwC8bxF9",
+          "name": "shell",
+          "arguments": "{\u0022command\u0022:\u0022git -C inspiration/cedar-go show 84fcf7c --format=\u0027%h%n%cI%n%B\u0027 --no-patch\u0022,\u0022description\u0022:\u0022Get full commit message for the earliest new commit\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 128,
+        "reasoningTokens": null,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 3185,
+        "totalTokens": 129
+      },
+      "timestamp": "2026-03-27T02:32:11.282926Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_01AMt1mXnog9xHSLcwC8bxF9",
+          "content": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\n2026-02-09T10:32:46-08:00\nschema: add more end-to-end validation tests\n\nSigned-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:11.365634Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_01Rtcq7i541krL6ZkZA5f1cN",
+          "name": "write_file",
+          "arguments": "{\u0022file_path\u0022:\u0022.ai/semport_new_commits.md\u0022,\u0022content\u0022:\u0022# Semport: Next New Commit to Process\\n\\n**Short SHA:** 84fcf7c\\n**Timestamp:** 2026-02-09T10:32:46-08:00\\n**Message:**\\nschema: add more end-to-end validation tests\\n\\nSigned-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E\\n\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 163,
+        "reasoningTokens": null,
+        "cacheReadTokens": 3185,
+        "cacheWriteTokens": 211,
+        "totalTokens": 164
+      },
+      "timestamp": "2026-03-27T02:32:14.144514Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_01Rtcq7i541krL6ZkZA5f1cN",
+          "content": "OK",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:14.144842Z"
+    },
+    {
+      "case": "assistant",
+      "content": "Done. The earliest unprocessed commit is:\n\n- **SHA:** \u006084fcf7c\u0060\n- **Date:** 2026-02-09T10:32:46-08:00\n- **Message:** \u0060schema: add more end-to-end validation tests\u0060\n\nThe details have been written to \u0060.ai/semport_new_commits.md\u0060 for processing.",
+      "toolCalls": [],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 87,
+        "reasoningTokens": null,
+        "cacheReadTokens": 3396,
+        "cacheWriteTokens": 176,
+        "totalTokens": 88
+      },
+      "timestamp": "2026-03-27T02:32:16.397762Z"
+    },
+    {
+      "case": "user",
+      "content": "## Pipeline Goal\nWe want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n## Previous Stage Response\nDone. The earliest unprocessed commit is:\n\n- **SHA:** \u006084fcf7c\u0060\n- **Date:** 2026-02-09T10:32:46-08:00\n- **Message:** \u0060schema: add more end-to-end validation tests\u0060\n\nThe details have been written to \u0060.ai/semport_new_commits.md\u0060 for processing.\n\n## Task\nYou have ONE job: analyze a single upstream commit and decide whether to port or acknowledge it.\n\nSTEP 1: Read .ai/semport_new_commits.md to get the commit shortsha.\nSTEP 2: Run \u0060git -C inspiration/cedar-go show \u003Cshortsha\u003E\u0060 to see the full diff.\nSTEP 3: Decide: is this a semantic change that needs porting to C#? Or is it Go-specific/docs-only/CI-only/test-only?\n\nIF ACKNOWLEDGE (skip):\n1. Run: \u0060python3 semport/ledger.py update \u003Cshortsha\u003E acknowledged \u0026\u0026 python3 semport/ledger.py sort\u0060\n2. Run: \u0060git add semport/ledger.tsv \u0026\u0026 git commit -m \u0022semport: acknowledge \u003Cshortsha\u003E - \u003Cbrief reason\u003E\u0022\u0060\n3. Run: \u0060rm -f .ai/semport_new_commits.md\u0060\n4. Write .ai/semport_plan.md with first line: SKIP\n\nIF PORT:\n1. Write .ai/semport_plan.md with first line: PORT\n2. Below PORT, include: commit summary, semantic analysis, and concrete port tasks with file:line references for both Go source and C# target.\n\nDo NOT browse the repo. Do NOT read files other than .ai/semport_new_commits.md and the git show output. Be fast and decisive.\n",
+      "toolCalls": [],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:16.460077Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_01JbqYRFq2gun2PzK8hR3FWb",
+          "name": "read_file",
+          "arguments": "{\u0022file_path\u0022:\u0022.ai/semport_new_commits.md\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": "Let me start by reading the semport_new_commits.md file to get the commit shortsha.",
+      "usage": {
+        "inputTokens": 9,
+        "outputTokens": 95,
+        "reasoningTokens": null,
+        "cacheReadTokens": 3083,
+        "cacheWriteTokens": 1224,
+        "totalTokens": 104
+      },
+      "timestamp": "2026-03-27T02:32:18.650161Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_01JbqYRFq2gun2PzK8hR3FWb",
+          "content": "   1 | # Semport: Next New Commit to Process\n   2 | \n   3 | **Short SHA:** 84fcf7c\n   4 | **Timestamp:** 2026-02-09T10:32:46-08:00\n   5 | **Message:**\n   6 | schema: add more end-to-end validation tests\n   7 | \n   8 | Signed-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:18.651286Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_01DyqrvwdYDmcu87YfwMsQTu",
+          "name": "shell",
+          "arguments": "{\u0022command\u0022:\u0022git -C inspiration/cedar-go show 84fcf7c\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 65,
+        "reasoningTokens": null,
+        "cacheReadTokens": 3572,
+        "cacheWriteTokens": 890,
+        "totalTokens": 66
+      },
+      "timestamp": "2026-03-27T02:32:20.500611Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_01DyqrvwdYDmcu87YfwMsQTu",
+          "content": "[WARNING: Tool output was truncated. First 4885 characters were removed.]\n\n\t\tt.Run(\u0022schema-vs-rust\u0022, func(t *testing.T) {\n\u002B\t\t\t\tt.Parallel()\n\u002B\n\u002B\t\t\t\t// Extract schema filename from path (e.g., \u0022corpus-tests/abc123.cedarschema\u0022 -\u003E \u0022abc123\u0022)\n\u002B\t\t\t\tschemaFilename := strings.TrimSuffix(strings.TrimPrefix(tt.Schema, \u0022corpus-tests/\u0022), \u0022.cedarschema\u0022)\n\u002B\t\t\t\tjsonSchemaPath := fmt.Sprintf(\u0022corpus-tests-json-schemas/%s.cedarschema.json\u0022, schemaFilename)\n\u002B\n\u002B\t\t\t\trustJSON, err := jsonSchemasFdm.GetFileData(jsonSchemaPath)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize Rust JSON: appliesTo is optional - match testdata_test.go pattern\n\u002B\t\t\t\t// Need to handle trailing comma to avoid creating invalid JSON like {,\u0022other\u0022:...}\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]},\u0060), nil)\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]}\u0060), nil)\n\u002B\n\u002B\t\t\t\t// Unmarshal Rust JSON to handle any syntax issues from replacement\n\u002B\t\t\t\tvar rustSchema schema.Schema\n\u002B\t\t\t\terr = rustSchema.UnmarshalJSON(rustJSON)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Marshal both schemas to JSON for comparison\n\u002B\t\t\t\tgoJSON, err := s.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\t\t\t\trustJSON2, err := rustSchema.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize and compare\n\u002B\t\t\t\tstringEquals(t, string(normalizeJSON(t, goJSON)), string(normalizeJSON(t, rustJSON2)))\n\u002B\t\t\t})\n\u002B\n \t\t\tpolicyContent, err := fdm.GetFileData(tt.Policies)\n \t\t\tif err != nil {\n \t\t\t\tt.Fatal(\u0022error reading policy content\u0022, err)\n@@ -240,6 \u002B324,21 @@ func TestCorpus(t *testing.T) {\n \t}\n }\n \n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n\u002B\ttestutil.OK(t, err)\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n\u002B\ttestutil.OK(t, err)\n\u002B\treturn b\n\u002B}\n\u002B\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n\u002B}\n\u002B\n // Specific corpus tests that have been extracted for easy regression testing purposes\n func TestCorpusRelated(t *testing.T) {\n \tt.Parallel()\n@@ -412,80 \u002B511,3 @@ func TestCorpusRelated(t *testing.T) {\n \t\t})\n \t}\n }\n-\n-//nolint:revive // due to test cognitive complexity\n-func TestCorpusSchemas(t *testing.T) {\n-\tt.Parallel()\n-\n-\tgzipReader, err := gzip.NewReader(bytes.NewReader(corpusArchive))\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive header\u0022, err)\n-\t}\n-\tdefer gzipReader.Close() //nolint:errcheck\n-\n-\tbuf, err := io.ReadAll(gzipReader)\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive\u0022, err)\n-\t}\n-\n-\tbufReader := bytes.NewReader(buf)\n-\tarchiveReader := tar.NewReader(bufReader)\n-\n-\tfdm := NewTarFileMap(bufReader)\n-\tvar schemaFiles []string\n-\tfor file, err := archiveReader.Next(); err == nil; file, err = archiveReader.Next() {\n-\t\tif file.Typeflag != tar.TypeReg {\n-\t\t\tcontinue\n-\t\t}\n-\n-\t\tcursor, _ := bufReader.Seek(0, io.SeekCurrent)\n-\t\tfdm.AddFileData(file.Name, cursor, file.Size)\n-\n-\t\tif strings.HasSuffix(file.Name, \u0022.cedarschema\u0022) {\n-\t\t\tschemaFiles = append(schemaFiles, file.Name)\n-\t\t}\n-\t}\n-\n-\tfor _, schemaFile := range schemaFiles {\n-\t\tschemaFile := schemaFile\n-\t\tt.Run(schemaFile, func(t *testing.T) {\n-\t\t\tt.Parallel()\n-\t\t\tcontent, err := fdm.GetFileData(schemaFile)\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error reading schema content\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Parse Cedar text\n-\t\t\tvar s schema.Schema\n-\t\t\ts.SetFilename(schemaFile)\n-\t\t\tif err := s.UnmarshalCedar(content); err != nil {\n-\t\t\t\tt.Fatal(\u0022error parsing schema\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal back to Cedar and re-parse\n-\t\t\tcedarBytes, err := s.MarshalCedar()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to cedar\u0022, err)\n-\t\t\t}\n-\t\t\tvar s2 schema.Schema\n-\t\t\tif err := s2.UnmarshalCedar(cedarBytes); err != nil {\n-\t\t\t\tt.Fatalf(\u0022error re-parsing marshaled cedar:\\n%s\\nerror: %v\u0022, cedarBytes, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal to JSON and re-parse\n-\t\t\tjsonBytes, err := s.MarshalJSON()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to JSON\u0022, err)\n-\t\t\t}\n-\t\t\tvar s3 schema.Schema\n-\t\t\tif err := s3.UnmarshalJSON(jsonBytes); err != nil {\n[... 876 lines omitted ...]\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022Resolve\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tr, err := s.Resolve()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, r, wantResolved)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarToJSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tjsonBytes, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(jsonBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONToCedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tcedarBytes, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(cedarBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONMarshalInterface\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := json.Marshal(s)\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, json.Unmarshal(b, \u0026s2))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalCedarErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\tconst filename = \u0022path/to/my-file-name.cedarschema\u0022\n\u002B\t\ts.SetFilename(filename)\n\u002B\t\terr := s.UnmarshalCedar([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t\ttestutil.FatalIf(t, !strings.Contains(err.Error(), filename\u002B\u0022:1:1\u0022), \u0022expected %q in error: %v\u0022, filename, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalJSONErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalJSON([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022ResolveErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(\u0060entity User in [NonExistent];\u0060)))\n\u002B\t\t_, err := s.Resolve()\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022EmptySchema\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(\u0026ast.Schema{})\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(b), \u0022\u0022)\n\u002B\n\u002B\t\tjb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\t})\n\u002B}\n \n-\ttestutil.Equals(t, len(res.Enums), 1)\n-\tstatus := res.Enums[\u0022Status\u0022]\n-\ttestutil.Equals(t, status.Values, []types.String{\u0022active\u0022, \u0022inactive\u0022})\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n }\n \n-func TestNewSchemaFromASTNil(t *testing.T) {\n-\tt.Parallel()\n-\ta := \u0026ast.Schema{}\n-\ts := schema.NewSchemaFromAST(a)\n-\tb, err := s.MarshalCedar()\n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(b), \u0022\u0022)\n-\n-\tjb, err := s.MarshalJSON()\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\treturn b\n }",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:20.582094Z"
+    },
+    {
+      "case": "assistant",
+      "content": "This commit is purely test-only \u2014 it adds and reorganizes end-to-end validation tests for schema parsing, round-tripping, and corpus comparison in Go. There are no semantic/behavioral changes to production code, only test infrastructure improvements and test refactoring.",
+      "toolCalls": [
+        {
+          "id": "toolu_01FYbtbtQJbtMqkbtCaitdq5",
+          "name": "shell",
+          "arguments": "{\u0022command\u0022:\u0022python3 semport/ledger.py update 84fcf7c acknowledged \u0026\u0026 python3 semport/ledger.py sort\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 137,
+        "reasoningTokens": null,
+        "cacheReadTokens": 4462,
+        "cacheWriteTokens": 3346,
+        "totalTokens": 138
+      },
+      "timestamp": "2026-03-27T02:32:24.575605Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_01FYbtbtQJbtMqkbtCaitdq5",
+          "content": "exit_code: 0\ntimed_out: False\nstdout:\nUpdated 84fcf7c to \u0027acknowledged\u0027\nSorted 62 entries by timestamp",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:24.735838Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_017CdGwqBXSGZtJndNfBQBpw",
+          "name": "shell",
+          "arguments": "{\u0022command\u0022:\u0022git add semport/ledger.tsv \u0026\u0026 git commit -m \\\u0022semport: acknowledge 84fcf7c - test-only, no semantic changes\\\u0022\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 85,
+        "reasoningTokens": null,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 7995,
+        "totalTokens": 86
+      },
+      "timestamp": "2026-03-27T02:32:27.299325Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_017CdGwqBXSGZtJndNfBQBpw",
+          "content": "exit_code: 0\ntimed_out: False\nstdout:\n[main 28ffb9d] semport: acknowledge 84fcf7c - test-only, no semantic changes\n 1 file changed, 1 insertion(\u002B), 1 deletion(-)",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:27.50888Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_015wLqrNu5ARVSpgKGk1cQBs",
+          "name": "shell",
+          "arguments": "{\u0022command\u0022:\u0022rm -f .ai/semport_new_commits.md\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 64,
+        "reasoningTokens": null,
+        "cacheReadTokens": 7808,
+        "cacheWriteTokens": 347,
+        "totalTokens": 65
+      },
+      "timestamp": "2026-03-27T02:32:29.382156Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_015wLqrNu5ARVSpgKGk1cQBs",
+          "content": "exit_code: 0\ntimed_out: False",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:29.405449Z"
+    },
+    {
+      "case": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "toolu_01MQChfV9gh3V65istaMzEvS",
+          "name": "write_file",
+          "arguments": "{\u0022file_path\u0022:\u0022.ai/semport_plan.md\u0022,\u0022content\u0022:\u0022SKIP\\n\\n## Commit: 84fcf7c \u2014 schema: add more end-to-end validation tests\\n\\n### Decision: ACKNOWLEDGE\\n\\n### Reason\\nThis commit is **test-only**. It:\\n- Reorganizes and expands corpus-level schema validation tests in Go\\n- Adds round-trip tests (Cedar\u2192JSON, JSON\u2192Cedar) and error-path tests\\n- Adds helper functions (\u0060normalizeJSON\u0060, \u0060stringEquals\u0060) used only in tests\\n- Removes a now-redundant \u0060TestCorpusSchemas\u0060 test function (its coverage is subsumed into the refactored \u0060TestCorpus\u0060)\\n\\nThere are **zero changes to production/semantic code**. No new behaviors, algorithms, data structures, or error conditions were introduced. Nothing needs to be ported to the C# implementation.\\n\u0022}",
+          "metadata": {}
+        }
+      ],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 261,
+        "reasoningTokens": null,
+        "cacheReadTokens": 7808,
+        "cacheWriteTokens": 436,
+        "totalTokens": 262
+      },
+      "timestamp": "2026-03-27T02:32:35.305714Z"
+    },
+    {
+      "case": "tool_results",
+      "content": "",
+      "toolCalls": [],
+      "toolResults": [
+        {
+          "toolCallId": "toolu_01MQChfV9gh3V65istaMzEvS",
+          "content": "OK",
+          "isError": false,
+          "imageData": null,
+          "imageMediaType": null
+        }
+      ],
+      "reasoning": null,
+      "usage": null,
+      "timestamp": "2026-03-27T02:32:35.3069Z"
+    },
+    {
+      "case": "assistant",
+      "content": "**Decision: SKIP**\n\nCommit \u006084fcf7c\u0060 (\u0022schema: add more end-to-end validation tests\u0022) is **test-only** \u2014 it reorganizes corpus schema tests, adds round-trip helpers (\u0060normalizeJSON\u0060, \u0060stringEquals\u0060), and removes a now-redundant test function. No production/semantic code was changed. Nothing to port to C#.\n\n- \u2705 Ledger updated to \u0060acknowledged\u0060\n- \u2705 Committed \u0060semport/ledger.tsv\u0060\n- \u2705 \u0060.ai/semport_new_commits.md\u0060 removed\n- \u2705 \u0060.ai/semport_plan.md\u0060 written with \u0060SKIP\u0060",
+      "toolCalls": [],
+      "toolResults": [],
+      "reasoning": null,
+      "usage": {
+        "inputTokens": 1,
+        "outputTokens": 159,
+        "reasoningTokens": null,
+        "cacheReadTokens": 8244,
+        "cacheWriteTokens": 274,
+        "totalTokens": 160
+      },
+      "timestamp": "2026-03-27T02:32:39.031918Z"
+    }
+  ],
+  "events": [
+    {
+      "kind": "SessionStart",
+      "timestamp": "2026-03-27T02:32:04.669686Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "TurnStart",
+      "timestamp": "2026-03-27T02:32:04.669688Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "input": "## Pipeline Goal\nWe want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n## Task\nOur goal is: We want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n---\n\n**CRITICAL: Use semport/ledger.py for all ledger operations to ensure proper chronological ordering. Ledger entries MUST always use short git hashes (7 characters, e.g. from \u0060git rev-parse --short\u0060).**\n\n1. Run \u0060python3 semport/ledger.py earliest\u0060 to get the chronologically earliest commit with disposition=\u0027new\u0027\n2. If a commit is found, write ONLY that single commit (shortsha, iso8601, and full commit message from git show) to .ai/semport_new_commits.md and you are done.\n3. If NO \u0027new\u0027 commits exist:\n   a. Ensure inspiration/cedar-go exists (clone from https://github.com/cedar-policy/cedar-go.git if missing)\n   b. Run \u0060git -C inspiration/cedar-go fetch origin \u0026\u0026 git -C inspiration/cedar-go checkout main \u0026\u0026 git -C inspiration/cedar-go pull origin main\u0060 to get latest\n   c. Use git log to find commits newer than the latest in ledger.tsv, capturing a short hash for each commit (e.g. \u0060git -C inspiration/cedar-go log --format=\u0027%%h %%cI\u0027 \u003Clatest_sha\u003E..HEAD\u0060)\n   d. Add new commits using \u0060python3 semport/ledger.py add \u003Cshortsha\u003E \u003Ctimestamp\u003E\u0060\n   e. Run \u0060python3 semport/ledger.py sort\u0060 to maintain chronological order\n   f. Then run \u0060python3 semport/ledger.py earliest\u0060 to get the first new commit\n   g. If a new commit is found after fetching, write it to .ai/semport_new_commits.md\n   h. If still no new commits after fetching, remove .ai/semport_new_commits.md if it exists (rm -f)\n\nIMPORTANT: If there IS a commit to process, .ai/semport_new_commits.md must exist when you finish. If there is NOT, .ai/semport_new_commits.md must NOT exist.\n"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "UserInput",
+      "timestamp": "2026-03-27T02:32:04.669689Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "content": "## Pipeline Goal\nWe want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n## Task\nOur goal is: We want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n---\n\n**CRITICAL: Use semport/ledger.py for all ledger operations to ensure proper chronological ordering. Ledger entries MUST always use short git hashes (7 characters, e.g. from \u0060git rev-parse --short\u0060).**\n\n1. Run \u0060python3 semport/ledger.py earliest\u0060 to get the chronologically earliest commit with disposition=\u0027new\u0027\n2. If a commit is found, write ONLY that single commit (shortsha, iso8601, and full commit message from git show) to .ai/semport_new_commits.md and you are done.\n3. If NO \u0027new\u0027 commits exist:\n   a. Ensure inspiration/cedar-go exists (clone from https://github.com/cedar-policy/cedar-go.git if missing)\n   b. Run \u0060git -C inspiration/cedar-go fetch origin \u0026\u0026 git -C inspiration/cedar-go checkout main \u0026\u0026 git -C inspiration/cedar-go pull origin main\u0060 to get latest\n   c. Use git log to find commits newer than the latest in ledger.tsv, capturing a short hash for each commit (e.g. \u0060git -C inspiration/cedar-go log --format=\u0027%%h %%cI\u0027 \u003Clatest_sha\u003E..HEAD\u0060)\n   d. Add new commits using \u0060python3 semport/ledger.py add \u003Cshortsha\u003E \u003Ctimestamp\u003E\u0060\n   e. Run \u0060python3 semport/ledger.py sort\u0060 to maintain chronological order\n   f. Then run \u0060python3 semport/ledger.py earliest\u0060 to get the first new commit\n   g. If a new commit is found after fetching, write it to .ai/semport_new_commits.md\n   h. If still no new commits after fetching, remove .ai/semport_new_commits.md if it exists (rm -f)\n\nIMPORTANT: If there IS a commit to process, .ai/semport_new_commits.md must exist when you finish. If there is NOT, .ai/semport_new_commits.md must NOT exist.\n"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:04.842774Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:04.842775Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:08.313291Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:08.313303Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:08.313308Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:08.313332Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_019n1mCb8g43aQWrvxzGatdD",
+        "tool_name": "shell"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:08.416772Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_019n1mCb8g43aQWrvxzGatdD",
+        "delta": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\t2026-02-09T10:32:46-08:00\tnew"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:08.416775Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_019n1mCb8g43aQWrvxzGatdD",
+        "output": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\t2026-02-09T10:32:46-08:00\tnew"
+      },
+      "fullOutput": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\t2026-02-09T10:32:46-08:00\tnew"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:08.583786Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:08.583788Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:11.28291Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:11.282922Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": "A \u0027new\u0027 commit was found. Now I\u0027ll get the full commit details."
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:11.282936Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": "A \u0027new\u0027 commit was found. Now I\u0027ll get the full commit details."
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:11.282961Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01AMt1mXnog9xHSLcwC8bxF9",
+        "tool_name": "shell"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:11.36563Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01AMt1mXnog9xHSLcwC8bxF9",
+        "delta": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\n2026-02-09T10:32:46-08:00\nschema: add more end-to-end validation tests\n\nSigned-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:11.365632Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01AMt1mXnog9xHSLcwC8bxF9",
+        "output": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\n2026-02-09T10:32:46-08:00\nschema: add more end-to-end validation tests\n\nSigned-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E"
+      },
+      "fullOutput": "exit_code: 0\ntimed_out: False\nstdout:\n84fcf7c\n2026-02-09T10:32:46-08:00\nschema: add more end-to-end validation tests\n\nSigned-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:11.52794Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:11.527942Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:14.144511Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:14.144514Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:14.144518Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:14.144523Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01Rtcq7i541krL6ZkZA5f1cN",
+        "tool_name": "write_file"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:14.144841Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01Rtcq7i541krL6ZkZA5f1cN",
+        "delta": "OK"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:14.144841Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01Rtcq7i541krL6ZkZA5f1cN",
+        "output": "OK"
+      },
+      "fullOutput": "OK"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:14.27204Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:14.272043Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:16.397747Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:16.397759Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": "Done. The earliest unprocessed commit is:\n\n- **SHA:** \u006084fcf7c\u0060\n- **Date:** 2026-02-09T10:32:46-08:00\n- **Message:** \u0060schema: add more end-to-end validation tests\u0060\n\nThe details have been written to \u0060.ai/semport_new_commits.md\u0060 for processing."
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:16.397772Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": "Done. The earliest unprocessed commit is:\n\n- **SHA:** \u006084fcf7c\u0060\n- **Date:** 2026-02-09T10:32:46-08:00\n- **Message:** \u0060schema: add more end-to-end validation tests\u0060\n\nThe details have been written to \u0060.ai/semport_new_commits.md\u0060 for processing."
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "TurnEnd",
+      "timestamp": "2026-03-27T02:32:16.397806Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "state": "idle"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "SessionEnd",
+      "timestamp": "2026-03-27T02:32:16.397809Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "state": "idle"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "TurnStart",
+      "timestamp": "2026-03-27T02:32:16.460077Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "input": "## Pipeline Goal\nWe want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n## Previous Stage Response\nDone. The earliest unprocessed commit is:\n\n- **SHA:** \u006084fcf7c\u0060\n- **Date:** 2026-02-09T10:32:46-08:00\n- **Message:** \u0060schema: add more end-to-end validation tests\u0060\n\nThe details have been written to \u0060.ai/semport_new_commits.md\u0060 for processing.\n\n## Task\nYou have ONE job: analyze a single upstream commit and decide whether to port or acknowledge it.\n\nSTEP 1: Read .ai/semport_new_commits.md to get the commit shortsha.\nSTEP 2: Run \u0060git -C inspiration/cedar-go show \u003Cshortsha\u003E\u0060 to see the full diff.\nSTEP 3: Decide: is this a semantic change that needs porting to C#? Or is it Go-specific/docs-only/CI-only/test-only?\n\nIF ACKNOWLEDGE (skip):\n1. Run: \u0060python3 semport/ledger.py update \u003Cshortsha\u003E acknowledged \u0026\u0026 python3 semport/ledger.py sort\u0060\n2. Run: \u0060git add semport/ledger.tsv \u0026\u0026 git commit -m \u0022semport: acknowledge \u003Cshortsha\u003E - \u003Cbrief reason\u003E\u0022\u0060\n3. Run: \u0060rm -f .ai/semport_new_commits.md\u0060\n4. Write .ai/semport_plan.md with first line: SKIP\n\nIF PORT:\n1. Write .ai/semport_plan.md with first line: PORT\n2. Below PORT, include: commit summary, semantic analysis, and concrete port tasks with file:line references for both Go source and C# target.\n\nDo NOT browse the repo. Do NOT read files other than .ai/semport_new_commits.md and the git show output. Be fast and decisive.\n"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "UserInput",
+      "timestamp": "2026-03-27T02:32:16.460077Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "content": "## Pipeline Goal\nWe want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: \u0027new\u0027 (unprocessed), \u0027implemented\u0027 (changes made), or \u0027acknowledged\u0027 (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.\n\n## Previous Stage Response\nDone. The earliest unprocessed commit is:\n\n- **SHA:** \u006084fcf7c\u0060\n- **Date:** 2026-02-09T10:32:46-08:00\n- **Message:** \u0060schema: add more end-to-end validation tests\u0060\n\nThe details have been written to \u0060.ai/semport_new_commits.md\u0060 for processing.\n\n## Task\nYou have ONE job: analyze a single upstream commit and decide whether to port or acknowledge it.\n\nSTEP 1: Read .ai/semport_new_commits.md to get the commit shortsha.\nSTEP 2: Run \u0060git -C inspiration/cedar-go show \u003Cshortsha\u003E\u0060 to see the full diff.\nSTEP 3: Decide: is this a semantic change that needs porting to C#? Or is it Go-specific/docs-only/CI-only/test-only?\n\nIF ACKNOWLEDGE (skip):\n1. Run: \u0060python3 semport/ledger.py update \u003Cshortsha\u003E acknowledged \u0026\u0026 python3 semport/ledger.py sort\u0060\n2. Run: \u0060git add semport/ledger.tsv \u0026\u0026 git commit -m \u0022semport: acknowledge \u003Cshortsha\u003E - \u003Cbrief reason\u003E\u0022\u0060\n3. Run: \u0060rm -f .ai/semport_new_commits.md\u0060\n4. Write .ai/semport_plan.md with first line: SKIP\n\nIF PORT:\n1. Write .ai/semport_plan.md with first line: PORT\n2. Below PORT, include: commit summary, semantic analysis, and concrete port tasks with file:line references for both Go source and C# target.\n\nDo NOT browse the repo. Do NOT read files other than .ai/semport_new_commits.md and the git show output. Be fast and decisive.\n"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:16.629246Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:16.629249Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:18.650145Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:18.650157Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:18.650163Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:18.650192Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01JbqYRFq2gun2PzK8hR3FWb",
+        "tool_name": "read_file"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:18.651234Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01JbqYRFq2gun2PzK8hR3FWb",
+        "delta": "   1 | # Semport: Next New Commit to Process\n   2 | \n   3 | **Short SHA:** 84fcf7c\n   4 | **Timestamp:** 2026-02-09T10:32:46-08:00\n   5 | **Message:**\n   6 | schema: add more end-to-end validation tests\n   7 | \n   8 | Signed-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:18.651238Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01JbqYRFq2gun2PzK8hR3FWb",
+        "output": "   1 | # Semport: Next New Commit to Process\n   2 | \n   3 | **Short SHA:** 84fcf7c\n   4 | **Timestamp:** 2026-02-09T10:32:46-08:00\n   5 | **Message:**\n   6 | schema: add more end-to-end validation tests\n   7 | \n   8 | Signed-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E"
+      },
+      "fullOutput": "   1 | # Semport: Next New Commit to Process\n   2 | \n   3 | **Short SHA:** 84fcf7c\n   4 | **Timestamp:** 2026-02-09T10:32:46-08:00\n   5 | **Message:**\n   6 | schema: add more end-to-end validation tests\n   7 | \n   8 | Signed-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:18.865022Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:18.865025Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:20.500594Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:20.500607Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:20.500613Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:20.50065Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01DyqrvwdYDmcu87YfwMsQTu",
+        "tool_name": "shell"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:20.582089Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01DyqrvwdYDmcu87YfwMsQTu",
+        "delta": "exit_code: 0\ntimed_out: False\nstdout:\ncommit 84fcf7c357d45f5b5bf1ba4cf191cf90d95d1346\nAuthor: Phil Hassey \u003Cphil@strongdm.com\u003E\nDate:   Mon Feb 9 10:56:52 2026 -0700\n\n    schema: add more end-to-end validation tests\n    \n    Signed-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E\n\ndiff --git a/Makefile b/Makefile\nnew file mode 100644\nindex 0000000..5b3ebdf\n--- /dev/null\n\u002B\u002B\u002B b/Makefile\n@@ -0,0 \u002B1,14 @@\n\u002Bcorpus-tests-json-schemas.tar.gz: corpus-tests.tar.gz\n\u002B\t@echo \u0022Generating JSON schemas from Cedar schemas...\u0022\n\u002B\t@rm -rf /tmp/corpus-tests /tmp/corpus-tests-json-schemas\n\u002B\t@mkdir -p /tmp/corpus-tests-json-schemas\n\u002B\t@tar -xzf corpus-tests.tar.gz -C /tmp/\n\u002B\t@for schema in /tmp/corpus-tests/*.cedarschema; do \\\n\u002B\t\tbasename=$$(basename $$schema .cedarschema); \\\n\u002B\t\techo \u0022Converting $$basename.cedarschema...\u0022; \\\n\u002B\t\tcedar translate-schema --direction cedar-to-json --schema \u0022$$schema\u0022 \u003E \u0022/tmp/corpus-tests-json-schemas/$$basename.cedarschema.json\u0022 2\u003E\u00261; \\\n\u002B\tdone\n\u002B\t@cd /tmp \u0026\u0026 tar -czf corpus-tests-json-schemas.tar.gz corpus-tests-json-schemas/\n\u002B\t@mv /tmp/corpus-tests-json-schemas.tar.gz .\n\u002B\t@rm -rf /tmp/corpus-tests /tmp/corpus-tests-json-schemas\n\u002B\t@echo \u0022Done! Created corpus-tests-json-schemas.tar.gz\u0022\ndiff --git a/corpus-tests-json-schemas.tar.gz b/corpus-tests-json-schemas.tar.gz\nnew file mode 100644\nindex 0000000..621b65c\nBinary files /dev/null and b/corpus-tests-json-schemas.tar.gz differ\ndiff --git a/corpus_test.go b/corpus_test.go\nindex 15c3042..24e1c1f 100644\n--- a/corpus_test.go\n\u002B\u002B\u002B b/corpus_test.go\n@@ -56,6 \u002B56,9 @@ type corpusTest struct {\n //go:embed corpus-tests.tar.gz\n var corpusArchive []byte\n \n\u002B//go:embed corpus-tests-json-schemas.tar.gz\n\u002Bvar corpusJSONSchemasArchive []byte\n\u002B\n type tarFileDataPointer struct {\n \tPosition int64\n \tSize     int64\n@@ -91,26 \u002B94,24 @@ func (fdm TarFileMap) GetFileData(path string) ([]byte, error) {\n \treturn content, nil\n }\n \n-//nolint:revive // due to test cognitive complexity\n-func TestCorpus(t *testing.T) {\n-\tt.Parallel()\n\u002Bfunc loadTarGz(t testing.TB, archive []byte) TarFileMap {\n\u002B\tt.Helper()\n \n-\tgzipReader, err := gzip.NewReader(bytes.NewReader(corpusArchive))\n\u002B\tgzipReader, err := gzip.NewReader(bytes.NewReader(archive))\n \tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive header\u0022, err)\n\u002B\t\tt.Fatal(\u0022error reading compressed archive header\u0022, err)\n \t}\n \tdefer gzipReader.Close() //nolint:errcheck\n \n \tbuf, err := io.ReadAll(gzipReader)\n \tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive\u0022, err)\n\u002B\t\tt.Fatal(\u0022error reading compressed archive\u0022, err)\n \t}\n \n \tbufReader := bytes.NewReader(buf)\n \tarchiveReader := tar.NewReader(bufReader)\n \n \tfdm := NewTarFileMap(bufReader)\n-\tvar testFiles []string\n \tfor file, err := archiveReader.Next(); err == nil; file, err = archiveReader.Next() {\n \t\tif file.Typeflag != tar.TypeReg {\n \t\t\tcontinue\n@@ -118,12 \u002B119,27 @@ func TestCorpus(t *testing.T) {\n \n \t\tcursor, _ := bufReader.Seek(0, io.SeekCurrent)\n \t\tfdm.AddFileData(file.Name, cursor, file.Size)\n\u002B\t}\n\u002B\n\u002B\treturn fdm\n\u002B}\n\u002B\n\u002B//nolint:revive // due to test cognitive complexity\n\u002Bfunc TestCorpus(t *testing.T) {\n\u002B\tt.Parallel()\n \n-\t\tif strings.HasSuffix(file.Name, \u0022.json\u0022) \u0026\u0026 !strings.HasSuffix(file.Name, \u0022.entities.json\u0022) {\n-\t\t\ttestFiles = append(testFiles, file.Name)\n\u002B\t// Load corpus test files\n\u002B\tfdm := loadTarGz(t, corpusArchive)\n\u002B\tvar testFiles []string\n\u002B\tfor fileName := range fdm.files {\n\u002B\t\tif strings.HasSuffix(fileName, \u0022.json\u0022) \u0026\u0026 !strings.HasSuffix(fileName, \u0022.entities.json\u0022) {\n\u002B\t\t\ttestFiles = append(testFiles, fileName)\n \t\t}\n \t}\n \n\u002B\t// Load JSON schemas for validation\n\u002B\tjsonSchemasFdm := loadTarGz(t, corpusJSONSchemasArchive)\n\u002B\n \tfor _, testFile := range testFiles {\n \t\ttestFile := testFile\n \t\tt.Run(testFile, func(t *testing.T) {\n@@ -148,6 \u002B164,74 @@ func TestCorpus(t *testing.T) {\n \t\t\t\tt.Fatal(\u0022error unmarshalling test\u0022, err)\n \t\t\t}\n \n\u002B\t\t\tschemaContent, err := fdm.GetFileData(tt.Schema)\n\u002B\t\t\tif err != nil {\n\u002B\t\t\t\tt.Fatal(\u0022error reading schema content\u0022, err)\n\u002B\t\t\t}\n\u002B\t\t\t// Rust converted JSON never contains the empty context record\n\u002B\t\t\tschemaContent = bytes.ReplaceAll(schemaContent, []byte(\u0022context: {}\\n\u0022), nil)\n\u002B\n\u002B\t\t\tvar s schema.Schema\n\u002B\t\t\ts.SetFilename(\u0022test.schema\u0022)\n\u002B\t\t\tif err := s.UnmarshalCedar(schemaContent); err != nil {\n\u002B\t\t\t\tt.Fatal(\u0022error parsing schema\u0022, err, \u0022\\n===\\n\u0022, string(schemaContent))\n\u002B\t\t\t}\n\u002B\n\u002B\t\t\t// Validate schema round-trip\n\u002B\t\t\tt.Run(\u0022schema-round-trip\u0022, func(t *testing.T) {\n\u002B\t\t\t\tt.Parallel()\n\u002B\n\u002B\t\t\t\tjs, err := s.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tvar s2 schema.Schema\n\u002B\t\t\t\terr = s2.UnmarshalJSON(js)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tsb, err := s2.MarshalCedar()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tvar s3 schema.Schema\n\u002B\t\t\t\terr = s3.UnmarshalCedar(sb)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tj2, err := s3.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\ttestutil.Equals(t, string(j2), string(js))\n\u002B\t\t\t})\n\u002B\n\u002B\t\t\t// Validate schema matches Rust Cedar CLI output\n\u002B\t\t\tt.Run(\u0022schema-vs-rust\u0022, func(t *testing.T) {\n\u002B\t\t\t\tt.Parallel()\n\u002B\n\u002B\t\t\t\t// Extract schema filename from path (e.g., \u0022corpus-tests/abc123.cedarschema\u0022 -\u003E \u0022abc123\u0022)\n\u002B\t\t\t\tschemaFilename := strings.TrimSuffix(strings.TrimPrefix(tt.Schema, \u0022corpus-tests/\u0022), \u0022.cedarschema\u0022)\n\u002B\t\t\t\tjsonSchemaPath := fmt.Sprintf(\u0022corpus-tests-json-schemas/%s.cedarschema.json\u0022, schemaFilename)\n\u002B\n\u002B\t\t\t\trustJSON, err := jsonSchemasFdm.GetFileData(jsonSchemaPath)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize Rust JSON: appliesTo is optional - match testdata_test.go pattern\n\u002B\t\t\t\t// Need to handle trailing comma to avoid creating invalid JSON like {,\u0022other\u0022:...}\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]},\u0060), nil)\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]}\u0060), nil)\n\u002B\n\u002B\t\t\t\t// Unmarshal Rust JSON to handle any syntax issues from replacement\n\u002B\t\t\t\tvar rustSchema schema.Schema\n\u002B\t\t\t\terr = rustSchema.UnmarshalJSON(rustJSON)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Marshal both schemas to JSON for comparison\n\u002B\t\t\t\tgoJSON, err := s.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\t\t\t\trustJSON2, err := rustSchema.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize and compare\n\u002B\t\t\t\tstringEquals(t, string(normalizeJSON(t, goJSON)), string(normalizeJSON(t, rustJSON2)))\n\u002B\t\t\t})\n\u002B\n \t\t\tpolicyContent, err := fdm.GetFileData(tt.Policies)\n \t\t\tif err != nil {\n \t\t\t\tt.Fatal(\u0022error reading policy content\u0022, err)\n@@ -240,6 \u002B324,21 @@ func TestCorpus(t *testing.T) {\n \t}\n }\n \n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n\u002B\ttestutil.OK(t, err)\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n\u002B\ttestutil.OK(t, err)\n\u002B\treturn b\n\u002B}\n\u002B\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n\u002B}\n\u002B\n // Specific corpus tests that have been extracted for easy regression testing purposes\n func TestCorpusRelated(t *testing.T) {\n \tt.Parallel()\n@@ -412,80 \u002B511,3 @@ func TestCorpusRelated(t *testing.T) {\n \t\t})\n \t}\n }\n-\n-//nolint:revive // due to test cognitive complexity\n-func TestCorpusSchemas(t *testing.T) {\n-\tt.Parallel()\n-\n-\tgzipReader, err := gzip.NewReader(bytes.NewReader(corpusArchive))\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive header\u0022, err)\n-\t}\n-\tdefer gzipReader.Close() //nolint:errcheck\n-\n-\tbuf, err := io.ReadAll(gzipReader)\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive\u0022, err)\n-\t}\n-\n-\tbufReader := bytes.NewReader(buf)\n-\tarchiveReader := tar.NewReader(bufReader)\n-\n-\tfdm := NewTarFileMap(bufReader)\n-\tvar schemaFiles []string\n-\tfor file, err := archiveReader.Next(); err == nil; file, err = archiveReader.Next() {\n-\t\tif file.Typeflag != tar.TypeReg {\n-\t\t\tcontinue\n-\t\t}\n-\n-\t\tcursor, _ := bufReader.Seek(0, io.SeekCurrent)\n-\t\tfdm.AddFileData(file.Name, cursor, file.Size)\n-\n-\t\tif strings.HasSuffix(file.Name, \u0022.cedarschema\u0022) {\n-\t\t\tschemaFiles = append(schemaFiles, file.Name)\n-\t\t}\n-\t}\n-\n-\tfor _, schemaFile := range schemaFiles {\n-\t\tschemaFile := schemaFile\n-\t\tt.Run(schemaFile, func(t *testing.T) {\n-\t\t\tt.Parallel()\n-\t\t\tcontent, err := fdm.GetFileData(schemaFile)\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error reading schema content\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Parse Cedar text\n-\t\t\tvar s schema.Schema\n-\t\t\ts.SetFilename(schemaFile)\n-\t\t\tif err := s.UnmarshalCedar(content); err != nil {\n-\t\t\t\tt.Fatal(\u0022error parsing schema\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal back to Cedar and re-parse\n-\t\t\tcedarBytes, err := s.MarshalCedar()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to cedar\u0022, err)\n-\t\t\t}\n-\t\t\tvar s2 schema.Schema\n-\t\t\tif err := s2.UnmarshalCedar(cedarBytes); err != nil {\n-\t\t\t\tt.Fatalf(\u0022error re-parsing marshaled cedar:\\n%s\\nerror: %v\u0022, cedarBytes, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal to JSON and re-parse\n-\t\t\tjsonBytes, err := s.MarshalJSON()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to JSON\u0022, err)\n-\t\t\t}\n-\t\t\tvar s3 schema.Schema\n-\t\t\tif err := s3.UnmarshalJSON(jsonBytes); err != nil {\n-\t\t\t\tt.Fatalf(\u0022error re-parsing marshaled JSON:\\n%s\\nerror: %v\u0022, jsonBytes, err)\n-\t\t\t}\n-\n-\t\t\t// Verify the schema resolves without error\n-\t\t\tif _, err := s.Resolve(); err != nil {\n-\t\t\t\tt.Fatal(\u0022error resolving schema\u0022, err)\n-\t\t\t}\n-\t\t})\n-\t}\n-}\ndiff --git a/schema/schema_test.go b/schema/schema_test.go\nindex f6d0974..6f21d95 100644\n--- a/schema/schema_test.go\n\u002B\u002B\u002B b/schema/schema_test.go\n@@ -2,6 \u002B2,7 @@ package schema_test\n \n import (\n \t\u0022encoding/json\u0022\n\u002B\t\u0022strings\u0022\n \t\u0022testing\u0022\n \n \t\u0022github.com/cedar-policy/cedar-go/internal/testutil\u0022\n@@ -11,279 \u002B12,738 @@ import (\n \t\u0022github.com/cedar-policy/cedar-go/types\u0022\n )\n \n-func TestNewSchemaFromAST(t *testing.T) {\n-\tt.Parallel()\n-\ta := \u0026ast.Schema{\n-\t\tEntities: ast.Entities{\n-\t\t\t\u0022User\u0022: ast.Entity{},\n-\t\t},\n-\t}\n-\ts := schema.NewSchemaFromAST(a)\n-\ttestutil.Equals(t, s.AST(), a)\n-}\n-\n-func TestSetFilename(t *testing.T) {\n-\tt.Parallel()\n-\ts := \u0026schema.Schema{}\n-\ts.SetFilename(\u0022test.cedarschema\u0022)\n-\terr := s.UnmarshalCedar([]byte(\u0022entity 42;\u0022))\n-\ttestutil.Error(t, err)\n-\t// The error should include the filename\n-\ttestutil.Equals(t, true, len(err.Error()) \u003E 0)\n-}\n-\n-func TestMarshalUnmarshalCedar(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0022entity User;\\n\u0022)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tb, err := s.MarshalCedar()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalCedar(b))\n-\ttestutil.Equals(t, len(s2.AST().Entities), 1)\n-}\n-\n-func TestMarshalUnmarshalJSON(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060{\u0022\u0022: {\u0022entityTypes\u0022: {\u0022User\u0022: {}}, \u0022actions\u0022: {}}}\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalJSON(input))\n-\n-\tb, err := s.MarshalJSON()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalJSON(b))\n-\ttestutil.Equals(t, len(s2.AST().Entities), 1)\n-}\n-\n-func TestCedarToJSONRoundTrip(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060entity User {\n-\tname: String,\n-\tage?: Long\n\u002Bvar wantCedar = \u0060\n\u002B@doc(\u0022Address information\u0022)\n\u002B@personal_information\n\u002Btype Address = {\n\u002B\t@also(\u0022town\u0022)\n\u002B\tcity: String,\n\u002B\tcountry: Country,\n\u002B\tstreet: String,\n\u002B\tzipcode?: String\n };\n \n-action \u0022view\u0022 appliesTo {\n-\tprincipal: User,\n-\tresource: User,\n-\tcontext: {}\n\u002Btype decimal = {\n\u002B\tdecimal: Long,\n\u002B\twhole: Long\n };\n-\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tjsonBytes, err := s.MarshalJSON()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalJSON(jsonBytes))\n-\n-\tcedarBytes, err := s2.MarshalCedar()\n-\ttestutil.OK(t, err)\n-\n-\tvar s3 schema.Schema\n-\ttestutil.OK(t, s3.UnmarshalCedar(cedarBytes))\n-\n-\ttestutil.Equals(t, len(s3.AST().Entities), 1)\n-\ttestutil.Equals(t, len(s3.AST().Actions), 1)\n-}\n-\n-func TestJSONToCedarRoundTrip(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060{\n-\t\t\u0022NS\u0022: {\n-\t\t\t\u0022entityTypes\u0022: {\n-\t\t\t\t\u0022User\u0022: {\n-\t\t\t\t\t\u0022memberOfTypes\u0022: [\u0022Group\u0022],\n-\t\t\t\t\t\u0022shape\u0022: {\n-\t\t\t\t\t\t\u0022type\u0022: \u0022Record\u0022,\n-\t\t\t\t\t\t\u0022attributes\u0022: {\n-\t\t\t\t\t\t\t\u0022name\u0022: {\u0022type\u0022: \u0022String\u0022}\n-\t\t\t\t\t\t}\n-\t\t\t\t\t}\n-\t\t\t\t},\n-\t\t\t\t\u0022Group\u0022: {}\n-\t\t\t},\n-\t\t\t\u0022actions\u0022: {\n-\t\t\t\t\u0022view\u0022: {\n-\t\t\t\t\t\u0022appliesTo\u0022: {\n-\t\t\t\t\t\t\u0022principalTypes\u0022: [\u0022User\u0022],\n-\t\t\t\t\t\t\u0022resourceTypes\u0022: [\u0022Group\u0022],\n-\t\t\t\t\t\t\u0022context\u0022: {\u0022type\u0022: \u0022Record\u0022, \u0022attributes\u0022: {}}\n-\t\t\t\t\t}\n-\t\t\t\t}\n-\t\t\t}\n-\t\t}\n-\t}\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalJSON(input))\n \n-\tcedarBytes, err := s.MarshalCedar()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalCedar(cedarBytes))\n-\n-\tjsonBytes, err := s2.MarshalJSON()\n-\ttestutil.OK(t, err)\n-\n-\tvar s3 schema.Schema\n-\ttestutil.OK(t, s3.UnmarshalJSON(jsonBytes))\n\u002Bentity Admin;\n \n-\tns := s3.AST().Namespaces[\u0022NS\u0022]\n-\ttestutil.Equals(t, len(ns.Entities), 2)\n-\ttestutil.Equals(t, len(ns.Actions), 1)\n-}\n-\n-func TestResolve(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060entity User;\n\u002Bentity Country;\n \n-action \u0022view\u0022 appliesTo {\n-\tprincipal: User,\n-\tresource: User,\n-\tcontext: {}\n\u002Bentity System in Admin {\n\u002B\tversion: String\n };\n-\u0060)\n \n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n\u002Bentity Role enum [\u0022superuser\u0022, \u0022operator\u0022];\n \n-\ttestutil.Equals(t, len(res.Entities), 1)\n-\ttestutil.Equals(t, len(res.Actions), 1)\n-\n-\taction := res.Actions[types.NewEntityUID(\u0022Action\u0022, \u0022view\u0022)]\n-\ttestutil.Equals(t, action.Name, types.String(\u0022view\u0022))\n-\ttestutil.Equals(t, action.AppliesTo != nil, true)\n-\ttestutil.Equals(t, action.AppliesTo.Principals, []types.EntityType{\u0022User\u0022})\n-}\n-\n-func TestResolveError(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060entity User in [NonExistent];\u0060)\n\u002Baction audit appliesTo {\n\u002B\tprincipal: Admin,\n\u002B\tresource: [MyApp::Document, System]\n\u002B};\n \n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n\u002B@doc(\u0022Doc manager\u0022)\n\u002Bnamespace MyApp {\n\u002B\ttype Metadata = {\n\u002B\t\tcreated: datetime,\n\u002B\t\ttags: Set\u003CString\u003E\n\u002B\t};\n \n-\t_, err := s.Resolve()\n-\ttestutil.Error(t, err)\n-}\n\u002B\tentity Department {\n\u002B\t\tbudget: decimal\n\u002B\t};\n \n-func TestUnmarshalCedarError(t *testing.T) {\n-\tt.Parallel()\n-\tvar s schema.Schema\n-\ttestutil.Error(t, s.UnmarshalCedar([]byte(\u0022not valid cedar {\u0022)))\n-}\n\u002B\tentity Document {\n\u002B\t\tpublic: Bool,\n\u002B\t\ttitle: String\n\u002B\t};\n \n-func TestUnmarshalJSONError(t *testing.T) {\n-\tt.Parallel()\n-\tvar s schema.Schema\n-\ttestutil.Error(t, s.UnmarshalJSON([]byte(\u0022not json\u0022)))\n-}\n\u002B\tentity Group in Department {\n\u002B\t\tmetadata: Metadata,\n\u002B\t\tname: String\n\u002B\t};\n \n-func TestJSONMarshalInterface(t *testing.T) {\n-\tt.Parallel()\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar([]byte(\u0022entity User;\u0022)))\n\u002B\t@doc(\u0022User entity\u0022)\n\u002B\tentity User in Group {\n\u002B\t\tactive: Bool,\n\u002B\t\taddress: Address,\n\u002B\t\temail: String,\n\u002B\t\tlevel: Long\n\u002B\t};\n \n-\tb, err := json.Marshal(\u0026s)\n-\ttestutil.OK(t, err)\n\u002B\tentity Status enum [\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022];\n \n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, json.Unmarshal(b, \u0026s2))\n-\ttestutil.Equals(t, len(s2.AST().Entities), 1)\n-}\n\u002B\t@doc(\u0022View or edit document\u0022)\n\u002B\taction edit appliesTo {\n\u002B\t\tprincipal: User,\n\u002B\t\tresource: Document,\n\u002B\t\tcontext: {\n\u002B\t\t\tip: ipaddr,\n\u002B\t\t\ttimestamp: datetime\n\u002B\t\t}\n\u002B\t};\n \n-func TestResolveWithNamespace(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060namespace NS {\n-\tentity User;\n\u002B\taction manage appliesTo {\n\u002B\t\tprincipal: User,\n\u002B\t\tresource: [Document, Group]\n\u002B\t};\n \n-\taction \u0022view\u0022 appliesTo {\n\u002B\t@doc(\u0022View or edit document\u0022)\n\u002B\taction view appliesTo {\n \t\tprincipal: User,\n-\t\tresource: User,\n-\t\tcontext: {}\n\u002B\t\tresource: Document,\n\u002B\t\tcontext: {\n\u002B\t\t\tip: ipaddr,\n\u002B\t\t\ttimestamp: datetime\n\u002B\t\t}\n \t};\n }\n-\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n-\n-\t_, ok := res.Entities[\u0022NS::User\u0022]\n-\ttestutil.Equals(t, ok, true)\n-\n-\taction := res.Actions[types.NewEntityUID(\u0022NS::Action\u0022, \u0022view\u0022)]\n-\ttestutil.Equals(t, action.AppliesTo.Principals, []types.EntityType{\u0022NS::User\u0022})\n\u002B\u0060\n\u002B\n\u002Bvar wantJSON = \u0060{\n\u002B  \u0022\u0022: {\n\u002B    \u0022entityTypes\u0022: {\n\u002B      \u0022Admin\u0022: {},\n\u002B      \u0022Country\u0022: {},\n\u002B      \u0022Role\u0022: {\n\u002B        \u0022enum\u0022: [\u0022superuser\u0022, \u0022operator\u0022]\n\u002B      },\n\u002B      \u0022System\u0022: {\n\u002B        \u0022memberOfTypes\u0022: [\u0022Admin\u0022],\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022version\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022actions\u0022: {\n\u002B      \u0022audit\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022Admin\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022MyApp::Document\u0022, \u0022System\u0022]\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022commonTypes\u0022: {\n\u002B      \u0022Address\u0022: {\n\u002B        \u0022type\u0022: \u0022Record\u0022,\n\u002B        \u0022attributes\u0022: {\n\u002B          \u0022city\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022String\u0022,\n\u002B            \u0022annotations\u0022: {\n\u002B              \u0022also\u0022: \u0022town\u0022\n\u002B            }\n\u002B          },\n\u002B          \u0022country\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022Country\u0022\n\u002B          },\n\u002B          \u0022street\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022String\u0022\n\u002B          },\n\u002B          \u0022zipcode\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022String\u0022,\n\u002B            \u0022required\u0022: false\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022Address information\u0022,\n\u002B          \u0022personal_information\u0022: \u0022\u0022\n\u002B        }\n\u002B      },\n\u002B      \u0022decimal\u0022: {\n\u002B        \u0022type\u0022: \u0022Record\u0022,\n\u002B        \u0022attributes\u0022: {\n\u002B          \u0022decimal\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022Long\u0022\n\u002B          },\n\u002B          \u0022whole\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022Long\u0022\n\u002B          }\n\u002B        }\n\u002B      }\n\u002B    }\n\u002B  },\n\u002B  \u0022MyApp\u0022: {\n\u002B    \u0022annotations\u0022: {\n\u002B      \u0022doc\u0022: \u0022Doc manager\u0022\n\u002B    },\n\u002B    \u0022entityTypes\u0022: {\n\u002B      \u0022Department\u0022: {\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022budget\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022decimal\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      },\n\u002B      \u0022Document\u0022: {\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022public\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Bool\u0022\n\u002B            },\n\u002B            \u0022title\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      },\n\u002B      \u0022Group\u0022: {\n\u002B        \u0022memberOfTypes\u0022: [\u0022Department\u0022],\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022metadata\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Metadata\u0022\n\u002B            },\n\u002B            \u0022name\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      },\n\u002B      \u0022Status\u0022: {\n\u002B        \u0022enum\u0022: [\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022]\n\u002B      },\n\u002B      \u0022User\u0022: {\n\u002B        \u0022memberOfTypes\u0022: [\u0022Group\u0022],\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022active\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Bool\u0022\n\u002B            },\n\u002B            \u0022address\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Address\u0022\n\u002B            },\n\u002B            \u0022email\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            },\n\u002B            \u0022level\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Long\u0022\n\u002B            }\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022User entity\u0022\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022actions\u0022: {\n\u002B      \u0022edit\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022User\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022Document\u0022],\n\u002B          \u0022context\u0022: {\n\u002B            \u0022type\u0022: \u0022Record\u0022,\n\u002B            \u0022attributes\u0022: {\n\u002B              \u0022ip\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022ipaddr\u0022\n\u002B              },\n\u002B              \u0022timestamp\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022datetime\u0022\n\u002B              }\n\u002B            }\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022View or edit document\u0022\n\u002B        }\n\u002B      },\n\u002B      \u0022manage\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022User\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022Document\u0022, \u0022Group\u0022]\n\u002B        }\n\u002B      },\n\u002B      \u0022view\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022User\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022Document\u0022],\n\u002B          \u0022context\u0022: {\n\u002B            \u0022type\u0022: \u0022Record\u0022,\n\u002B            \u0022attributes\u0022: {\n\u002B              \u0022ip\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022ipaddr\u0022\n\u002B              },\n\u002B              \u0022timestamp\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022datetime\u0022\n\u002B              }\n\u002B            }\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022View or edit document\u0022\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022commonTypes\u0022: {\n\u002B      \u0022Metadata\u0022: {\n\u002B        \u0022type\u0022: \u0022Record\u0022,\n\u002B        \u0022attributes\u0022: {\n\u002B          \u0022created\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022datetime\u0022\n\u002B          },\n\u002B          \u0022tags\u0022: {\n\u002B            \u0022type\u0022: \u0022Set\u0022,\n\u002B            \u0022element\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      }\n\u002B    }\n\u002B  }\n\u002B}\u0060\n\u002B\n\u002B// wantAST is the expected AST structure for the test schema.\n\u002B// The Cedar parser produces ast.TypeRef for all type names (including\n\u002B// builtins like String, Long, Bool). Resolution happens later.\n\u002Bvar wantAST = \u0026ast.Schema{\n\u002B\tCommonTypes: ast.CommonTypes{\n\u002B\t\t\u0022Address\u0022: ast.CommonType{\n\u002B\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\u0022doc\u0022:                  \u0022Address information\u0022,\n\u002B\t\t\t\t\u0022personal_information\u0022: \u0022\u0022,\n\u002B\t\t\t},\n\u002B\t\t\tType: ast.RecordType{\n\u002B\t\t\t\t\u0022city\u0022: ast.Attribute{\n\u002B\t\t\t\t\tType: ast.TypeRef(\u0022String\u0022),\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022also\u0022: \u0022town\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022country\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Country\u0022)},\n\u002B\t\t\t\t\u0022street\u0022:  ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\u0022zipcode\u0022: ast.Attribute{Type: ast.TypeRef(\u0022String\u0022), Optional: true},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022decimal\u0022: ast.CommonType{\n\u002B\t\t\tType: ast.RecordType{\n\u002B\t\t\t\t\u0022decimal\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Long\u0022)},\n\u002B\t\t\t\t\u0022whole\u0022:   ast.Attribute{Type: ast.TypeRef(\u0022Long\u0022)},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEntities: ast.Entities{\n\u002B\t\t\u0022Admin\u0022:   ast.Entity{},\n\u002B\t\t\u0022Country\u0022: ast.Entity{},\n\u002B\t\t\u0022System\u0022: ast.Entity{\n\u002B\t\t\tMemberOf: []ast.EntityTypeRef{\u0022Admin\u0022},\n\u002B\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\u0022version\u0022: ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEnums: ast.Enums{\n\u002B\t\t\u0022Role\u0022: ast.Enum{\n\u002B\t\t\tValues: []types.String{\u0022superuser\u0022, \u0022operator\u0022},\n\u002B\t\t},\n\u002B\t},\n\u002B\tActions: ast.Actions{\n\u002B\t\t\u0022audit\u0022: ast.Action{\n\u002B\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022Admin\u0022},\n\u002B\t\t\t\tResources:  []ast.EntityTypeRef{\u0022MyApp::Document\u0022, \u0022System\u0022},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tNamespaces: ast.Namespaces{\n\u002B\t\t\u0022MyApp\u0022: ast.Namespace{\n\u002B\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\u0022doc\u0022: \u0022Doc manager\u0022,\n\u002B\t\t\t},\n\u002B\t\t\tCommonTypes: ast.CommonTypes{\n\u002B\t\t\t\t\u0022Metadata\u0022: ast.CommonType{\n\u002B\t\t\t\t\tType: ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022created\u0022: ast.Attribute{Type: ast.TypeRef(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t\u0022tags\u0022:    ast.Attribute{Type: ast.SetType{Element: ast.TypeRef(\u0022String\u0022)}},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t\tEntities: ast.Entities{\n\u002B\t\t\t\t\u0022MyApp::Department\u0022: ast.Entity{\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022budget\u0022: ast.Attribute{Type: ast.TypeRef(\u0022decimal\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022MyApp::Document\u0022: ast.Entity{\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022public\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Bool\u0022)},\n\u002B\t\t\t\t\t\t\u0022title\u0022:  ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022MyApp::Group\u0022: ast.Entity{\n\u002B\t\t\t\t\tMemberOf: []ast.EntityTypeRef{\u0022Department\u0022},\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022metadata\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Metadata\u0022)},\n\u002B\t\t\t\t\t\t\u0022name\u0022:     ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022MyApp::User\u0022: ast.Entity{\n\u002B\t\t\t\t\tMemberOf: []ast.EntityTypeRef{\u0022Group\u0022},\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022doc\u0022: \u0022User entity\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022active\u0022:  ast.Attribute{Type: ast.TypeRef(\u0022Bool\u0022)},\n\u002B\t\t\t\t\t\t\u0022address\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Address\u0022)},\n\u002B\t\t\t\t\t\t\u0022email\u0022:   ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\t\t\u0022level\u0022:   ast.Attribute{Type: ast.TypeRef(\u0022Long\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t\tEnums: ast.Enums{\n\u002B\t\t\t\t\u0022MyApp::Status\u0022: ast.Enum{\n\u002B\t\t\t\t\tValues: []types.String{\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t\tActions: ast.Actions{\n\u002B\t\t\t\t\u0022edit\u0022: ast.Action{\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022doc\u0022: \u0022View or edit document\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022User\u0022},\n\u002B\t\t\t\t\t\tResources:  []ast.EntityTypeRef{\u0022Document\u0022},\n\u002B\t\t\t\t\t\tContext: ast.RecordType{\n\u002B\t\t\t\t\t\t\t\u0022ip\u0022:        ast.Attribute{Type: ast.TypeRef(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\t\t\u0022timestamp\u0022: ast.Attribute{Type: ast.TypeRef(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022manage\u0022: ast.Action{\n\u002B\t\t\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022User\u0022},\n\u002B\t\t\t\t\t\tResources:  []ast.EntityTypeRef{\u0022Document\u0022, \u0022Group\u0022},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022view\u0022: ast.Action{\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022doc\u0022: \u0022View or edit document\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022User\u0022},\n\u002B\t\t\t\t\t\tResources:  []ast.EntityTypeRef{\u0022Document\u0022},\n\u002B\t\t\t\t\t\tContext: ast.RecordType{\n\u002B\t\t\t\t\t\t\t\u0022ip\u0022:        ast.Attribute{Type: ast.TypeRef(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\t\t\u0022timestamp\u0022: ast.Attribute{Type: ast.TypeRef(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n }\n \n-func TestResolveCommonType(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060type Context = {\n-\tip: ipaddr\n-};\n-\n-entity User {\n-\tctx: Context\n-};\n-\n-action \u0022view\u0022 appliesTo {\n-\tprincipal: User,\n-\tresource: User,\n-\tcontext: Context\n-};\n-\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n-\n-\tuser := res.Entities[\u0022User\u0022]\n-\tattr := (*user.Shape)[\u0022ctx\u0022]\n-\t_, ok := attr.Type.(resolved.RecordType)\n-\ttestutil.Equals(t, ok, true)\n\u002B// wantResolved is the expected resolved schema structure.\n\u002B// All type references have been fully qualified and common types inlined.\n\u002Bvar wantResolved = \u0026resolved.Schema{\n\u002B\tNamespaces: map[types.Path]resolved.Namespace{\n\u002B\t\t\u0022MyApp\u0022: {\n\u002B\t\t\tName: \u0022MyApp\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\n\u002B\t\t\t\t\u0022doc\u0022: \u0022Doc manager\u0022,\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEntities: map[types.EntityType]resolved.Entity{\n\u002B\t\t\u0022Admin\u0022: {\n\u002B\t\t\tName: \u0022Admin\u0022,\n\u002B\t\t},\n\u002B\t\t\u0022Country\u0022: {\n\u002B\t\t\tName: \u0022Country\u0022,\n\u002B\t\t},\n\u002B\t\t\u0022System\u0022: {\n\u002B\t\t\tName:     \u0022System\u0022,\n\u002B\t\t\tMemberOf: []types.EntityType{\u0022Admin\u0022},\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022version\u0022: resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Department\u0022: {\n\u002B\t\t\tName: \u0022MyApp::Department\u0022,\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022budget\u0022: resolved.Attribute{\n\u002B\t\t\t\t\tType: resolved.RecordType{\n\u002B\t\t\t\t\t\t\u0022decimal\u0022: resolved.Attribute{Type: resolved.LongType{}},\n\u002B\t\t\t\t\t\t\u0022whole\u0022:   resolved.Attribute{Type: resolved.LongType{}},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Document\u0022: {\n\u002B\t\t\tName: \u0022MyApp::Document\u0022,\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022public\u0022: resolved.Attribute{Type: resolved.BoolType{}},\n\u002B\t\t\t\t\u0022title\u0022:  resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Group\u0022: {\n\u002B\t\t\tName:     \u0022MyApp::Group\u0022,\n\u002B\t\t\tMemberOf: []types.EntityType{\u0022MyApp::Department\u0022},\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022metadata\u0022: resolved.Attribute{\n\u002B\t\t\t\t\tType: resolved.RecordType{\n\u002B\t\t\t\t\t\t\u0022created\u0022: resolved.Attribute{Type: resolved.ExtensionType(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t\u0022tags\u0022:    resolved.Attribute{Type: resolved.SetType{Element: resolved.StringType{}}},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022name\u0022: resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::User\u0022: {\n\u002B\t\t\tName:        \u0022MyApp::User\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\u0022doc\u0022: \u0022User entity\u0022},\n\u002B\t\t\tMemberOf:    []types.EntityType{\u0022MyApp::Group\u0022},\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022active\u0022: resolved.Attribute{Type: resolved.BoolType{}},\n\u002B\t\t\t\t\u0022address\u0022: resolved.Attribute{\n\u002B\t\t\t\t\tType: resolved.RecordType{\n\u002B\t\t\t\t\t\t\u0022city\u0022: resolved.Attribute{\n\u002B\t\t\t\t\t\t\tType:        resolved.StringType{},\n\u002B\t\t\t\t\t\t\tAnnotations: resolved.Annotations{\u0022also\u0022: \u0022town\u0022},\n\u002B\t\t\t\t\t\t},\n\u002B\t\t\t\t\t\t\u0022country\u0022: resolved.Attribute{Type: resolved.EntityType(\u0022Country\u0022)},\n\u002B\t\t\t\t\t\t\u0022street\u0022:  resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t\t\t\t\u0022zipcode\u0022: resolved.Attribute{Type: resolved.StringType{}, Optional: true},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022email\u0022: resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t\t\u0022level\u0022: resolved.Attribute{Type: resolved.LongType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEnums: map[types.EntityType]resolved.Enum{\n\u002B\t\t\u0022Role\u0022: {\n\u002B\t\t\tName:   \u0022Role\u0022,\n\u002B\t\t\tValues: []types.String{\u0022superuser\u0022, \u0022operator\u0022},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Status\u0022: {\n\u002B\t\t\tName:   \u0022MyApp::Status\u0022,\n\u002B\t\t\tValues: []types.String{\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022},\n\u002B\t\t},\n\u002B\t},\n\u002B\tActions: map[types.EntityUID]resolved.Action{\n\u002B\t\ttypes.NewEntityUID(\u0022Action\u0022, \u0022audit\u0022): {\n\u002B\t\t\tName: \u0022audit\u0022,\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022Admin\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022, \u0022System\u0022},\n\u002B\t\t\t\tContext:    resolved.RecordType{},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\ttypes.NewEntityUID(\u0022MyApp::Action\u0022, \u0022edit\u0022): {\n\u002B\t\t\tName:        \u0022edit\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\u0022doc\u0022: \u0022View or edit document\u0022},\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022MyApp::User\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022},\n\u002B\t\t\t\tContext: resolved.RecordType{\n\u002B\t\t\t\t\t\u0022ip\u0022:        resolved.Attribute{Type: resolved.ExtensionType(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\u0022timestamp\u0022: resolved.Attribute{Type: resolved.ExtensionType(\u0022datetime\u0022)},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\ttypes.NewEntityUID(\u0022MyApp::Action\u0022, \u0022manage\u0022): {\n\u002B\t\t\tName: \u0022manage\u0022,\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022MyApp::User\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022, \u0022MyApp::Group\u0022},\n\u002B\t\t\t\tContext:    resolved.RecordType{},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\ttypes.NewEntityUID(\u0022MyApp::Action\u0022, \u0022view\u0022): {\n\u002B\t\t\tName:        \u0022view\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\u0022doc\u0022: \u0022View or edit document\u0022},\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022MyApp::User\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022},\n\u002B\t\t\t\tContext: resolved.RecordType{\n\u002B\t\t\t\t\t\u0022ip\u0022:        resolved.Attribute{Type: resolved.ExtensionType(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\u0022timestamp\u0022: resolved.Attribute{Type: resolved.ExtensionType(\u0022datetime\u0022)},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n }\n \n-func TestResolveEnum(t *testing.T) {\n\u002Bfunc TestSchema(t *testing.T) {\n \tt.Parallel()\n-\tinput := []byte(\u0060entity Status enum [\u0022active\u0022, \u0022inactive\u0022];\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n \n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n\u002B\tt.Run(\u0022UnmarshalCedar\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalCedar([]byte(wantCedar))\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, s.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalJSON\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalJSON([]byte(wantJSON))\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, s.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022MarshalCedar\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tstringEquals(t, string(b), wantCedar)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022MarshalJSON\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tstringEquals(t, string(normalizeJSON(t, b)), string(normalizeJSON(t, []byte(wantJSON))))\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022Resolve\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tr, err := s.Resolve()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, r, wantResolved)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarToJSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tjsonBytes, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(jsonBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONToCedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tcedarBytes, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(cedarBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONMarshalInterface\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := json.Marshal(s)\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, json.Unmarshal(b, \u0026s2))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalCedarErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\tconst filename = \u0022path/to/my-file-name.cedarschema\u0022\n\u002B\t\ts.SetFilename(filename)\n\u002B\t\terr := s.UnmarshalCedar([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t\ttestutil.FatalIf(t, !strings.Contains(err.Error(), filename\u002B\u0022:1:1\u0022), \u0022expected %q in error: %v\u0022, filename, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalJSONErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalJSON([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022ResolveErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(\u0060entity User in [NonExistent];\u0060)))\n\u002B\t\t_, err := s.Resolve()\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022EmptySchema\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(\u0026ast.Schema{})\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(b), \u0022\u0022)\n\u002B\n\u002B\t\tjb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\t})\n\u002B}\n \n-\ttestutil.Equals(t, len(res.Enums), 1)\n-\tstatus := res.Enums[\u0022Status\u0022]\n-\ttestutil.Equals(t, status.Values, []types.String{\u0022active\u0022, \u0022inactive\u0022})\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n }\n \n-func TestNewSchemaFromASTNil(t *testing.T) {\n-\tt.Parallel()\n-\ta := \u0026ast.Schema{}\n-\ts := schema.NewSchemaFromAST(a)\n-\tb, err := s.MarshalCedar()\n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(b), \u0022\u0022)\n-\n-\tjb, err := s.MarshalJSON()\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\treturn b\n }"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:20.582092Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01DyqrvwdYDmcu87YfwMsQTu",
+        "output": "[WARNING: Tool output was truncated. First 4885 characters were removed.]\n\n\t\tt.Run(\u0022schema-vs-rust\u0022, func(t *testing.T) {\n\u002B\t\t\t\tt.Parallel()\n\u002B\n\u002B\t\t\t\t// Extract schema filename from path (e.g., \u0022corpus-tests/abc123.cedarschema\u0022 -\u003E \u0022abc123\u0022)\n\u002B\t\t\t\tschemaFilename := strings.TrimSuffix(strings.TrimPrefix(tt.Schema, \u0022corpus-tests/\u0022), \u0022.cedarschema\u0022)\n\u002B\t\t\t\tjsonSchemaPath := fmt.Sprintf(\u0022corpus-tests-json-schemas/%s.cedarschema.json\u0022, schemaFilename)\n\u002B\n\u002B\t\t\t\trustJSON, err := jsonSchemasFdm.GetFileData(jsonSchemaPath)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize Rust JSON: appliesTo is optional - match testdata_test.go pattern\n\u002B\t\t\t\t// Need to handle trailing comma to avoid creating invalid JSON like {,\u0022other\u0022:...}\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]},\u0060), nil)\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]}\u0060), nil)\n\u002B\n\u002B\t\t\t\t// Unmarshal Rust JSON to handle any syntax issues from replacement\n\u002B\t\t\t\tvar rustSchema schema.Schema\n\u002B\t\t\t\terr = rustSchema.UnmarshalJSON(rustJSON)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Marshal both schemas to JSON for comparison\n\u002B\t\t\t\tgoJSON, err := s.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\t\t\t\trustJSON2, err := rustSchema.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize and compare\n\u002B\t\t\t\tstringEquals(t, string(normalizeJSON(t, goJSON)), string(normalizeJSON(t, rustJSON2)))\n\u002B\t\t\t})\n\u002B\n \t\t\tpolicyContent, err := fdm.GetFileData(tt.Policies)\n \t\t\tif err != nil {\n \t\t\t\tt.Fatal(\u0022error reading policy content\u0022, err)\n@@ -240,6 \u002B324,21 @@ func TestCorpus(t *testing.T) {\n \t}\n }\n \n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n\u002B\ttestutil.OK(t, err)\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n\u002B\ttestutil.OK(t, err)\n\u002B\treturn b\n\u002B}\n\u002B\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n\u002B}\n\u002B\n // Specific corpus tests that have been extracted for easy regression testing purposes\n func TestCorpusRelated(t *testing.T) {\n \tt.Parallel()\n@@ -412,80 \u002B511,3 @@ func TestCorpusRelated(t *testing.T) {\n \t\t})\n \t}\n }\n-\n-//nolint:revive // due to test cognitive complexity\n-func TestCorpusSchemas(t *testing.T) {\n-\tt.Parallel()\n-\n-\tgzipReader, err := gzip.NewReader(bytes.NewReader(corpusArchive))\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive header\u0022, err)\n-\t}\n-\tdefer gzipReader.Close() //nolint:errcheck\n-\n-\tbuf, err := io.ReadAll(gzipReader)\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive\u0022, err)\n-\t}\n-\n-\tbufReader := bytes.NewReader(buf)\n-\tarchiveReader := tar.NewReader(bufReader)\n-\n-\tfdm := NewTarFileMap(bufReader)\n-\tvar schemaFiles []string\n-\tfor file, err := archiveReader.Next(); err == nil; file, err = archiveReader.Next() {\n-\t\tif file.Typeflag != tar.TypeReg {\n-\t\t\tcontinue\n-\t\t}\n-\n-\t\tcursor, _ := bufReader.Seek(0, io.SeekCurrent)\n-\t\tfdm.AddFileData(file.Name, cursor, file.Size)\n-\n-\t\tif strings.HasSuffix(file.Name, \u0022.cedarschema\u0022) {\n-\t\t\tschemaFiles = append(schemaFiles, file.Name)\n-\t\t}\n-\t}\n-\n-\tfor _, schemaFile := range schemaFiles {\n-\t\tschemaFile := schemaFile\n-\t\tt.Run(schemaFile, func(t *testing.T) {\n-\t\t\tt.Parallel()\n-\t\t\tcontent, err := fdm.GetFileData(schemaFile)\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error reading schema content\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Parse Cedar text\n-\t\t\tvar s schema.Schema\n-\t\t\ts.SetFilename(schemaFile)\n-\t\t\tif err := s.UnmarshalCedar(content); err != nil {\n-\t\t\t\tt.Fatal(\u0022error parsing schema\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal back to Cedar and re-parse\n-\t\t\tcedarBytes, err := s.MarshalCedar()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to cedar\u0022, err)\n-\t\t\t}\n-\t\t\tvar s2 schema.Schema\n-\t\t\tif err := s2.UnmarshalCedar(cedarBytes); err != nil {\n-\t\t\t\tt.Fatalf(\u0022error re-parsing marshaled cedar:\\n%s\\nerror: %v\u0022, cedarBytes, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal to JSON and re-parse\n-\t\t\tjsonBytes, err := s.MarshalJSON()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to JSON\u0022, err)\n-\t\t\t}\n-\t\t\tvar s3 schema.Schema\n-\t\t\tif err := s3.UnmarshalJSON(jsonBytes); err != nil {\n[... 876 lines omitted ...]\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022Resolve\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tr, err := s.Resolve()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, r, wantResolved)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarToJSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tjsonBytes, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(jsonBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONToCedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tcedarBytes, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(cedarBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONMarshalInterface\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := json.Marshal(s)\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, json.Unmarshal(b, \u0026s2))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalCedarErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\tconst filename = \u0022path/to/my-file-name.cedarschema\u0022\n\u002B\t\ts.SetFilename(filename)\n\u002B\t\terr := s.UnmarshalCedar([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t\ttestutil.FatalIf(t, !strings.Contains(err.Error(), filename\u002B\u0022:1:1\u0022), \u0022expected %q in error: %v\u0022, filename, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalJSONErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalJSON([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022ResolveErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(\u0060entity User in [NonExistent];\u0060)))\n\u002B\t\t_, err := s.Resolve()\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022EmptySchema\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(\u0026ast.Schema{})\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(b), \u0022\u0022)\n\u002B\n\u002B\t\tjb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\t})\n\u002B}\n \n-\ttestutil.Equals(t, len(res.Enums), 1)\n-\tstatus := res.Enums[\u0022Status\u0022]\n-\ttestutil.Equals(t, status.Values, []types.String{\u0022active\u0022, \u0022inactive\u0022})\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n }\n \n-func TestNewSchemaFromASTNil(t *testing.T) {\n-\tt.Parallel()\n-\ta := \u0026ast.Schema{}\n-\ts := schema.NewSchemaFromAST(a)\n-\tb, err := s.MarshalCedar()\n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(b), \u0022\u0022)\n-\n-\tjb, err := s.MarshalJSON()\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\treturn b\n }"
+      },
+      "fullOutput": "exit_code: 0\ntimed_out: False\nstdout:\ncommit 84fcf7c357d45f5b5bf1ba4cf191cf90d95d1346\nAuthor: Phil Hassey \u003Cphil@strongdm.com\u003E\nDate:   Mon Feb 9 10:56:52 2026 -0700\n\n    schema: add more end-to-end validation tests\n    \n    Signed-off-by: Phil Hassey \u003Cphil@strongdm.com\u003E\n\ndiff --git a/Makefile b/Makefile\nnew file mode 100644\nindex 0000000..5b3ebdf\n--- /dev/null\n\u002B\u002B\u002B b/Makefile\n@@ -0,0 \u002B1,14 @@\n\u002Bcorpus-tests-json-schemas.tar.gz: corpus-tests.tar.gz\n\u002B\t@echo \u0022Generating JSON schemas from Cedar schemas...\u0022\n\u002B\t@rm -rf /tmp/corpus-tests /tmp/corpus-tests-json-schemas\n\u002B\t@mkdir -p /tmp/corpus-tests-json-schemas\n\u002B\t@tar -xzf corpus-tests.tar.gz -C /tmp/\n\u002B\t@for schema in /tmp/corpus-tests/*.cedarschema; do \\\n\u002B\t\tbasename=$$(basename $$schema .cedarschema); \\\n\u002B\t\techo \u0022Converting $$basename.cedarschema...\u0022; \\\n\u002B\t\tcedar translate-schema --direction cedar-to-json --schema \u0022$$schema\u0022 \u003E \u0022/tmp/corpus-tests-json-schemas/$$basename.cedarschema.json\u0022 2\u003E\u00261; \\\n\u002B\tdone\n\u002B\t@cd /tmp \u0026\u0026 tar -czf corpus-tests-json-schemas.tar.gz corpus-tests-json-schemas/\n\u002B\t@mv /tmp/corpus-tests-json-schemas.tar.gz .\n\u002B\t@rm -rf /tmp/corpus-tests /tmp/corpus-tests-json-schemas\n\u002B\t@echo \u0022Done! Created corpus-tests-json-schemas.tar.gz\u0022\ndiff --git a/corpus-tests-json-schemas.tar.gz b/corpus-tests-json-schemas.tar.gz\nnew file mode 100644\nindex 0000000..621b65c\nBinary files /dev/null and b/corpus-tests-json-schemas.tar.gz differ\ndiff --git a/corpus_test.go b/corpus_test.go\nindex 15c3042..24e1c1f 100644\n--- a/corpus_test.go\n\u002B\u002B\u002B b/corpus_test.go\n@@ -56,6 \u002B56,9 @@ type corpusTest struct {\n //go:embed corpus-tests.tar.gz\n var corpusArchive []byte\n \n\u002B//go:embed corpus-tests-json-schemas.tar.gz\n\u002Bvar corpusJSONSchemasArchive []byte\n\u002B\n type tarFileDataPointer struct {\n \tPosition int64\n \tSize     int64\n@@ -91,26 \u002B94,24 @@ func (fdm TarFileMap) GetFileData(path string) ([]byte, error) {\n \treturn content, nil\n }\n \n-//nolint:revive // due to test cognitive complexity\n-func TestCorpus(t *testing.T) {\n-\tt.Parallel()\n\u002Bfunc loadTarGz(t testing.TB, archive []byte) TarFileMap {\n\u002B\tt.Helper()\n \n-\tgzipReader, err := gzip.NewReader(bytes.NewReader(corpusArchive))\n\u002B\tgzipReader, err := gzip.NewReader(bytes.NewReader(archive))\n \tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive header\u0022, err)\n\u002B\t\tt.Fatal(\u0022error reading compressed archive header\u0022, err)\n \t}\n \tdefer gzipReader.Close() //nolint:errcheck\n \n \tbuf, err := io.ReadAll(gzipReader)\n \tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive\u0022, err)\n\u002B\t\tt.Fatal(\u0022error reading compressed archive\u0022, err)\n \t}\n \n \tbufReader := bytes.NewReader(buf)\n \tarchiveReader := tar.NewReader(bufReader)\n \n \tfdm := NewTarFileMap(bufReader)\n-\tvar testFiles []string\n \tfor file, err := archiveReader.Next(); err == nil; file, err = archiveReader.Next() {\n \t\tif file.Typeflag != tar.TypeReg {\n \t\t\tcontinue\n@@ -118,12 \u002B119,27 @@ func TestCorpus(t *testing.T) {\n \n \t\tcursor, _ := bufReader.Seek(0, io.SeekCurrent)\n \t\tfdm.AddFileData(file.Name, cursor, file.Size)\n\u002B\t}\n\u002B\n\u002B\treturn fdm\n\u002B}\n\u002B\n\u002B//nolint:revive // due to test cognitive complexity\n\u002Bfunc TestCorpus(t *testing.T) {\n\u002B\tt.Parallel()\n \n-\t\tif strings.HasSuffix(file.Name, \u0022.json\u0022) \u0026\u0026 !strings.HasSuffix(file.Name, \u0022.entities.json\u0022) {\n-\t\t\ttestFiles = append(testFiles, file.Name)\n\u002B\t// Load corpus test files\n\u002B\tfdm := loadTarGz(t, corpusArchive)\n\u002B\tvar testFiles []string\n\u002B\tfor fileName := range fdm.files {\n\u002B\t\tif strings.HasSuffix(fileName, \u0022.json\u0022) \u0026\u0026 !strings.HasSuffix(fileName, \u0022.entities.json\u0022) {\n\u002B\t\t\ttestFiles = append(testFiles, fileName)\n \t\t}\n \t}\n \n\u002B\t// Load JSON schemas for validation\n\u002B\tjsonSchemasFdm := loadTarGz(t, corpusJSONSchemasArchive)\n\u002B\n \tfor _, testFile := range testFiles {\n \t\ttestFile := testFile\n \t\tt.Run(testFile, func(t *testing.T) {\n@@ -148,6 \u002B164,74 @@ func TestCorpus(t *testing.T) {\n \t\t\t\tt.Fatal(\u0022error unmarshalling test\u0022, err)\n \t\t\t}\n \n\u002B\t\t\tschemaContent, err := fdm.GetFileData(tt.Schema)\n\u002B\t\t\tif err != nil {\n\u002B\t\t\t\tt.Fatal(\u0022error reading schema content\u0022, err)\n\u002B\t\t\t}\n\u002B\t\t\t// Rust converted JSON never contains the empty context record\n\u002B\t\t\tschemaContent = bytes.ReplaceAll(schemaContent, []byte(\u0022context: {}\\n\u0022), nil)\n\u002B\n\u002B\t\t\tvar s schema.Schema\n\u002B\t\t\ts.SetFilename(\u0022test.schema\u0022)\n\u002B\t\t\tif err := s.UnmarshalCedar(schemaContent); err != nil {\n\u002B\t\t\t\tt.Fatal(\u0022error parsing schema\u0022, err, \u0022\\n===\\n\u0022, string(schemaContent))\n\u002B\t\t\t}\n\u002B\n\u002B\t\t\t// Validate schema round-trip\n\u002B\t\t\tt.Run(\u0022schema-round-trip\u0022, func(t *testing.T) {\n\u002B\t\t\t\tt.Parallel()\n\u002B\n\u002B\t\t\t\tjs, err := s.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tvar s2 schema.Schema\n\u002B\t\t\t\terr = s2.UnmarshalJSON(js)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tsb, err := s2.MarshalCedar()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tvar s3 schema.Schema\n\u002B\t\t\t\terr = s3.UnmarshalCedar(sb)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\tj2, err := s3.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\ttestutil.Equals(t, string(j2), string(js))\n\u002B\t\t\t})\n\u002B\n\u002B\t\t\t// Validate schema matches Rust Cedar CLI output\n\u002B\t\t\tt.Run(\u0022schema-vs-rust\u0022, func(t *testing.T) {\n\u002B\t\t\t\tt.Parallel()\n\u002B\n\u002B\t\t\t\t// Extract schema filename from path (e.g., \u0022corpus-tests/abc123.cedarschema\u0022 -\u003E \u0022abc123\u0022)\n\u002B\t\t\t\tschemaFilename := strings.TrimSuffix(strings.TrimPrefix(tt.Schema, \u0022corpus-tests/\u0022), \u0022.cedarschema\u0022)\n\u002B\t\t\t\tjsonSchemaPath := fmt.Sprintf(\u0022corpus-tests-json-schemas/%s.cedarschema.json\u0022, schemaFilename)\n\u002B\n\u002B\t\t\t\trustJSON, err := jsonSchemasFdm.GetFileData(jsonSchemaPath)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize Rust JSON: appliesTo is optional - match testdata_test.go pattern\n\u002B\t\t\t\t// Need to handle trailing comma to avoid creating invalid JSON like {,\u0022other\u0022:...}\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]},\u0060), nil)\n\u002B\t\t\t\trustJSON = bytes.ReplaceAll(rustJSON, []byte(\u0060\u0022appliesTo\u0022:{\u0022resourceTypes\u0022:[],\u0022principalTypes\u0022:[]}\u0060), nil)\n\u002B\n\u002B\t\t\t\t// Unmarshal Rust JSON to handle any syntax issues from replacement\n\u002B\t\t\t\tvar rustSchema schema.Schema\n\u002B\t\t\t\terr = rustSchema.UnmarshalJSON(rustJSON)\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Marshal both schemas to JSON for comparison\n\u002B\t\t\t\tgoJSON, err := s.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\t\t\t\trustJSON2, err := rustSchema.MarshalJSON()\n\u002B\t\t\t\ttestutil.OK(t, err)\n\u002B\n\u002B\t\t\t\t// Normalize and compare\n\u002B\t\t\t\tstringEquals(t, string(normalizeJSON(t, goJSON)), string(normalizeJSON(t, rustJSON2)))\n\u002B\t\t\t})\n\u002B\n \t\t\tpolicyContent, err := fdm.GetFileData(tt.Policies)\n \t\t\tif err != nil {\n \t\t\t\tt.Fatal(\u0022error reading policy content\u0022, err)\n@@ -240,6 \u002B324,21 @@ func TestCorpus(t *testing.T) {\n \t}\n }\n \n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n\u002B\ttestutil.OK(t, err)\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n\u002B\ttestutil.OK(t, err)\n\u002B\treturn b\n\u002B}\n\u002B\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n\u002B}\n\u002B\n // Specific corpus tests that have been extracted for easy regression testing purposes\n func TestCorpusRelated(t *testing.T) {\n \tt.Parallel()\n@@ -412,80 \u002B511,3 @@ func TestCorpusRelated(t *testing.T) {\n \t\t})\n \t}\n }\n-\n-//nolint:revive // due to test cognitive complexity\n-func TestCorpusSchemas(t *testing.T) {\n-\tt.Parallel()\n-\n-\tgzipReader, err := gzip.NewReader(bytes.NewReader(corpusArchive))\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive header\u0022, err)\n-\t}\n-\tdefer gzipReader.Close() //nolint:errcheck\n-\n-\tbuf, err := io.ReadAll(gzipReader)\n-\tif err != nil {\n-\t\tt.Fatal(\u0022error reading corpus compressed archive\u0022, err)\n-\t}\n-\n-\tbufReader := bytes.NewReader(buf)\n-\tarchiveReader := tar.NewReader(bufReader)\n-\n-\tfdm := NewTarFileMap(bufReader)\n-\tvar schemaFiles []string\n-\tfor file, err := archiveReader.Next(); err == nil; file, err = archiveReader.Next() {\n-\t\tif file.Typeflag != tar.TypeReg {\n-\t\t\tcontinue\n-\t\t}\n-\n-\t\tcursor, _ := bufReader.Seek(0, io.SeekCurrent)\n-\t\tfdm.AddFileData(file.Name, cursor, file.Size)\n-\n-\t\tif strings.HasSuffix(file.Name, \u0022.cedarschema\u0022) {\n-\t\t\tschemaFiles = append(schemaFiles, file.Name)\n-\t\t}\n-\t}\n-\n-\tfor _, schemaFile := range schemaFiles {\n-\t\tschemaFile := schemaFile\n-\t\tt.Run(schemaFile, func(t *testing.T) {\n-\t\t\tt.Parallel()\n-\t\t\tcontent, err := fdm.GetFileData(schemaFile)\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error reading schema content\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Parse Cedar text\n-\t\t\tvar s schema.Schema\n-\t\t\ts.SetFilename(schemaFile)\n-\t\t\tif err := s.UnmarshalCedar(content); err != nil {\n-\t\t\t\tt.Fatal(\u0022error parsing schema\u0022, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal back to Cedar and re-parse\n-\t\t\tcedarBytes, err := s.MarshalCedar()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to cedar\u0022, err)\n-\t\t\t}\n-\t\t\tvar s2 schema.Schema\n-\t\t\tif err := s2.UnmarshalCedar(cedarBytes); err != nil {\n-\t\t\t\tt.Fatalf(\u0022error re-parsing marshaled cedar:\\n%s\\nerror: %v\u0022, cedarBytes, err)\n-\t\t\t}\n-\n-\t\t\t// Marshal to JSON and re-parse\n-\t\t\tjsonBytes, err := s.MarshalJSON()\n-\t\t\tif err != nil {\n-\t\t\t\tt.Fatal(\u0022error marshaling schema to JSON\u0022, err)\n-\t\t\t}\n-\t\t\tvar s3 schema.Schema\n-\t\t\tif err := s3.UnmarshalJSON(jsonBytes); err != nil {\n-\t\t\t\tt.Fatalf(\u0022error re-parsing marshaled JSON:\\n%s\\nerror: %v\u0022, jsonBytes, err)\n-\t\t\t}\n-\n-\t\t\t// Verify the schema resolves without error\n-\t\t\tif _, err := s.Resolve(); err != nil {\n-\t\t\t\tt.Fatal(\u0022error resolving schema\u0022, err)\n-\t\t\t}\n-\t\t})\n-\t}\n-}\ndiff --git a/schema/schema_test.go b/schema/schema_test.go\nindex f6d0974..6f21d95 100644\n--- a/schema/schema_test.go\n\u002B\u002B\u002B b/schema/schema_test.go\n@@ -2,6 \u002B2,7 @@ package schema_test\n \n import (\n \t\u0022encoding/json\u0022\n\u002B\t\u0022strings\u0022\n \t\u0022testing\u0022\n \n \t\u0022github.com/cedar-policy/cedar-go/internal/testutil\u0022\n@@ -11,279 \u002B12,738 @@ import (\n \t\u0022github.com/cedar-policy/cedar-go/types\u0022\n )\n \n-func TestNewSchemaFromAST(t *testing.T) {\n-\tt.Parallel()\n-\ta := \u0026ast.Schema{\n-\t\tEntities: ast.Entities{\n-\t\t\t\u0022User\u0022: ast.Entity{},\n-\t\t},\n-\t}\n-\ts := schema.NewSchemaFromAST(a)\n-\ttestutil.Equals(t, s.AST(), a)\n-}\n-\n-func TestSetFilename(t *testing.T) {\n-\tt.Parallel()\n-\ts := \u0026schema.Schema{}\n-\ts.SetFilename(\u0022test.cedarschema\u0022)\n-\terr := s.UnmarshalCedar([]byte(\u0022entity 42;\u0022))\n-\ttestutil.Error(t, err)\n-\t// The error should include the filename\n-\ttestutil.Equals(t, true, len(err.Error()) \u003E 0)\n-}\n-\n-func TestMarshalUnmarshalCedar(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0022entity User;\\n\u0022)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tb, err := s.MarshalCedar()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalCedar(b))\n-\ttestutil.Equals(t, len(s2.AST().Entities), 1)\n-}\n-\n-func TestMarshalUnmarshalJSON(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060{\u0022\u0022: {\u0022entityTypes\u0022: {\u0022User\u0022: {}}, \u0022actions\u0022: {}}}\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalJSON(input))\n-\n-\tb, err := s.MarshalJSON()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalJSON(b))\n-\ttestutil.Equals(t, len(s2.AST().Entities), 1)\n-}\n-\n-func TestCedarToJSONRoundTrip(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060entity User {\n-\tname: String,\n-\tage?: Long\n\u002Bvar wantCedar = \u0060\n\u002B@doc(\u0022Address information\u0022)\n\u002B@personal_information\n\u002Btype Address = {\n\u002B\t@also(\u0022town\u0022)\n\u002B\tcity: String,\n\u002B\tcountry: Country,\n\u002B\tstreet: String,\n\u002B\tzipcode?: String\n };\n \n-action \u0022view\u0022 appliesTo {\n-\tprincipal: User,\n-\tresource: User,\n-\tcontext: {}\n\u002Btype decimal = {\n\u002B\tdecimal: Long,\n\u002B\twhole: Long\n };\n-\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tjsonBytes, err := s.MarshalJSON()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalJSON(jsonBytes))\n-\n-\tcedarBytes, err := s2.MarshalCedar()\n-\ttestutil.OK(t, err)\n-\n-\tvar s3 schema.Schema\n-\ttestutil.OK(t, s3.UnmarshalCedar(cedarBytes))\n-\n-\ttestutil.Equals(t, len(s3.AST().Entities), 1)\n-\ttestutil.Equals(t, len(s3.AST().Actions), 1)\n-}\n-\n-func TestJSONToCedarRoundTrip(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060{\n-\t\t\u0022NS\u0022: {\n-\t\t\t\u0022entityTypes\u0022: {\n-\t\t\t\t\u0022User\u0022: {\n-\t\t\t\t\t\u0022memberOfTypes\u0022: [\u0022Group\u0022],\n-\t\t\t\t\t\u0022shape\u0022: {\n-\t\t\t\t\t\t\u0022type\u0022: \u0022Record\u0022,\n-\t\t\t\t\t\t\u0022attributes\u0022: {\n-\t\t\t\t\t\t\t\u0022name\u0022: {\u0022type\u0022: \u0022String\u0022}\n-\t\t\t\t\t\t}\n-\t\t\t\t\t}\n-\t\t\t\t},\n-\t\t\t\t\u0022Group\u0022: {}\n-\t\t\t},\n-\t\t\t\u0022actions\u0022: {\n-\t\t\t\t\u0022view\u0022: {\n-\t\t\t\t\t\u0022appliesTo\u0022: {\n-\t\t\t\t\t\t\u0022principalTypes\u0022: [\u0022User\u0022],\n-\t\t\t\t\t\t\u0022resourceTypes\u0022: [\u0022Group\u0022],\n-\t\t\t\t\t\t\u0022context\u0022: {\u0022type\u0022: \u0022Record\u0022, \u0022attributes\u0022: {}}\n-\t\t\t\t\t}\n-\t\t\t\t}\n-\t\t\t}\n-\t\t}\n-\t}\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalJSON(input))\n \n-\tcedarBytes, err := s.MarshalCedar()\n-\ttestutil.OK(t, err)\n-\n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, s2.UnmarshalCedar(cedarBytes))\n-\n-\tjsonBytes, err := s2.MarshalJSON()\n-\ttestutil.OK(t, err)\n-\n-\tvar s3 schema.Schema\n-\ttestutil.OK(t, s3.UnmarshalJSON(jsonBytes))\n\u002Bentity Admin;\n \n-\tns := s3.AST().Namespaces[\u0022NS\u0022]\n-\ttestutil.Equals(t, len(ns.Entities), 2)\n-\ttestutil.Equals(t, len(ns.Actions), 1)\n-}\n-\n-func TestResolve(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060entity User;\n\u002Bentity Country;\n \n-action \u0022view\u0022 appliesTo {\n-\tprincipal: User,\n-\tresource: User,\n-\tcontext: {}\n\u002Bentity System in Admin {\n\u002B\tversion: String\n };\n-\u0060)\n \n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n\u002Bentity Role enum [\u0022superuser\u0022, \u0022operator\u0022];\n \n-\ttestutil.Equals(t, len(res.Entities), 1)\n-\ttestutil.Equals(t, len(res.Actions), 1)\n-\n-\taction := res.Actions[types.NewEntityUID(\u0022Action\u0022, \u0022view\u0022)]\n-\ttestutil.Equals(t, action.Name, types.String(\u0022view\u0022))\n-\ttestutil.Equals(t, action.AppliesTo != nil, true)\n-\ttestutil.Equals(t, action.AppliesTo.Principals, []types.EntityType{\u0022User\u0022})\n-}\n-\n-func TestResolveError(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060entity User in [NonExistent];\u0060)\n\u002Baction audit appliesTo {\n\u002B\tprincipal: Admin,\n\u002B\tresource: [MyApp::Document, System]\n\u002B};\n \n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n\u002B@doc(\u0022Doc manager\u0022)\n\u002Bnamespace MyApp {\n\u002B\ttype Metadata = {\n\u002B\t\tcreated: datetime,\n\u002B\t\ttags: Set\u003CString\u003E\n\u002B\t};\n \n-\t_, err := s.Resolve()\n-\ttestutil.Error(t, err)\n-}\n\u002B\tentity Department {\n\u002B\t\tbudget: decimal\n\u002B\t};\n \n-func TestUnmarshalCedarError(t *testing.T) {\n-\tt.Parallel()\n-\tvar s schema.Schema\n-\ttestutil.Error(t, s.UnmarshalCedar([]byte(\u0022not valid cedar {\u0022)))\n-}\n\u002B\tentity Document {\n\u002B\t\tpublic: Bool,\n\u002B\t\ttitle: String\n\u002B\t};\n \n-func TestUnmarshalJSONError(t *testing.T) {\n-\tt.Parallel()\n-\tvar s schema.Schema\n-\ttestutil.Error(t, s.UnmarshalJSON([]byte(\u0022not json\u0022)))\n-}\n\u002B\tentity Group in Department {\n\u002B\t\tmetadata: Metadata,\n\u002B\t\tname: String\n\u002B\t};\n \n-func TestJSONMarshalInterface(t *testing.T) {\n-\tt.Parallel()\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar([]byte(\u0022entity User;\u0022)))\n\u002B\t@doc(\u0022User entity\u0022)\n\u002B\tentity User in Group {\n\u002B\t\tactive: Bool,\n\u002B\t\taddress: Address,\n\u002B\t\temail: String,\n\u002B\t\tlevel: Long\n\u002B\t};\n \n-\tb, err := json.Marshal(\u0026s)\n-\ttestutil.OK(t, err)\n\u002B\tentity Status enum [\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022];\n \n-\tvar s2 schema.Schema\n-\ttestutil.OK(t, json.Unmarshal(b, \u0026s2))\n-\ttestutil.Equals(t, len(s2.AST().Entities), 1)\n-}\n\u002B\t@doc(\u0022View or edit document\u0022)\n\u002B\taction edit appliesTo {\n\u002B\t\tprincipal: User,\n\u002B\t\tresource: Document,\n\u002B\t\tcontext: {\n\u002B\t\t\tip: ipaddr,\n\u002B\t\t\ttimestamp: datetime\n\u002B\t\t}\n\u002B\t};\n \n-func TestResolveWithNamespace(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060namespace NS {\n-\tentity User;\n\u002B\taction manage appliesTo {\n\u002B\t\tprincipal: User,\n\u002B\t\tresource: [Document, Group]\n\u002B\t};\n \n-\taction \u0022view\u0022 appliesTo {\n\u002B\t@doc(\u0022View or edit document\u0022)\n\u002B\taction view appliesTo {\n \t\tprincipal: User,\n-\t\tresource: User,\n-\t\tcontext: {}\n\u002B\t\tresource: Document,\n\u002B\t\tcontext: {\n\u002B\t\t\tip: ipaddr,\n\u002B\t\t\ttimestamp: datetime\n\u002B\t\t}\n \t};\n }\n-\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n-\n-\t_, ok := res.Entities[\u0022NS::User\u0022]\n-\ttestutil.Equals(t, ok, true)\n-\n-\taction := res.Actions[types.NewEntityUID(\u0022NS::Action\u0022, \u0022view\u0022)]\n-\ttestutil.Equals(t, action.AppliesTo.Principals, []types.EntityType{\u0022NS::User\u0022})\n\u002B\u0060\n\u002B\n\u002Bvar wantJSON = \u0060{\n\u002B  \u0022\u0022: {\n\u002B    \u0022entityTypes\u0022: {\n\u002B      \u0022Admin\u0022: {},\n\u002B      \u0022Country\u0022: {},\n\u002B      \u0022Role\u0022: {\n\u002B        \u0022enum\u0022: [\u0022superuser\u0022, \u0022operator\u0022]\n\u002B      },\n\u002B      \u0022System\u0022: {\n\u002B        \u0022memberOfTypes\u0022: [\u0022Admin\u0022],\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022version\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022actions\u0022: {\n\u002B      \u0022audit\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022Admin\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022MyApp::Document\u0022, \u0022System\u0022]\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022commonTypes\u0022: {\n\u002B      \u0022Address\u0022: {\n\u002B        \u0022type\u0022: \u0022Record\u0022,\n\u002B        \u0022attributes\u0022: {\n\u002B          \u0022city\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022String\u0022,\n\u002B            \u0022annotations\u0022: {\n\u002B              \u0022also\u0022: \u0022town\u0022\n\u002B            }\n\u002B          },\n\u002B          \u0022country\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022Country\u0022\n\u002B          },\n\u002B          \u0022street\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022String\u0022\n\u002B          },\n\u002B          \u0022zipcode\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022String\u0022,\n\u002B            \u0022required\u0022: false\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022Address information\u0022,\n\u002B          \u0022personal_information\u0022: \u0022\u0022\n\u002B        }\n\u002B      },\n\u002B      \u0022decimal\u0022: {\n\u002B        \u0022type\u0022: \u0022Record\u0022,\n\u002B        \u0022attributes\u0022: {\n\u002B          \u0022decimal\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022Long\u0022\n\u002B          },\n\u002B          \u0022whole\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022Long\u0022\n\u002B          }\n\u002B        }\n\u002B      }\n\u002B    }\n\u002B  },\n\u002B  \u0022MyApp\u0022: {\n\u002B    \u0022annotations\u0022: {\n\u002B      \u0022doc\u0022: \u0022Doc manager\u0022\n\u002B    },\n\u002B    \u0022entityTypes\u0022: {\n\u002B      \u0022Department\u0022: {\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022budget\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022decimal\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      },\n\u002B      \u0022Document\u0022: {\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022public\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Bool\u0022\n\u002B            },\n\u002B            \u0022title\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      },\n\u002B      \u0022Group\u0022: {\n\u002B        \u0022memberOfTypes\u0022: [\u0022Department\u0022],\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022metadata\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Metadata\u0022\n\u002B            },\n\u002B            \u0022name\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      },\n\u002B      \u0022Status\u0022: {\n\u002B        \u0022enum\u0022: [\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022]\n\u002B      },\n\u002B      \u0022User\u0022: {\n\u002B        \u0022memberOfTypes\u0022: [\u0022Group\u0022],\n\u002B        \u0022shape\u0022: {\n\u002B          \u0022type\u0022: \u0022Record\u0022,\n\u002B          \u0022attributes\u0022: {\n\u002B            \u0022active\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Bool\u0022\n\u002B            },\n\u002B            \u0022address\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Address\u0022\n\u002B            },\n\u002B            \u0022email\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            },\n\u002B            \u0022level\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022Long\u0022\n\u002B            }\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022User entity\u0022\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022actions\u0022: {\n\u002B      \u0022edit\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022User\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022Document\u0022],\n\u002B          \u0022context\u0022: {\n\u002B            \u0022type\u0022: \u0022Record\u0022,\n\u002B            \u0022attributes\u0022: {\n\u002B              \u0022ip\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022ipaddr\u0022\n\u002B              },\n\u002B              \u0022timestamp\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022datetime\u0022\n\u002B              }\n\u002B            }\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022View or edit document\u0022\n\u002B        }\n\u002B      },\n\u002B      \u0022manage\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022User\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022Document\u0022, \u0022Group\u0022]\n\u002B        }\n\u002B      },\n\u002B      \u0022view\u0022: {\n\u002B        \u0022appliesTo\u0022: {\n\u002B          \u0022principalTypes\u0022: [\u0022User\u0022],\n\u002B          \u0022resourceTypes\u0022: [\u0022Document\u0022],\n\u002B          \u0022context\u0022: {\n\u002B            \u0022type\u0022: \u0022Record\u0022,\n\u002B            \u0022attributes\u0022: {\n\u002B              \u0022ip\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022ipaddr\u0022\n\u002B              },\n\u002B              \u0022timestamp\u0022: {\n\u002B                \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B                \u0022name\u0022: \u0022datetime\u0022\n\u002B              }\n\u002B            }\n\u002B          }\n\u002B        },\n\u002B        \u0022annotations\u0022: {\n\u002B          \u0022doc\u0022: \u0022View or edit document\u0022\n\u002B        }\n\u002B      }\n\u002B    },\n\u002B    \u0022commonTypes\u0022: {\n\u002B      \u0022Metadata\u0022: {\n\u002B        \u0022type\u0022: \u0022Record\u0022,\n\u002B        \u0022attributes\u0022: {\n\u002B          \u0022created\u0022: {\n\u002B            \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B            \u0022name\u0022: \u0022datetime\u0022\n\u002B          },\n\u002B          \u0022tags\u0022: {\n\u002B            \u0022type\u0022: \u0022Set\u0022,\n\u002B            \u0022element\u0022: {\n\u002B              \u0022type\u0022: \u0022EntityOrCommon\u0022,\n\u002B              \u0022name\u0022: \u0022String\u0022\n\u002B            }\n\u002B          }\n\u002B        }\n\u002B      }\n\u002B    }\n\u002B  }\n\u002B}\u0060\n\u002B\n\u002B// wantAST is the expected AST structure for the test schema.\n\u002B// The Cedar parser produces ast.TypeRef for all type names (including\n\u002B// builtins like String, Long, Bool). Resolution happens later.\n\u002Bvar wantAST = \u0026ast.Schema{\n\u002B\tCommonTypes: ast.CommonTypes{\n\u002B\t\t\u0022Address\u0022: ast.CommonType{\n\u002B\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\u0022doc\u0022:                  \u0022Address information\u0022,\n\u002B\t\t\t\t\u0022personal_information\u0022: \u0022\u0022,\n\u002B\t\t\t},\n\u002B\t\t\tType: ast.RecordType{\n\u002B\t\t\t\t\u0022city\u0022: ast.Attribute{\n\u002B\t\t\t\t\tType: ast.TypeRef(\u0022String\u0022),\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022also\u0022: \u0022town\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022country\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Country\u0022)},\n\u002B\t\t\t\t\u0022street\u0022:  ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\u0022zipcode\u0022: ast.Attribute{Type: ast.TypeRef(\u0022String\u0022), Optional: true},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022decimal\u0022: ast.CommonType{\n\u002B\t\t\tType: ast.RecordType{\n\u002B\t\t\t\t\u0022decimal\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Long\u0022)},\n\u002B\t\t\t\t\u0022whole\u0022:   ast.Attribute{Type: ast.TypeRef(\u0022Long\u0022)},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEntities: ast.Entities{\n\u002B\t\t\u0022Admin\u0022:   ast.Entity{},\n\u002B\t\t\u0022Country\u0022: ast.Entity{},\n\u002B\t\t\u0022System\u0022: ast.Entity{\n\u002B\t\t\tMemberOf: []ast.EntityTypeRef{\u0022Admin\u0022},\n\u002B\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\u0022version\u0022: ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEnums: ast.Enums{\n\u002B\t\t\u0022Role\u0022: ast.Enum{\n\u002B\t\t\tValues: []types.String{\u0022superuser\u0022, \u0022operator\u0022},\n\u002B\t\t},\n\u002B\t},\n\u002B\tActions: ast.Actions{\n\u002B\t\t\u0022audit\u0022: ast.Action{\n\u002B\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022Admin\u0022},\n\u002B\t\t\t\tResources:  []ast.EntityTypeRef{\u0022MyApp::Document\u0022, \u0022System\u0022},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tNamespaces: ast.Namespaces{\n\u002B\t\t\u0022MyApp\u0022: ast.Namespace{\n\u002B\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\u0022doc\u0022: \u0022Doc manager\u0022,\n\u002B\t\t\t},\n\u002B\t\t\tCommonTypes: ast.CommonTypes{\n\u002B\t\t\t\t\u0022Metadata\u0022: ast.CommonType{\n\u002B\t\t\t\t\tType: ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022created\u0022: ast.Attribute{Type: ast.TypeRef(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t\u0022tags\u0022:    ast.Attribute{Type: ast.SetType{Element: ast.TypeRef(\u0022String\u0022)}},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t\tEntities: ast.Entities{\n\u002B\t\t\t\t\u0022MyApp::Department\u0022: ast.Entity{\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022budget\u0022: ast.Attribute{Type: ast.TypeRef(\u0022decimal\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022MyApp::Document\u0022: ast.Entity{\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022public\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Bool\u0022)},\n\u002B\t\t\t\t\t\t\u0022title\u0022:  ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022MyApp::Group\u0022: ast.Entity{\n\u002B\t\t\t\t\tMemberOf: []ast.EntityTypeRef{\u0022Department\u0022},\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022metadata\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Metadata\u0022)},\n\u002B\t\t\t\t\t\t\u0022name\u0022:     ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022MyApp::User\u0022: ast.Entity{\n\u002B\t\t\t\t\tMemberOf: []ast.EntityTypeRef{\u0022Group\u0022},\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022doc\u0022: \u0022User entity\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t\tShape: \u0026ast.RecordType{\n\u002B\t\t\t\t\t\t\u0022active\u0022:  ast.Attribute{Type: ast.TypeRef(\u0022Bool\u0022)},\n\u002B\t\t\t\t\t\t\u0022address\u0022: ast.Attribute{Type: ast.TypeRef(\u0022Address\u0022)},\n\u002B\t\t\t\t\t\t\u0022email\u0022:   ast.Attribute{Type: ast.TypeRef(\u0022String\u0022)},\n\u002B\t\t\t\t\t\t\u0022level\u0022:   ast.Attribute{Type: ast.TypeRef(\u0022Long\u0022)},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t\tEnums: ast.Enums{\n\u002B\t\t\t\t\u0022MyApp::Status\u0022: ast.Enum{\n\u002B\t\t\t\t\tValues: []types.String{\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t\tActions: ast.Actions{\n\u002B\t\t\t\t\u0022edit\u0022: ast.Action{\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022doc\u0022: \u0022View or edit document\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022User\u0022},\n\u002B\t\t\t\t\t\tResources:  []ast.EntityTypeRef{\u0022Document\u0022},\n\u002B\t\t\t\t\t\tContext: ast.RecordType{\n\u002B\t\t\t\t\t\t\t\u0022ip\u0022:        ast.Attribute{Type: ast.TypeRef(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\t\t\u0022timestamp\u0022: ast.Attribute{Type: ast.TypeRef(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022manage\u0022: ast.Action{\n\u002B\t\t\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022User\u0022},\n\u002B\t\t\t\t\t\tResources:  []ast.EntityTypeRef{\u0022Document\u0022, \u0022Group\u0022},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022view\u0022: ast.Action{\n\u002B\t\t\t\t\tAnnotations: ast.Annotations{\n\u002B\t\t\t\t\t\t\u0022doc\u0022: \u0022View or edit document\u0022,\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t\tAppliesTo: \u0026ast.AppliesTo{\n\u002B\t\t\t\t\t\tPrincipals: []ast.EntityTypeRef{\u0022User\u0022},\n\u002B\t\t\t\t\t\tResources:  []ast.EntityTypeRef{\u0022Document\u0022},\n\u002B\t\t\t\t\t\tContext: ast.RecordType{\n\u002B\t\t\t\t\t\t\t\u0022ip\u0022:        ast.Attribute{Type: ast.TypeRef(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\t\t\u0022timestamp\u0022: ast.Attribute{Type: ast.TypeRef(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n }\n \n-func TestResolveCommonType(t *testing.T) {\n-\tt.Parallel()\n-\tinput := []byte(\u0060type Context = {\n-\tip: ipaddr\n-};\n-\n-entity User {\n-\tctx: Context\n-};\n-\n-action \u0022view\u0022 appliesTo {\n-\tprincipal: User,\n-\tresource: User,\n-\tcontext: Context\n-};\n-\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n-\n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n-\n-\tuser := res.Entities[\u0022User\u0022]\n-\tattr := (*user.Shape)[\u0022ctx\u0022]\n-\t_, ok := attr.Type.(resolved.RecordType)\n-\ttestutil.Equals(t, ok, true)\n\u002B// wantResolved is the expected resolved schema structure.\n\u002B// All type references have been fully qualified and common types inlined.\n\u002Bvar wantResolved = \u0026resolved.Schema{\n\u002B\tNamespaces: map[types.Path]resolved.Namespace{\n\u002B\t\t\u0022MyApp\u0022: {\n\u002B\t\t\tName: \u0022MyApp\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\n\u002B\t\t\t\t\u0022doc\u0022: \u0022Doc manager\u0022,\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEntities: map[types.EntityType]resolved.Entity{\n\u002B\t\t\u0022Admin\u0022: {\n\u002B\t\t\tName: \u0022Admin\u0022,\n\u002B\t\t},\n\u002B\t\t\u0022Country\u0022: {\n\u002B\t\t\tName: \u0022Country\u0022,\n\u002B\t\t},\n\u002B\t\t\u0022System\u0022: {\n\u002B\t\t\tName:     \u0022System\u0022,\n\u002B\t\t\tMemberOf: []types.EntityType{\u0022Admin\u0022},\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022version\u0022: resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Department\u0022: {\n\u002B\t\t\tName: \u0022MyApp::Department\u0022,\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022budget\u0022: resolved.Attribute{\n\u002B\t\t\t\t\tType: resolved.RecordType{\n\u002B\t\t\t\t\t\t\u0022decimal\u0022: resolved.Attribute{Type: resolved.LongType{}},\n\u002B\t\t\t\t\t\t\u0022whole\u0022:   resolved.Attribute{Type: resolved.LongType{}},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Document\u0022: {\n\u002B\t\t\tName: \u0022MyApp::Document\u0022,\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022public\u0022: resolved.Attribute{Type: resolved.BoolType{}},\n\u002B\t\t\t\t\u0022title\u0022:  resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Group\u0022: {\n\u002B\t\t\tName:     \u0022MyApp::Group\u0022,\n\u002B\t\t\tMemberOf: []types.EntityType{\u0022MyApp::Department\u0022},\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022metadata\u0022: resolved.Attribute{\n\u002B\t\t\t\t\tType: resolved.RecordType{\n\u002B\t\t\t\t\t\t\u0022created\u0022: resolved.Attribute{Type: resolved.ExtensionType(\u0022datetime\u0022)},\n\u002B\t\t\t\t\t\t\u0022tags\u0022:    resolved.Attribute{Type: resolved.SetType{Element: resolved.StringType{}}},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022name\u0022: resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::User\u0022: {\n\u002B\t\t\tName:        \u0022MyApp::User\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\u0022doc\u0022: \u0022User entity\u0022},\n\u002B\t\t\tMemberOf:    []types.EntityType{\u0022MyApp::Group\u0022},\n\u002B\t\t\tShape: \u0026resolved.RecordType{\n\u002B\t\t\t\t\u0022active\u0022: resolved.Attribute{Type: resolved.BoolType{}},\n\u002B\t\t\t\t\u0022address\u0022: resolved.Attribute{\n\u002B\t\t\t\t\tType: resolved.RecordType{\n\u002B\t\t\t\t\t\t\u0022city\u0022: resolved.Attribute{\n\u002B\t\t\t\t\t\t\tType:        resolved.StringType{},\n\u002B\t\t\t\t\t\t\tAnnotations: resolved.Annotations{\u0022also\u0022: \u0022town\u0022},\n\u002B\t\t\t\t\t\t},\n\u002B\t\t\t\t\t\t\u0022country\u0022: resolved.Attribute{Type: resolved.EntityType(\u0022Country\u0022)},\n\u002B\t\t\t\t\t\t\u0022street\u0022:  resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t\t\t\t\u0022zipcode\u0022: resolved.Attribute{Type: resolved.StringType{}, Optional: true},\n\u002B\t\t\t\t\t},\n\u002B\t\t\t\t},\n\u002B\t\t\t\t\u0022email\u0022: resolved.Attribute{Type: resolved.StringType{}},\n\u002B\t\t\t\t\u0022level\u0022: resolved.Attribute{Type: resolved.LongType{}},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n\u002B\tEnums: map[types.EntityType]resolved.Enum{\n\u002B\t\t\u0022Role\u0022: {\n\u002B\t\t\tName:   \u0022Role\u0022,\n\u002B\t\t\tValues: []types.String{\u0022superuser\u0022, \u0022operator\u0022},\n\u002B\t\t},\n\u002B\t\t\u0022MyApp::Status\u0022: {\n\u002B\t\t\tName:   \u0022MyApp::Status\u0022,\n\u002B\t\t\tValues: []types.String{\u0022draft\u0022, \u0022published\u0022, \u0022archived\u0022},\n\u002B\t\t},\n\u002B\t},\n\u002B\tActions: map[types.EntityUID]resolved.Action{\n\u002B\t\ttypes.NewEntityUID(\u0022Action\u0022, \u0022audit\u0022): {\n\u002B\t\t\tName: \u0022audit\u0022,\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022Admin\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022, \u0022System\u0022},\n\u002B\t\t\t\tContext:    resolved.RecordType{},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\ttypes.NewEntityUID(\u0022MyApp::Action\u0022, \u0022edit\u0022): {\n\u002B\t\t\tName:        \u0022edit\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\u0022doc\u0022: \u0022View or edit document\u0022},\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022MyApp::User\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022},\n\u002B\t\t\t\tContext: resolved.RecordType{\n\u002B\t\t\t\t\t\u0022ip\u0022:        resolved.Attribute{Type: resolved.ExtensionType(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\u0022timestamp\u0022: resolved.Attribute{Type: resolved.ExtensionType(\u0022datetime\u0022)},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\ttypes.NewEntityUID(\u0022MyApp::Action\u0022, \u0022manage\u0022): {\n\u002B\t\t\tName: \u0022manage\u0022,\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022MyApp::User\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022, \u0022MyApp::Group\u0022},\n\u002B\t\t\t\tContext:    resolved.RecordType{},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t\ttypes.NewEntityUID(\u0022MyApp::Action\u0022, \u0022view\u0022): {\n\u002B\t\t\tName:        \u0022view\u0022,\n\u002B\t\t\tAnnotations: resolved.Annotations{\u0022doc\u0022: \u0022View or edit document\u0022},\n\u002B\t\t\tAppliesTo: \u0026resolved.AppliesTo{\n\u002B\t\t\t\tPrincipals: []types.EntityType{\u0022MyApp::User\u0022},\n\u002B\t\t\t\tResources:  []types.EntityType{\u0022MyApp::Document\u0022},\n\u002B\t\t\t\tContext: resolved.RecordType{\n\u002B\t\t\t\t\t\u0022ip\u0022:        resolved.Attribute{Type: resolved.ExtensionType(\u0022ipaddr\u0022)},\n\u002B\t\t\t\t\t\u0022timestamp\u0022: resolved.Attribute{Type: resolved.ExtensionType(\u0022datetime\u0022)},\n\u002B\t\t\t\t},\n\u002B\t\t\t},\n\u002B\t\t},\n\u002B\t},\n }\n \n-func TestResolveEnum(t *testing.T) {\n\u002Bfunc TestSchema(t *testing.T) {\n \tt.Parallel()\n-\tinput := []byte(\u0060entity Status enum [\u0022active\u0022, \u0022inactive\u0022];\u0060)\n-\n-\tvar s schema.Schema\n-\ttestutil.OK(t, s.UnmarshalCedar(input))\n \n-\tres, err := s.Resolve()\n-\ttestutil.OK(t, err)\n\u002B\tt.Run(\u0022UnmarshalCedar\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalCedar([]byte(wantCedar))\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, s.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalJSON\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalJSON([]byte(wantJSON))\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, s.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022MarshalCedar\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tstringEquals(t, string(b), wantCedar)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022MarshalJSON\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tstringEquals(t, string(normalizeJSON(t, b)), string(normalizeJSON(t, []byte(wantJSON))))\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022Resolve\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tr, err := s.Resolve()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, r, wantResolved)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(b))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022CedarToJSONRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(wantCedar)))\n\u002B\t\tjsonBytes, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalJSON(jsonBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONToCedarRoundTrip\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalJSON([]byte(wantJSON)))\n\u002B\t\tcedarBytes, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, s2.UnmarshalCedar(cedarBytes))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022JSONMarshalInterface\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(wantAST)\n\u002B\t\tb, err := json.Marshal(s)\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\tvar s2 schema.Schema\n\u002B\t\ttestutil.OK(t, json.Unmarshal(b, \u0026s2))\n\u002B\t\ttestutil.Equals(t, s2.AST(), wantAST)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalCedarErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\tconst filename = \u0022path/to/my-file-name.cedarschema\u0022\n\u002B\t\ts.SetFilename(filename)\n\u002B\t\terr := s.UnmarshalCedar([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t\ttestutil.FatalIf(t, !strings.Contains(err.Error(), filename\u002B\u0022:1:1\u0022), \u0022expected %q in error: %v\u0022, filename, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022UnmarshalJSONErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\terr := s.UnmarshalJSON([]byte(\u0022LSKJDFN\u0022))\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022ResolveErr\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\tvar s schema.Schema\n\u002B\t\ttestutil.OK(t, s.UnmarshalCedar([]byte(\u0060entity User in [NonExistent];\u0060)))\n\u002B\t\t_, err := s.Resolve()\n\u002B\t\ttestutil.Error(t, err)\n\u002B\t})\n\u002B\n\u002B\tt.Run(\u0022EmptySchema\u0022, func(t *testing.T) {\n\u002B\t\tt.Parallel()\n\u002B\t\ts := schema.NewSchemaFromAST(\u0026ast.Schema{})\n\u002B\t\tb, err := s.MarshalCedar()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(b), \u0022\u0022)\n\u002B\n\u002B\t\tjb, err := s.MarshalJSON()\n\u002B\t\ttestutil.OK(t, err)\n\u002B\t\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\t})\n\u002B}\n \n-\ttestutil.Equals(t, len(res.Enums), 1)\n-\tstatus := res.Enums[\u0022Status\u0022]\n-\ttestutil.Equals(t, status.Values, []types.String{\u0022active\u0022, \u0022inactive\u0022})\n\u002Bfunc stringEquals(t *testing.T, got, want string) {\n\u002B\tt.Helper()\n\u002B\ttestutil.Equals(t, strings.TrimSpace(got), strings.TrimSpace(want))\n }\n \n-func TestNewSchemaFromASTNil(t *testing.T) {\n-\tt.Parallel()\n-\ta := \u0026ast.Schema{}\n-\ts := schema.NewSchemaFromAST(a)\n-\tb, err := s.MarshalCedar()\n\u002Bfunc normalizeJSON(t *testing.T, in []byte) []byte {\n\u002B\tt.Helper()\n\u002B\tvar out any\n\u002B\terr := json.Unmarshal(in, \u0026out)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(b), \u0022\u0022)\n-\n-\tjb, err := s.MarshalJSON()\n\u002B\tb, err := json.MarshalIndent(out, \u0022\u0022, \u0022  \u0022)\n \ttestutil.OK(t, err)\n-\ttestutil.Equals(t, string(jb), \u0022{}\u0022)\n\u002B\treturn b\n }"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:20.744475Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:20.744477Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:24.575588Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:24.575601Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": "This commit is purely test-only \u2014 it adds and reorganizes end-to-end validation tests for schema parsing, round-tripping, and corpus comparison in Go. There are no semantic/behavioral changes to production code, only test infrastructure improvements and test refactoring."
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:24.575606Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": "This commit is purely test-only \u2014 it adds and reorganizes end-to-end validation tests for schema parsing, round-tripping, and corpus comparison in Go. There are no semantic/behavioral changes to production code, only test infrastructure improvements and test refactoring."
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:24.575634Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01FYbtbtQJbtMqkbtCaitdq5",
+        "tool_name": "shell"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:24.735833Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01FYbtbtQJbtMqkbtCaitdq5",
+        "delta": "exit_code: 0\ntimed_out: False\nstdout:\nUpdated 84fcf7c to \u0027acknowledged\u0027\nSorted 62 entries by timestamp"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:24.735836Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01FYbtbtQJbtMqkbtCaitdq5",
+        "output": "exit_code: 0\ntimed_out: False\nstdout:\nUpdated 84fcf7c to \u0027acknowledged\u0027\nSorted 62 entries by timestamp"
+      },
+      "fullOutput": "exit_code: 0\ntimed_out: False\nstdout:\nUpdated 84fcf7c to \u0027acknowledged\u0027\nSorted 62 entries by timestamp"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:24.893292Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:24.893294Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:27.299319Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:27.299324Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:27.299325Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:27.299337Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_017CdGwqBXSGZtJndNfBQBpw",
+        "tool_name": "shell"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:27.508877Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_017CdGwqBXSGZtJndNfBQBpw",
+        "delta": "exit_code: 0\ntimed_out: False\nstdout:\n[main 28ffb9d] semport: acknowledge 84fcf7c - test-only, no semantic changes\n 1 file changed, 1 insertion(\u002B), 1 deletion(-)"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:27.508878Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_017CdGwqBXSGZtJndNfBQBpw",
+        "output": "exit_code: 0\ntimed_out: False\nstdout:\n[main 28ffb9d] semport: acknowledge 84fcf7c - test-only, no semantic changes\n 1 file changed, 1 insertion(\u002B), 1 deletion(-)"
+      },
+      "fullOutput": "exit_code: 0\ntimed_out: False\nstdout:\n[main 28ffb9d] semport: acknowledge 84fcf7c - test-only, no semantic changes\n 1 file changed, 1 insertion(\u002B), 1 deletion(-)"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:27.663603Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:27.663605Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:29.382153Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:29.382155Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:29.382159Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:29.382164Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_015wLqrNu5ARVSpgKGk1cQBs",
+        "tool_name": "shell"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:29.405445Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_015wLqrNu5ARVSpgKGk1cQBs",
+        "delta": "exit_code: 0\ntimed_out: False"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:29.405448Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_015wLqrNu5ARVSpgKGk1cQBs",
+        "output": "exit_code: 0\ntimed_out: False"
+      },
+      "fullOutput": "exit_code: 0\ntimed_out: False"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:29.537507Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:29.537512Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:35.305702Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:35.30571Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:35.305725Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": ""
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallStart",
+      "timestamp": "2026-03-27T02:32:35.305761Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01MQChfV9gh3V65istaMzEvS",
+        "tool_name": "write_file"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallOutputDelta",
+      "timestamp": "2026-03-27T02:32:35.306894Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01MQChfV9gh3V65istaMzEvS",
+        "delta": "OK"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "ToolCallEnd",
+      "timestamp": "2026-03-27T02:32:35.306895Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "call_id": "toolu_01MQChfV9gh3V65istaMzEvS",
+        "output": "OK"
+      },
+      "fullOutput": "OK"
+    },
+    {
+      "kind": "LlmCallStart",
+      "timestamp": "2026-03-27T02:32:35.495057Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextStart",
+      "timestamp": "2026-03-27T02:32:35.49506Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {},
+      "fullOutput": null
+    },
+    {
+      "kind": "LlmCallEnd",
+      "timestamp": "2026-03-27T02:32:39.0319Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "model": "claude-sonnet-4-6"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextDelta",
+      "timestamp": "2026-03-27T02:32:39.031913Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "delta": "**Decision: SKIP**\n\nCommit \u006084fcf7c\u0060 (\u0022schema: add more end-to-end validation tests\u0022) is **test-only** \u2014 it reorganizes corpus schema tests, adds round-trip helpers (\u0060normalizeJSON\u0060, \u0060stringEquals\u0060), and removes a now-redundant test function. No production/semantic code was changed. Nothing to port to C#.\n\n- \u2705 Ledger updated to \u0060acknowledged\u0060\n- \u2705 Committed \u0060semport/ledger.tsv\u0060\n- \u2705 \u0060.ai/semport_new_commits.md\u0060 removed\n- \u2705 \u0060.ai/semport_plan.md\u0060 written with \u0060SKIP\u0060"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "AssistantTextEnd",
+      "timestamp": "2026-03-27T02:32:39.031929Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "text": "**Decision: SKIP**\n\nCommit \u006084fcf7c\u0060 (\u0022schema: add more end-to-end validation tests\u0022) is **test-only** \u2014 it reorganizes corpus schema tests, adds round-trip helpers (\u0060normalizeJSON\u0060, \u0060stringEquals\u0060), and removes a now-redundant test function. No production/semantic code was changed. Nothing to port to C#.\n\n- \u2705 Ledger updated to \u0060acknowledged\u0060\n- \u2705 Committed \u0060semport/ledger.tsv\u0060\n- \u2705 \u0060.ai/semport_new_commits.md\u0060 removed\n- \u2705 \u0060.ai/semport_plan.md\u0060 written with \u0060SKIP\u0060"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "TurnEnd",
+      "timestamp": "2026-03-27T02:32:39.031961Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "state": "idle"
+      },
+      "fullOutput": null
+    },
+    {
+      "kind": "SessionEnd",
+      "timestamp": "2026-03-27T02:32:39.031961Z",
+      "sessionId": "1dc03f18beaa4a5b96f0fde96c18ebc2",
+      "data": {
+        "state": "idle"
+      },
+      "fullOutput": null
+    }
+  ],
+  "steeringQueue": [],
+  "followupQueue": [],
+  "subagentMetadata": [],
+  "savedAt": "2026-03-27T02:32:39.049819+00:00"
+}
