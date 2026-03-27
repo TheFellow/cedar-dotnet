@@ -130,6 +130,81 @@ public sealed class CedarWriterTests
             CedarWriter.Write(policy));
     }
 
+    [Fact]
+    public void WriteParenthesizesRightOperandOfOrForAssociativity()
+    {
+        INode expression = new NodeOr(
+            new NodeValue(new CedarBool(true)),
+            new NodeOr(
+                new NodeValue(new CedarBool(false)),
+                new NodeValue(new CedarBool(true))));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { true || (false || true) };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
+    public void WriteParenthesizesRightOperandOfAndForAssociativity()
+    {
+        INode expression = new NodeAnd(
+            new NodeValue(new CedarBool(true)),
+            new NodeAnd(
+                new NodeValue(new CedarBool(false)),
+                new NodeValue(new CedarBool(true))));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { true && (false && true) };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
+    public void WriteParenthesizesRightOperandOfMultForAssociativity()
+    {
+        INode expression = new NodeMult(
+            new NodeValue(new CedarLong(1)),
+            new NodeMult(
+                new NodeValue(new CedarLong(2)),
+                new NodeValue(new CedarLong(3))));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { 1 * (2 * 3) };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
+    public void WriteParenthesizesRightOperandOfAddForAssociativity()
+    {
+        INode expression = new NodeAdd(
+            new NodeValue(new CedarLong(1)),
+            new NodeAdd(
+                new NodeValue(new CedarLong(2)),
+                new NodeValue(new CedarLong(3))));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { 1 + (2 + 3) };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
+    public void WriteAddWithSubOnRightParenthesizes()
+    {
+        INode expression = new NodeAdd(
+            new NodeValue(new CedarLong(1)),
+            new NodeSub(
+                new NodeValue(new CedarLong(2)),
+                new NodeValue(new CedarLong(3))));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { 1 + (2 - 3) };",
+            CedarWriter.Write(policy));
+    }
+
     private static PolicyAst ParseSingle(string source)
     {
         PolicyAst[] policies = CedarParser.ParsePolicies(source);

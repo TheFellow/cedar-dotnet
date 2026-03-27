@@ -155,12 +155,12 @@ public static class CedarWriter
             case NodeOr or:
                 WriteNode(builder, or.Left, PrecOr);
                 builder.Append(" || ");
-                WriteNode(builder, or.Right, PrecOr);
+                WriteNode(builder, or.Right, PrecOr + 1);
                 break;
             case NodeAnd and:
                 WriteNode(builder, and.Left, PrecAnd);
                 builder.Append(" && ");
-                WriteNode(builder, and.Right, PrecAnd);
+                WriteNode(builder, and.Right, PrecAnd + 1);
                 break;
             case NodeLessThan lt:
                 WriteNode(builder, lt.Left, PrecRel + 1);
@@ -230,15 +230,7 @@ public static class CedarWriter
             case NodeAdd add:
                 WriteNode(builder, add.Left, PrecAdd);
                 builder.Append(" + ");
-                if (add.Right is NodeSub)
-                {
-                    WriteNode(builder, add.Right, PrecAdd + 1);
-                }
-                else
-                {
-                    WriteNode(builder, add.Right, PrecAdd);
-                }
-
+                WriteNode(builder, add.Right, PrecAdd + 1);
                 break;
             case NodeSub sub:
                 WriteNode(builder, sub.Left, PrecAdd);
@@ -248,7 +240,7 @@ public static class CedarWriter
             case NodeMult mult:
                 WriteNode(builder, mult.Left, PrecMult);
                 builder.Append(" * ");
-                WriteNode(builder, mult.Right, PrecMult);
+                WriteNode(builder, mult.Right, PrecMult + 1);
                 break;
             case NodeNot not:
                 builder.Append('!');
