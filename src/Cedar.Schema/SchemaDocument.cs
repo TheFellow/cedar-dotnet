@@ -32,6 +32,11 @@ public sealed record SchemaDocument
         return SchemaJsonConverter.Serialize(this);
     }
 
+    public ResolvedSchema Resolve()
+    {
+        return SchemaResolver.Resolve(this);
+    }
+
     public override string ToString()
     {
         return MarshalCedar();
