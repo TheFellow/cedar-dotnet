@@ -225,13 +225,13 @@ public sealed class ParserTests
     }
 
     [Fact]
-    public void ParseBracketAccessAsGetTag()
+    public void ParseBracketAccessAsAttributeAccess()
     {
         PolicyAst policy = ParseSingle("permit(principal, action, resource) when { resource[\"env\"] };");
 
-        NodeGetTag getTag = Assert.IsType<NodeGetTag>(Assert.Single(policy.Conditions));
-        Assert.IsType<NodeVariable>(getTag.Left);
-        Assert.IsType<NodeValue>(getTag.Right);
+        NodeAccess access = Assert.IsType<NodeAccess>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(access.Arg);
+        Assert.Equal("env", access.Attribute.Value);
     }
 
     [Fact]

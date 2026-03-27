@@ -253,13 +253,7 @@ public sealed record CedarPattern : CedarValue
         }
 
         PatternComponent last = components[^1];
-        if (last.Wildcard)
-        {
-            components.Add(new PatternComponent(false, literal));
-            return;
-        }
-
-        components[^1] = new PatternComponent(false, last.Literal + literal);
+        components[^1] = new PatternComponent(last.Wildcard, last.Literal + literal);
     }
 
     private static void AppendWildcard(List<PatternComponent> components)

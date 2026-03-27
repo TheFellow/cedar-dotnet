@@ -52,6 +52,22 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
             throw new FormatException("The IP address is invalid.");
         }
 
+        // .NET's IPAddress.TryParse is lenient and accepts short-form IPv4 like "0", "127",
+        // "192.168". Cedar (like Go's netip.ParseAddr) requires strict dotted-decimal with
+        // exactly four octets for IPv4 (a.b.c.d), and no leading zeros in octets.
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            if (CountOccurrences(addressText, '.') != 3)
+            {
+                throw new FormatException("IPv4 addresses must use dotted-decimal notation (a.b.c.d).");
+            }
+
+            if (HasLeadingZeroOctet(addressText))
+            {
+                throw new FormatException("IPv4 octets must not have leading zeros.");
+            }
+        }
+
         int bitLength = GetBitLength(address);
         int effectivePrefix = prefixLength ?? bitLength;
 
@@ -113,6 +129,26 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
     public override int GetHashCode()
     {
         return CedarHash.ForBytesAndInt32(nameof(CedarIpAddress), Address.GetAddressBytes(), PrefixLength);
+    }
+
+    private static bool HasLeadingZeroOctet(string value)
+    {
+        int start = 0;
+        for (int index = 0; index <= value.Length; index++)
+        {
+            if (index == value.Length || value[index] == '.')
+            {
+                int octetLength = index - start;
+                if (octetLength > 1 && value[start] == '0')
+                {
+                    return true;
+                }
+
+                start = index + 1;
+            }
+        }
+
+        return false;
     }
 
     private static int CountOccurrences(string value, char character)

@@ -282,9 +282,10 @@ internal sealed class ExpressionParser
 
             if (_state.Match(TokenType.LBracket))
             {
-                INode key = ParseExpression();
+                Token keyToken = _state.Expect(TokenType.String, "Expected string literal in bracket access.");
+                string key = _state.ParseStringToken(keyToken);
                 _state.Expect(TokenType.RBracket, "Expected ']' after index expression.");
-                lhs = new NodeGetTag(lhs, key);
+                lhs = new NodeAccess(lhs, new CedarString(key));
                 continue;
             }
 

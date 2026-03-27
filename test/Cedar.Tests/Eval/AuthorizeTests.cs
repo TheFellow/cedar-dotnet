@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Cedar.Ast;
@@ -274,6 +275,47 @@ public sealed class AuthorizeTests
         (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), MakeRequest());
         Assert.Equal(Decision.Deny, decision);
         Assert.True(diagnostic.Reasons.Length > 0);
+    }
+
+    [Fact]
+    public void BracketAccess_OnRecord_EvaluatesCorrectly()
+    {
+        // Bracket access like record["key"] must produce NodeAccess (attribute access),
+        // not NodeGetTag (tag access). This was a parser bug where [] was mapped to getTag.
+        string cedarText = "forbid(principal is a, action == Action::\"action\", resource) when { (true && ({\"k\": \"v\"}[\"k\"] like \"3\")) && false };";
+
+        Policy[] policies = Policy.UnmarshalCedarList(cedarText);
+        PolicySet policySet = new();
+        policySet.Add(new PolicyId("policy0"), policies[0]);
+
+        EntityUid principal = new(new EntityType("a"), new CedarString(""));
+        EntityUid action = new(new EntityType("Action"), new CedarString("action"));
+        EntityUid resource = new(new EntityType("a"), new CedarString(""));
+        Request request = new(principal, action, resource, new CedarRecord());
+
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policySet, new EntityMap(), request);
+
+        Assert.Empty(diagnostic.Errors);
+        Assert.Empty(diagnostic.Reasons);
+        Assert.Equal(Decision.Deny, decision);
+    }
+
+    [Fact]
+    public void IpAddress_ShortForm_IsRejected()
+    {
+        // Cedar follows Go's netip.ParseAddr which requires strict dotted-decimal for IPv4.
+        // Short forms like "0", "127", "192.168" must be rejected.
+        Assert.Throws<FormatException>(() => CedarIpAddress.Parse("0"));
+        Assert.Throws<FormatException>(() => CedarIpAddress.Parse("127"));
+        Assert.Throws<FormatException>(() => CedarIpAddress.Parse("192.168"));
+    }
+
+    [Fact]
+    public void IpAddress_LeadingZeros_IsRejected()
+    {
+        // Cedar follows Go's netip.ParseAddr which rejects leading zeros in IPv4 octets.
+        Assert.Throws<FormatException>(() => CedarIpAddress.Parse("01.02.03.04"));
+        Assert.Throws<FormatException>(() => CedarIpAddress.Parse("1.2.3.04"));
     }
 
     private sealed class SimplePolicyIterator : IPolicyIterator
