@@ -98,4 +98,30 @@ public sealed class CedarDurationTests
         Assert.Equal("{\"__extn\":{\"fn\":\"duration\",\"arg\":\"42ms\"}}", json);
         CedarAssert.Equal(expected, Assert.IsType<CedarDuration>(actual));
     }
+
+    [Fact]
+    public void ParseRejectsDigitAccumulationOverflow()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("99999999999999999999ms"));
+    }
+
+    [Fact]
+    public void ParseRejectsUnitMultiplicationOverflow()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("106751991168d"));
+    }
+
+    [Fact]
+    public void ParseRejectsTotalAccumulationOverflow()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("106751991167d8h"));
+    }
+
+    [Fact]
+    public void ParseAcceptsMaxValidDuration()
+    {
+        CedarDuration duration = CedarDuration.Parse("106751991167d7h12m55s807ms");
+
+        Assert.Equal(long.MaxValue, duration.Value);
+    }
 }

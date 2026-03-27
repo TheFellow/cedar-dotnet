@@ -44,10 +44,17 @@ public sealed record CedarDuration(long Value) : CedarValue
             }
 
             long quantity = 0;
-            while (index < value.Length && char.IsAsciiDigit(value[index]))
+            try
             {
-                quantity = checked((quantity * 10) + (value[index] - '0'));
-                index++;
+                while (index < value.Length && char.IsAsciiDigit(value[index]))
+                {
+                    quantity = checked((quantity * 10) + (value[index] - '0'));
+                    index++;
+                }
+            }
+            catch (OverflowException)
+            {
+                throw new FormatException("Duration value overflows the valid int64 range.");
             }
 
             string unit = ReadUnit(value, ref index);
@@ -58,7 +65,14 @@ public sealed record CedarDuration(long Value) : CedarValue
             }
 
             unitIndex = nextUnitIndex + 1;
-            total = checked(total + (quantity * OrderedUnits[nextUnitIndex].Milliseconds));
+            try
+            {
+                total = checked(total + (quantity * OrderedUnits[nextUnitIndex].Milliseconds));
+            }
+            catch (OverflowException)
+            {
+                throw new FormatException("Duration value overflows the valid int64 range.");
+            }
         }
 
         return new CedarDuration(sign * total);
