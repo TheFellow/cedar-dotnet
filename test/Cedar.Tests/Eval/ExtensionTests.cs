@@ -1,3 +1,4 @@
+using System;
 using Cedar.Core.Internal.Eval;
 using Cedar.Core.Internal.Extensions;
 using Cedar.Types;
@@ -212,6 +213,17 @@ public sealed class ExtensionTests
     }
 
     [Fact]
+    public void Offset_ThrowsOnOverflow()
+    {
+        CedarDatetime dt = new(long.MaxValue);
+        CedarDuration dur = new(1L);
+
+        EvalException ex = Assert.Throws<EvalException>(() => Invoke("offset", dt, dur));
+
+        Assert.Contains("overflow", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void DurationSince_ComputesDifference()
     {
         CedarDatetime dt1 = CedarDatetime.Parse("2024-01-02T00:00:00Z");
@@ -219,6 +231,17 @@ public sealed class ExtensionTests
         ICedarData result = Invoke("durationSince", dt1, dt2);
         CedarDuration duration = Assert.IsType<CedarDuration>(result);
         Assert.Equal(86400000L, duration.Value);
+    }
+
+    [Fact]
+    public void DurationSince_ThrowsOnOverflow()
+    {
+        CedarDatetime dt1 = new(long.MaxValue);
+        CedarDatetime dt2 = new(long.MinValue);
+
+        EvalException ex = Assert.Throws<EvalException>(() => Invoke("durationSince", dt1, dt2));
+
+        Assert.Contains("overflow", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

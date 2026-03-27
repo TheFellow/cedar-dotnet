@@ -124,4 +124,24 @@ public sealed class CedarDurationTests
 
         Assert.Equal(long.MaxValue, duration.Value);
     }
+
+    [Fact]
+    public void ParseAcceptsValueExceedingInt32Max()
+    {
+        CedarDuration duration = CedarDuration.Parse("2147483648ms");
+
+        Assert.Equal(2_147_483_648L, duration.Value);
+    }
+
+    [Fact]
+    public void ParseRejectsExactInt64MaxPlusOne()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("9223372036854775808ms"));
+    }
+
+    [Fact]
+    public void ParseRejectsTotalAccumulationOverflowAtBoundary()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("106751991167d7h12m55s808ms"));
+    }
 }
