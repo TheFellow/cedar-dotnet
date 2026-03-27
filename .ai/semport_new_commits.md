@@ -1,14 +1,10 @@
-d267346
-2026-03-18T15:41:46-06:00
-Fix canMarshalAsIdent for empty strings and reserved keywords
+5a500db 2026-03-18T15:41:46-06:00
 
-canMarshalAsIdent("") returned true because the loop over an empty
-string iterates zero times. It also accepted reserved keywords like
-"true", "false", "if", "in", etc., producing invalid Cedar like
-`context.true` instead of `context["true"]`.
+Fix Pattern MarshalCedar to use Cedar-compatible escaping
 
-Add an early return for empty strings and reserved keywords, using
-the existing IsReservedKeyword helper.
+Pattern.MarshalCedar() was using strconv.Quote which produces
+Go-style escapes (\x00, \v) that are not valid in Cedar. Switch
+to rust.EscapeString for Cedar-compatible escapes (\0, \u{b}).
 
 Signed-off-by: Phil Hassey <phil@strongdm.com>
 

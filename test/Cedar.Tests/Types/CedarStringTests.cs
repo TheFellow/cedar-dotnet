@@ -98,6 +98,11 @@ public sealed class CedarStringTests
     }
 
     [Theory]
+    [InlineData("\u0007", "\"\\u{7}\"")]
+    [InlineData("\u0008", "\"\\u{8}\"")]
+    [InlineData("\u000C", "\"\\u{c}\"")]
+    [InlineData("\u000B", "\"\\u{b}\"")]
+    [InlineData("*foo", "\"\\*foo\"")]
     [InlineData("a\u0300", "\"a\\u{300}\"")]
     [InlineData("a\uFF9E", "\"a\\u{ff9e}\"")]
     [InlineData("a\u0903", "\"a\u0903\"")]
@@ -105,5 +110,11 @@ public sealed class CedarStringTests
     public void PatternMarshalCedarEscapesEachCharacterUsingRustParity(string literal, string expected)
     {
         CedarAssert.CedarText(new CedarPattern(literal), expected);
+    }
+
+    [Fact]
+    public void PatternMarshalCedarEscapesLiteralStarFollowedByWildcard()
+    {
+        CedarAssert.CedarText(new CedarPattern("*foo", Wildcard.Instance), "\"\\*foo*\"");
     }
 }
