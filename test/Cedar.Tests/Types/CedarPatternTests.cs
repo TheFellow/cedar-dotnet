@@ -107,4 +107,38 @@ public sealed class CedarPatternTests
         Assert.Equal("{\"__extn\":{\"fn\":\"pattern\",\"arg\":\"a\\\\*b*c\"}}", json);
         CedarAssert.Equal(expected, Assert.IsType<CedarPattern>(actual));
     }
+
+    [Fact]
+    public void ParseEmptyStringProducesPatternThatMatchesOnlyEmptyString()
+    {
+        CedarPattern pattern = CedarPattern.Parse(string.Empty);
+
+        Assert.True(pattern.Match(string.Empty));
+        Assert.False(pattern.Match("a"));
+        Assert.Equal(string.Empty, pattern.ToPatternText());
+    }
+
+    [Fact]
+    public void JsonRoundTripPreservesEmptyStringPatternExtension()
+    {
+        CedarPattern expected = new(string.Empty);
+
+        string json = CedarJson.SerializeData(expected);
+        ICedarData actual = CedarJson.DeserializeData(json);
+
+        Assert.Equal("{\"__extn\":{\"fn\":\"pattern\",\"arg\":\"\"}}", json);
+        CedarAssert.Equal(expected, Assert.IsType<CedarPattern>(actual));
+    }
+
+    [Fact]
+    public void JsonRoundTripEscapesNullByteInPatternExtension()
+    {
+        CedarPattern expected = new("\0");
+
+        string json = CedarJson.SerializeData(expected);
+        ICedarData actual = CedarJson.DeserializeData(json);
+
+        Assert.Equal("{\"__extn\":{\"fn\":\"pattern\",\"arg\":\"\\u0000\"}}", json);
+        CedarAssert.Equal(expected, Assert.IsType<CedarPattern>(actual));
+    }
 }

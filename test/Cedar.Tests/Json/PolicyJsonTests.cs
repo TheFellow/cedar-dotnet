@@ -101,6 +101,37 @@ public sealed class PolicyJsonTests
     }
 
     [Fact]
+    public void MarshalJson_EncodesEmptyStringLikePatternAsLiteralComponent()
+    {
+        string json = Policy.UnmarshalCedar("permit(principal, action, resource) when { context.name like \"\" };").MarshalJson();
+
+        Assert.Contains("\"pattern\":[{\"Literal\":\"\"}]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RoundTrip_EmptyStringLikePattern_PreservesSemantics()
+    {
+        const string cedar = "permit(principal, action, resource) when { context.name like \"\" };";
+        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
+
+        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
+        Policy roundTripped = Policy.UnmarshalJson(json);
+
+        Assert.Contains("\"pattern\":[{\"Literal\":\"\"}]", json, StringComparison.Ordinal);
+        Assert.Equal(expected, roundTripped.MarshalCedar());
+    }
+
+    [Fact]
+    public void UnmarshalJson_ReadsEmptyStringLikePatternLiteralComponent()
+    {
+        const string json = "{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"},\"conditions\":[{\"kind\":\"when\",\"body\":{\"like\":{\"left\":{\".\":{\"left\":{\"Var\":\"context\"},\"attr\":\"name\"}},\"pattern\":[{\"Literal\":\"\"}]}}}]}";
+
+        Policy policy = Policy.UnmarshalJson(json);
+
+        Assert.Equal("permit(principal, action, resource)\n  when { context.name like \"\" };", policy.MarshalCedar());
+    }
+
+    [Fact]
     public void UnmarshalJson_ReadsRecordPairsShape()
     {
         const string json = "{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"},\"conditions\":[{\"kind\":\"when\",\"body\":{\"Record\":{\"pairs\":[{\"key\":\"a\",\"value\":{\"Value\":1}},{\"key\":\"b\",\"value\":{\"Value\":2}}]}}}]}";
