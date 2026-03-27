@@ -1,1 +1,0 @@
-1) Fetch upstream & identify next commit (sonnet)
