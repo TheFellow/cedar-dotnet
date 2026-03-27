@@ -1,5 +1,7 @@
+using System;
 using System.Globalization;
 using System.Text;
+using Cedar.Core.Internal.Rust;
 
 namespace Cedar.Types;
 
@@ -17,6 +19,8 @@ public sealed record CedarString(string Value) : CedarValue
 
     internal static string Escape(string value)
     {
+        ArgumentNullException.ThrowIfNull(value);
+
         StringBuilder builder = new();
         bool isFirst = true;
 
@@ -24,6 +28,20 @@ public sealed record CedarString(string Value) : CedarValue
         {
             builder.Append(EscapeRune(rune, isFirst));
             isFirst = false;
+        }
+
+        return builder.ToString();
+    }
+
+    internal static string EscapeCharAll(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        StringBuilder builder = new();
+
+        foreach (Rune rune in value.EnumerateRunes())
+        {
+            builder.Append(EscapeRune(rune, escapeGraphemeExtend: true));
         }
 
         return builder.ToString();
@@ -40,30 +58,10 @@ public sealed record CedarString(string Value) : CedarValue
             0x5C => @"\\",
             0x22 => "\\\"",
             0x27 => @"\'",
-            _ when escapeGraphemeExtend && IsGraphemeExtend(rune) => UnicodeEscape(rune),
-            _ when NeedsUnicodeEscape(rune) => UnicodeEscape(rune),
+            _ when escapeGraphemeExtend && RustPrintable.IsGraphemeExtended(rune.Value) => UnicodeEscape(rune),
+            _ when !RustPrintable.IsPrintable(rune.Value) => UnicodeEscape(rune),
             _ => rune.ToString()
         };
-    }
-
-    private static bool IsGraphemeExtend(Rune rune)
-    {
-        UnicodeCategory category = Rune.GetUnicodeCategory(rune);
-        return category is UnicodeCategory.NonSpacingMark or UnicodeCategory.EnclosingMark;
-    }
-
-    private static bool NeedsUnicodeEscape(Rune rune)
-    {
-        UnicodeCategory category = Rune.GetUnicodeCategory(rune);
-
-        return category is UnicodeCategory.Control
-            or UnicodeCategory.Format
-            or UnicodeCategory.LineSeparator
-            or UnicodeCategory.ParagraphSeparator
-            or UnicodeCategory.OtherNotAssigned
-            or UnicodeCategory.PrivateUse
-            or UnicodeCategory.Surrogate
-            || rune.Value == 0x00A0;
     }
 
     private static string UnicodeEscape(Rune rune)

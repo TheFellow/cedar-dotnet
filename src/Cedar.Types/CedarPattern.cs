@@ -137,7 +137,7 @@ public sealed record CedarPattern : CedarValue
 
             if (component.Literal.Length > 0)
             {
-                builder.Append(CedarString.Escape(component.Literal).Replace("*", "\\*", StringComparison.Ordinal));
+                builder.Append(CedarString.EscapeCharAll(component.Literal).Replace("*", "\\*", StringComparison.Ordinal));
             }
         }
 

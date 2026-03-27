@@ -79,4 +79,31 @@ public sealed class CedarStringTests
     {
         CedarAssert.CedarText(new CedarString("\u0001"), "\"\\u{1}\"");
     }
+
+    [Theory]
+    [InlineData("\u00A0", "\"\\u{a0}\"")]
+    [InlineData("\u0300", "\"\\u{300}\"")]
+    [InlineData("a\u0300", "\"a\u0300\"")]
+    [InlineData("\u20DD", "\"\\u{20dd}\"")]
+    [InlineData("\u0903", "\"\u0903\"")]
+    [InlineData("\u00E9", "\"\u00E9\"")]
+    [InlineData("😀", "\"😀\"")]
+    [InlineData("\uFFFE", "\"\\u{fffe}\"")]
+    [InlineData("\u00AD", "\"\\u{ad}\"")]
+    [InlineData("\uFF9E", "\"\\u{ff9e}\"")]
+    [InlineData("a\uFF9E", "\"a\uFF9E\"")]
+    public void MarshalCedarEscapesUsingRustParity(string value, string expected)
+    {
+        CedarAssert.CedarText(new CedarString(value), expected);
+    }
+
+    [Theory]
+    [InlineData("a\u0300", "\"a\\u{300}\"")]
+    [InlineData("a\uFF9E", "\"a\\u{ff9e}\"")]
+    [InlineData("a\u0903", "\"a\u0903\"")]
+    [InlineData("hello", "\"hello\"")]
+    public void PatternMarshalCedarEscapesEachCharacterUsingRustParity(string literal, string expected)
+    {
+        CedarAssert.CedarText(new CedarPattern(literal), expected);
+    }
 }
