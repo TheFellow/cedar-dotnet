@@ -422,7 +422,8 @@ public static class CedarWriter
             or "in"
             or "like"
             or "has"
-            or "is";
+            or "is"
+            or "__cedar";
     }
 
     private static bool IsIdentifierStart(char value)

@@ -1,26 +1,14 @@
-# Semport: Earliest New Commit
+d267346
+2026-03-18T15:41:46-06:00
+Fix canMarshalAsIdent for empty strings and reserved keywords
 
-**Short SHA:** 47584d0
-**Timestamp:** 2026-03-18T15:41:46-06:00
+canMarshalAsIdent("") returned true because the loop over an empty
+string iterates zero times. It also accepted reserved keywords like
+"true", "false", "if", "in", etc., producing invalid Cedar like
+`context.true` instead of `context["true"]`.
 
-## Commit Message
-
-Fix Cedar marshal operator parenthesization for associativity
-
-Binary operators were not parenthesizing children correctly based on
-associativity:
-
-- Non-associative relation ops (==, !=, <, <=, >, >=, in) and keyword
-  ops (has, like, is, is-in) need to parenthesize both operands at the
-  same precedence, since (a == b) == c is valid but a == b == c is not.
-
-- Left-associative ops (+, -, *, &&, ||) need to parenthesize their
-  right operand at the same precedence, since (a - b) - (c - d) must
-  not be flattened to a - b - c - d which changes semantics.
-
-Split marshalInfixBinaryOp to take separate left/right precedence
-levels. Left-associative ops pass (p, p+1) and non-associative ops
-pass (p+1, p+1).
+Add an early return for empty strings and reserved keywords, using
+the existing IsReservedKeyword helper.
 
 Signed-off-by: Phil Hassey <phil@strongdm.com>
 

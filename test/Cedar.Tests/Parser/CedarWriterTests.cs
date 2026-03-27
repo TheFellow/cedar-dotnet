@@ -110,6 +110,28 @@ public sealed class CedarWriterTests
     }
 
     [Fact]
+    public void WriteAccessWithReservedKeyword()
+    {
+        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new CedarString("true"));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { context[\"true\"] };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
+    public void WriteAccessWithEmptyString()
+    {
+        INode expression = new NodeAccess(new NodeVariable(new CedarString("context")), new CedarString(string.Empty));
+        PolicyAst policy = BuildPolicy(expression);
+
+        Assert.Equal(
+            "permit(principal, action, resource)\n  when { context[\"\"] };",
+            CedarWriter.Write(policy));
+    }
+
+    [Fact]
     public void WriteMultiplePolicies()
     {
         PolicyAst first = ParseSingle("permit(principal, action, resource);");
