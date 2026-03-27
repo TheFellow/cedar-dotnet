@@ -33,6 +33,18 @@ public sealed class EntityUidTests
         Assert.Equal("User::\"a\\\"b\"", uid.MarshalCedar());
     }
 
+    [Theory]
+    [InlineData("\u0007", @"T::""\u{7}""")]
+    [InlineData("\u0008", @"T::""\u{8}""")]
+    [InlineData("\u000C", @"T::""\u{c}""")]
+    [InlineData("\u000B", @"T::""\u{b}""")]
+    public void MarshalCedarEscapesControlCharsWithCedarSyntax(string id, string expected)
+    {
+        EntityUid uid = new(new EntityType("T"), new CedarString(id));
+
+        Assert.Equal(expected, uid.MarshalCedar());
+    }
+
     [Fact]
     public void EqualValuesAreEqual()
     {

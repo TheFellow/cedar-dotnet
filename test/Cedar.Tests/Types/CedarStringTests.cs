@@ -81,6 +81,16 @@ public sealed class CedarStringTests
     }
 
     [Theory]
+    [InlineData("\u0007", "\"\\u{7}\"")]
+    [InlineData("\u0008", "\"\\u{8}\"")]
+    [InlineData("\u000C", "\"\\u{c}\"")]
+    [InlineData("\u000B", "\"\\u{b}\"")]
+    public void MarshalCedarEscapesGoStyleControlCharsWithCedarUnicodeSyntax(string value, string expected)
+    {
+        CedarAssert.CedarText(new CedarString(value), expected);
+    }
+
+    [Theory]
     [InlineData("\u00A0", "\"\\u{a0}\"")]
     [InlineData("\u0300", "\"\\u{300}\"")]
     [InlineData("a\u0300", "\"a\u0300\"")]
