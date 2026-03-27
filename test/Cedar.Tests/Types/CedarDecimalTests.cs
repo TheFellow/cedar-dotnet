@@ -28,6 +28,12 @@ public sealed class CedarDecimalTests
     }
 
     [Fact]
+    public void NewDecimalNegativeFractionalOnlyRoundTrips()
+    {
+        CedarAssert.Equal(CedarDecimal.Parse("-0.1234"), CedarDecimal.NewDecimal(-1234, -4));
+    }
+
+    [Fact]
     public void ParseAcceptsLeadingZeroes()
     {
         CedarAssert.Equal(CedarDecimal.Parse("1.01"), CedarDecimal.Parse("01.0100"));
@@ -37,6 +43,27 @@ public sealed class CedarDecimalTests
     public void ParseSupportsMinimumValue()
     {
         CedarAssert.Equal(new CedarDecimal(long.MinValue), CedarDecimal.Parse("-922337203685477.5808"));
+    }
+
+    [Theory]
+    [InlineData("-0.0001", -1L)]
+    [InlineData("-0.1", -1000L)]
+    [InlineData("-0.12", -1200L)]
+    [InlineData("-0.123", -1230L)]
+    [InlineData("-0.1234", -1234L)]
+    public void ParseNegativeFractionalOnlyDecimalsAreNegative(string input, long expectedRawValue)
+    {
+        CedarDecimal result = CedarDecimal.Parse(input);
+
+        Assert.Equal(expectedRawValue, result.Value);
+    }
+
+    [Fact]
+    public void ParseNegativeZeroNormalizesToPositiveZero()
+    {
+        CedarDecimal result = CedarDecimal.Parse("-0.0");
+
+        Assert.Equal(0L, result.Value);
     }
 
     [Fact]

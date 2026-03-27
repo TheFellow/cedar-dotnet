@@ -70,7 +70,7 @@ public sealed record CedarDecimal(long Value) : CedarValue
         }
 
         short fractionalPart = checked((short)(fractionalDigits * Pow10(4 - fractionalText.Length)));
-        if (integerPart < 0)
+        if (value[0] == '-')
         {
             fractionalPart = checked((short)-fractionalPart);
         }
