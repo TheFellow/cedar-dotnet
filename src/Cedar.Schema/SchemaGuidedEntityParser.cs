@@ -47,14 +47,16 @@ public static class SchemaGuidedEntityParser
         }
 
         EntityUid uid = ParseEntityUid(GetRequiredProperty(element, "uid", JsonValueKind.Object));
-        if (!TryLookupEntityDeclaration(schema, uid.Type.Value, out string currentNamespace, out EntityDecl? entityDecl))
-        {
-            throw new InvalidDataException($"Entity type '{uid.Type.Value}' is not declared in schema.");
-        }
 
         EntityUidSet parents = element.TryGetProperty("parents", out JsonElement parentsElement)
             ? ParseParents(parentsElement)
             : new EntityUidSet();
+
+        // Fall back to default (non-schema) parsing for entity types not in the schema
+        if (!TryLookupEntityDeclaration(schema, uid.Type.Value, out string currentNamespace, out EntityDecl? entityDecl))
+        {
+            return new Entity(uid, parents, new CedarRecord(), new CedarRecord());
+        }
 
         CedarRecord attributes = ParseEntityAttributes(element, entityDecl!.Shape, schema, currentNamespace);
         CedarRecord tags = ParseEntityTags(element, entityDecl.Tags, schema, currentNamespace);

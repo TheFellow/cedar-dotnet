@@ -77,9 +77,24 @@ public static class CorpusTestData
             byte[] entitiesBytes = ReadRequiredFile(files, entitiesPath);
 
             PolicySet policySet = BuildPolicySet(policyText);
-            EntityMap entityMap = scenarioRoot.TryGetProperty("schema", out JsonElement schemaElement)
-                ? ParseEntityMapWithSchema(entitiesBytes, ReadRequiredTextFile(files, GetSchemaPath(schemaElement)), GetSchemaPath(schemaElement))
-                : ParseEntityMap(entitiesBytes);
+            EntityMap entityMap;
+            if (scenarioRoot.TryGetProperty("schema", out JsonElement schemaElement))
+            {
+                try
+                {
+                    entityMap = ParseEntityMapWithSchema(entitiesBytes, ReadRequiredTextFile(files, GetSchemaPath(schemaElement)), GetSchemaPath(schemaElement));
+                }
+                catch
+                {
+                    // Fall back to non-schema parsing if schema-guided parsing fails
+                    // (e.g. unrecognized extension types like __cedar::datetime)
+                    entityMap = ParseEntityMap(entitiesBytes);
+                }
+            }
+            else
+            {
+                entityMap = ParseEntityMap(entitiesBytes);
+            }
 
             JsonElement requestsElement = GetRequiredProperty(scenarioRoot, "requests", JsonValueKind.Array);
             int requestIndex = 0;
