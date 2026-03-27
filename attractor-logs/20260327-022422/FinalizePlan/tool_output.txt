@@ -1,0 +1,1702 @@
+exit_code: 0
+timed_out: False
+stdout:
+2a36626	2026-01-29T11:41:32-08:00	new
+
+[WARNING: Tool output was truncated. First 443184 characters were removed.]
+
+an.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/zh-Hant/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/pl/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/ja/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/it/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/cs/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/ru/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/pt-BR/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/de/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/ko/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/fr/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/es/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/tr/Microsoft.TestPlatform.CoreUtilities.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/Microsoft.TestPlatform.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Perfolizer.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.CodeAnalysis.CSharp.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pl/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ja/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/it/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/cs/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ru/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/de/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ko/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/fr/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/es/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/tr/Microsoft.CodeAnalysis.CSharp.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hans/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/zh-Hant/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pl/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ja/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ru/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/pt-BR/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/ko/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/tr/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.CodeAnalysis.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/it/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/cs/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/de/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/fr/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/es/Microsoft.CodeAnalysis.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.Tracing.TraceEvent.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.FastSerialization.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/System.Management.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win/lib/net9.0/System.Management.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/System.CodeDom.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.execution.dotnet.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.assert.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/TraceReloggerLib.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Dia2Lib.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/amd64/msdia140.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/amd64/KernelTraceControl.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/x86/msdia140.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/x86/KernelTraceControl.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/x86/KernelTraceControl.Win61.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/arm64/msdia140.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/arm64/KernelTraceControl.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.Runtime.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Diagnostics.NETCore.Client.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Iced.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/Newtonsoft.Json.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Gee.External.Capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/osx-x64/native/libcapstone.dylib
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-arm/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-arm64/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-x86/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win-x86/native/capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/osx-arm64/native/libcapstone.dylib
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win-x64/native/capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/linux-x64/native/libcapstone.so
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/runtimes/win-arm64/native/capstone.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/CommandLine.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Logging.Abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Primitives.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Logging.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.Options.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.DependencyInjection.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/zh-Hans/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/zh-Hant/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/pl/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/ja/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/it/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/cs/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/ru/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/pt-BR/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/de/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/ko/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/fr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/es/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/tr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/zh-Hans/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/zh-Hant/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/pl/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/ja/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/it/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/cs/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/ru/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/pt-BR/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/de/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/ko/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/fr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/es/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/tr/FSharp.Core.resources.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/FSharp.Core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/FSharp.Core.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/benchmarks/Cedar.Benchmarks/bin/Debug/net10.0/Microsoft.DotNet.PlatformAbstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net9.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Conformance/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Experimental.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Batch.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Schema.Tests/bin/Debug/net10.0/xunit.abstractions.dll
+
+exit_code: 0
+timed_out: False
+stdout:
+2a36626
+2026-01-29T11:41:32-08:00
+Merge pull request #127 from strongdm/rfc-110-expanded-year
+
+types: add support RFC 110 expanded year format
+
+exit_code: 0
+timed_out: False
+
+OK
+
+   1 | # Next Commit to Process
+   2 | 
+   3 | **Short SHA:** 2a36626
+   4 | **Timestamp:** 2026-01-29T11:41:32-08:00
+   5 | 
+   6 | ## Commit Message
+   7 | 
+   8 | Merge pull request #127 from strongdm/rfc-110-expanded-year
+   9 | 
+  10 | types: add support RFC 110 expanded year format
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 2a3662681af2bcddbeaad8e871a565f532198cbf
+Merge: 77d5543 c1177bf
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Thu Jan 29 11:41:32 2026 -0800
+
+    Merge pull request #127 from strongdm/rfc-110-expanded-year
+    
+    types: add support RFC 110 expanded year format
+
+exit_code: 0
+timed_out: False
+stdout:
+commit c1177bf8516de5f9d7251b2dfdc4b762444dafa5
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Wed Jan 28 15:14:36 2026 -0800
+
+    types: add support RFC 110 expanded year format
+    
+    This change adds support for the nine-digit expanded year datetime format specified in RFC 110, allowing exotic datetimes far in the past or future to be represented in Cedar policies and entities.
+    
+    Signed-Off-By: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+
+diff --git a/types/datetime.go b/types/datetime.go
+index fa5f94c..d96a5ac 100644
+--- a/types/datetime.go
++++ b/types/datetime.go
+@@ -12,13 +12,23 @@ import (
+ 
+ var errDatetime = internal.ErrDatetime
+ 
++// maxDatetime is the highest possible timestamp that will fit in 64 bits of millisecond-precision space.
++var maxDatetime = time.Date(292278994, 8, 17, 7, 12, 55, 807*1e6, time.UTC)
++
++// minDatetime is the lowest possible timestamp that will fit in 64 bits of millisecond-precision space.
++var minDatetime = time.Date(-292275055, 5, 17, 16, 47, 04, 192*1e6, time.UTC)
++
+ // Datetime represents a Cedar datetime value
+ type Datetime struct {
+ 	// value is a timestamp in milliseconds
+ 	value int64
+ }
+ 
+-// NewDatetime returns a Cedar Datetime from a Go time.Time value
++// NewDatetime returns a Cedar Datetime from a Go time.Time value.
++//
++// The provided time.Time is truncated to millisecond precision. The result is
++// undefined if the Unix time in milliseconds cannot be represented by an int64
++// (a date more than 292 million years before or after 1970).
+ func NewDatetime(t time.Time) Datetime {
+ 	return Datetime{value: t.UnixMilli()}
+ }
+@@ -29,6 +39,41 @@ func NewDatetimeFromMillis(ms int64) Datetime {
+ 	return Datetime{value: ms}
+ }
+ 
++func expectChar(s string, c uint8) (string, error) {
++	if len(s) == 0 {
++		return "", fmt.Errorf("%w: unexpected EOF", errDatetime)
++	} else if s[0] != c {
++		return "", fmt.Errorf("%w: unexpected character %c", errDatetime, s[0])
++	}
++	return s[1:], nil
++}
++
++func parseUint(s string, chars int, maxValue uint, label string) (uint, string, error) {
++	if len(s) < chars {
++		return 0, "", fmt.Errorf("%w: unexpected EOF", errDatetime)
++	}
++	v, err := strconv.ParseUint(s[0:chars], 10, 0)
++	if err != nil {
++		return 0, "", fmt.Errorf("%w: invalid %v", errDatetime, label)
++	} else if v > uint64(maxValue) {
++		return 0, "", fmt.Errorf("%w: %v is greater than %v", errDatetime, label, maxValue)
++	}
++	return uint(v), s[chars:], nil
++}
++
++// checkValidDay ensures that the given day is valid for the given month in the given year.
++func checkValidDay(year int, month, day uint) error {
++	t := time.Date(year, time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
++
++	// Don't allow wrapping: https://github.com/cedar-policy/rfcs/pull/94
++	_, tmonth, tday := t.Date()
++	if time.Month(month) != tmonth || int(day) != tday {
++		return fmt.Errorf("%w: invalid date", errDatetime)
++	}
++
++	return nil
++}
++
+ // ParseDatetime returns a Cedar datetime when the argument provided
+ // represents a compatible datetime or an error
+ //
+@@ -39,186 +84,149 @@ func NewDatetimeFromMillis(ms int64) Datetime {
+ // - "YYYY-MM-DDThh:mm:ss.SSSZ" (date and time with millisecond, UTC)
+ // - "YYYY-MM-DDThh:mm:ss(+/-)hhmm" (date and time, time zone offset)
+ // - "YYYY-MM-DDThh:mm:ss.SSS(+/-)hhmm" (date and time with millisecond, time zone offset)
++//
++// Cedar RFC 110 extends this with ISO 8601 expanded year format:
++//
++// - "(+/-)YYYYYYYYY-MM-DD" (9-digit year, date only)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ssZ" (9-digit year, date and time, UTC)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss.SSSZ" (9-digit year with millisecond, UTC)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss(+/-)hhmm" (9-digit year with time zone offset)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss.SSS(+/-)hhmm" (9-digit year with millisecond and offset)
+ func ParseDatetime(s string) (Datetime, error) {
+ 	var (
+-		year, month, day, hour, minute, second, milli int
+-		offset                                        time.Duration
++		year                                    int
++		month, day, hour, minute, second, milli uint
++		offset                                  time.Duration
+ 	)
+ 
+-	length := len(s)
+-	if length < 10 {
+-		return Datetime{}, fmt.Errorf("%w: string too short", errDatetime)
++	if len(s) == 0 {
++		return Datetime{}, fmt.Errorf("%w: unexpected EOF", errDatetime)
+ 	}
+ 
+-	// Date: YYYY-MM-DD
+-	// YYYY is at offset 0
+-	// MM is at offset 5
+-	// DD is at offset 8
+-	// - is at 4 and 7
+-	// YYYY
+-	if !unicode.IsDigit(rune(s[0])) || !unicode.IsDigit(rune(s[1])) || !unicode.IsDigit(rune(s[2])) || !unicode.IsDigit(rune(s[3])) {
++	// Check if this is an expanded year format (starts with + or -)
++	yearSign := 1
++	yearLength := 4
++	yearMax := uint(9999)
++	if s[0] == '+' || s[0] == '-' {
++		yearLength = 9
++		yearMax = 999999999
++		if s[0] == '-' {
++			yearSign = -1
+[... 379 lines omitted ...]
+-			{"2023-02-28T23:59:60Z", "error parsing datetime value: second is out of range"},
+-			{"2023-02-28T23:60:59Z", "error parsing datetime value: minute is out of range"},
+-			{"1970-01-01T25:00:00Z", "error parsing datetime value: hour is out of range"},
+-			{"1970-12-32T:00:00Z", "error parsing datetime value: day is out of range"},
+-			{"1970-13-01T00:00:00Z", "error parsing datetime value: month is out of range"},
+-
+-			{"1970-01-01T00:00:00+2400", "error parsing datetime value: time zone offset hours are out of range"},
+-			{"1970-01-01T00:00:00-2400", "error parsing datetime value: time zone offset hours are out of range"},
+-			{"1970-01-01T00:00:00+2360", "error parsing datetime value: time zone offset minutes are out of range"},
+-			{"1970-01-01T00:00:00-2360", "error parsing datetime value: time zone offset minutes are out of range"},
++			{"2024-02-29T23:59:60Z", "error parsing datetime value: second is greater than 59"},
++			{"2023-02-28T23:59:60Z", "error parsing datetime value: second is greater than 59"},
++			{"2023-02-28T23:60:59Z", "error parsing datetime value: minute is greater than 59"},
++			{"1970-01-01T25:00:00Z", "error parsing datetime value: hour is greater than 23"},
++			{"1970-12-32T:00:00Z", "error parsing datetime value: day is greater than 31"},
++			{"1970-13-01T00:00:00Z", "error parsing datetime value: month is greater than 12"},
++
++			{"1970-01-01T00:00:00+2400", "error parsing datetime value: offset hours is greater than 23"},
++			{"1970-01-01T00:00:00-2400", "error parsing datetime value: offset hours is greater than 23"},
++			{"1970-01-01T00:00:00+2360", "error parsing datetime value: offset minutes is greater than 59"},
++			{"1970-01-01T00:00:00-2360", "error parsing datetime value: offset minutes is greater than 59"},
++
++			{"+", "error parsing datetime value: unexpected EOF"},
++			{"-", "error parsing datetime value: unexpected EOF"},
++			{"+12345678", "error parsing datetime value: unexpected EOF"},
++			{"+1234-01-01", "error parsing datetime value: invalid year"},
++			{"+00000000a-01-01", "error parsing datetime value: invalid year"},
++			{"-abcdefghi-01-01", "error parsing datetime value: invalid year"},
++			{"+12345678A-01-01", "error parsing datetime value: invalid year"},
++
++			{"1972-02-29T10:00:00-1000x", "error parsing datetime value: unexpected additional characters"},
++
++			{"+292278994-08-17T07:12:55.808Z", "error parsing datetime value: timestamp out of range"},
++			{"+292278994-08-17T06:12:55.808-0100", "error parsing datetime value: timestamp out of range"},
++			{"+292278994-08-17T08:12:55.808+0100", "error parsing datetime value: timestamp out of range"},
++			{"-292275055-05-17T16:47:04.191Z", "error parsing datetime value: timestamp out of range"},
++			{"-292275055-05-17T15:47:04.191-0100", "error parsing datetime value: timestamp out of range"},
++			{"-292275055-05-17T17:47:04.191+0100", "error parsing datetime value: timestamp out of range"},
+ 		}
+ 		for ti, tt := range tests {
+ 			tt := tt
+@@ -219,24 +249,66 @@ func TestDatetime(t *testing.T) {
+ 
+ 	t.Run("MarshalCedar", func(t *testing.T) {
+ 		t.Parallel()
+-		testutil.Equals(t, string(types.NewDatetime(time.UnixMilli(42)).MarshalCedar()), `datetime("1970-01-01T00:00:00.042Z")`)
++		tests := []struct {
++			year     int
++			month    int
++			day      int
++			expected string
++		}{
++			{0, 1, 1, `datetime("0000-01-01T00:00:00.000Z")`},
++			{1970, 1, 1, `datetime("1970-01-01T00:00:00.000Z")`},
++			{9999, 12, 31, `datetime("9999-12-31T00:00:00.000Z")`},
++			{10000, 1, 1, `datetime("+000010000-01-01T00:00:00.000Z")`},
++			{100000, 6, 15, `datetime("+000100000-06-15T00:00:00.000Z")`},
++			{1000000, 12, 31, `datetime("+001000000-12-31T00:00:00.000Z")`},
++			{-1, 1, 1, `datetime("-000000001-01-01T00:00:00.000Z")`},
++			{-100, 6, 15, `datetime("-000000100-06-15T00:00:00.000Z")`},
++			{-10000, 12, 31, `datetime("-000010000-12-31T00:00:00.000Z")`},
++		}
++		for ti, tt := range tests {
++			tt := tt
++			t.Run(fmt.Sprintf("%d_year=%d", ti, tt.year), func(t *testing.T) {
++				t.Parallel()
++				dt := types.NewDatetime(time.Date(tt.year, time.Month(tt.month), tt.day, 0, 0, 0, 0, time.UTC))
++				testutil.Equals(t, dt.MarshalCedar(), []byte(tt.expected))
++			})
++		}
+ 	})
+ 
+ 	t.Run("MarshalJSON", func(t *testing.T) {
+ 		t.Parallel()
+-		expected := `{
+-			"__extn": {
+-				"fn": "datetime",
+-				"arg": "1970-01-01T00:00:00.042Z"
+-			}
+-		}`
+-		dt1 := types.NewDatetime(time.UnixMilli(42))
+-		testutil.JSONMarshalsTo(t, dt1, expected)
+-
+-		var dt2 types.Datetime
+-		err := json.Unmarshal([]byte(expected), &dt2)
+-		testutil.OK(t, err)
+-		testutil.Equals(t, dt1, dt2)
++		t.Run("FourDigitYear", func(t *testing.T) {
++			expected := `{
++				"__extn": {
++					"fn": "datetime",
++					"arg": "1970-01-01T00:00:00.042Z"
++				}
++			}`
++			dt1 := types.NewDatetime(time.UnixMilli(42))
++			testutil.JSONMarshalsTo(t, dt1, expected)
++
++			var dt2 types.Datetime
++			err := json.Unmarshal([]byte(expected), &dt2)
++			testutil.OK(t, err)
++			testutil.Equals(t, dt1, dt2)
++		})
++
++		t.Run("FiveDigitYear", func(t *testing.T) {
++			t.Parallel()
++			dt := types.NewDatetime(time.Date(10000, 1, 1, 0, 0, 0, 42000000, time.UTC))
++			expected := `{
++				"__extn": {
++					"fn": "datetime",
++					"arg": "+000010000-01-01T00:00:00.042Z"
++				}
++			}`
++			testutil.JSONMarshalsTo(t, dt, expected)
++
++			var dt2 types.Datetime
++			err := json.Unmarshal([]byte(expected), &dt2)
++			testutil.OK(t, err)
++			testutil.Equals(t, dt, dt2)
++		})
+ 	})
+ 
+ 	t.Run("UnmarshalJSON/error", func(t *testing.T) {
+@@ -245,4 +317,5 @@ func TestDatetime(t *testing.T) {
+ 		err := json.Unmarshal([]byte("{}"), &dt2)
+ 		testutil.Error(t, err)
+ 	})
++
+ }
+
+exit_code: 0
+timed_out: False
+stdout:
+commit 2a3662681af2bcddbeaad8e871a565f532198cbf
+Merge: 77d5543 c1177bf
+Author: Patrick Jakubowski <patrick.jakubowski@strongdm.com>
+Date:   Thu Jan 29 11:41:32 2026 -0800
+
+    Merge pull request #127 from strongdm/rfc-110-expanded-year
+    
+    types: add support RFC 110 expanded year format
+
+ types/datetime.go      | 281 +++++++++++++++++++++++++++----------------------
+ types/datetime_test.go | 209 ++++++++++++++++++++++++------------
+ 2 files changed, 295 insertions(+), 195 deletions(-)
+
+exit_code: 0
+timed_out: False
+stdout:
++// maxDatetime is the highest possible timestamp that will fit in 64 bits of millisecond-precision space.
++var maxDatetime = time.Date(292278994, 8, 17, 7, 12, 55, 807*1e6, time.UTC)
++
++// minDatetime is the lowest possible timestamp that will fit in 64 bits of millisecond-precision space.
++var minDatetime = time.Date(-292275055, 5, 17, 16, 47, 04, 192*1e6, time.UTC)
++
++// NewDatetime returns a Cedar Datetime from a Go time.Time value.
++//
++// The provided time.Time is truncated to millisecond precision. The result is
++// undefined if the Unix time in milliseconds cannot be represented by an int64
++// (a date more than 292 million years before or after 1970).
++func expectChar(s string, c uint8) (string, error) {
++	if len(s) == 0 {
++		return "", fmt.Errorf("%w: unexpected EOF", errDatetime)
++	} else if s[0] != c {
++		return "", fmt.Errorf("%w: unexpected character %c", errDatetime, s[0])
++	}
++	return s[1:], nil
++}
++
++func parseUint(s string, chars int, maxValue uint, label string) (uint, string, error) {
++	if len(s) < chars {
++		return 0, "", fmt.Errorf("%w: unexpected EOF", errDatetime)
++	}
++	v, err := strconv.ParseUint(s[0:chars], 10, 0)
++	if err != nil {
++		return 0, "", fmt.Errorf("%w: invalid %v", errDatetime, label)
++	} else if v > uint64(maxValue) {
++		return 0, "", fmt.Errorf("%w: %v is greater than %v", errDatetime, label, maxValue)
++	}
++	return uint(v), s[chars:], nil
++}
++
++// checkValidDay ensures that the given day is valid for the given month in the given year.
++func checkValidDay(year int, month, day uint) error {
++	t := time.Date(year, time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
++
++	// Don't allow wrapping: https://github.com/cedar-policy/rfcs/pull/94
++	_, tmonth, tday := t.Date()
++	if time.Month(month) != tmonth || int(day) != tday {
++		return fmt.Errorf("%w: invalid date", errDatetime)
++	}
++
++	return nil
++}
++
++//
++// Cedar RFC 110 extends this with ISO 8601 expanded year format:
++//
++// - "(+/-)YYYYYYYYY-MM-DD" (9-digit year, date only)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ssZ" (9-digit year, date and time, UTC)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss.SSSZ" (9-digit year with millisecond, UTC)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss(+/-)hhmm" (9-digit year with time zone offset)
++// - "(+/-)YYYYYYYYY-MM-DDThh:mm:ss.SSS(+/-)hhmm" (9-digit year with millisecond and offset)
++		year                                    int
++		month, day, hour, minute, second, milli uint
++		offset                                  time.Duration
++	if len(s) == 0 {
++		return Datetime{}, fmt.Errorf("%w: unexpected EOF", errDatetime)
++	// Check if this is an expanded year format (starts with + or -)
++	yearSign := 1
++	yearLength := 4
++	yearMax := uint(9999)
++	if s[0] == '+' || s[0] == '-' {
++		yearLength = 9
++		yearMax = 999999999
++		if s[0] == '-' {
++			yearSign = -1
++		}
++		s = s[1:]
++	} else if !unicode.IsDigit(rune(s[0])) {
++	absYear, s, err := parseUint(s[0:], yearLength, yearMax, "year")
++	if err != nil {
++		return Datetime{}, err
++	year = int(absYear) * yearSign
++	if s, err = expectChar(s, '-'); err != nil {
++		return Datetime{}, err
++	if month, s, err = parseUint(s, 2, 12, "month"); err != nil {
++		return Datetime{}, err
++	if s, err = expectChar(s, '-'); err != nil {
++		return Datetime{}, err
++	if day, s, err = parseUint(s, 2, 31, "day"); err != nil {
++		return Datetime{}, err
++	if err = checkValidDay(year, month, day); err != nil {
++		return Datetime{}, err
++	if len(s) == 0 {
++		return Datetime{time.Date(year, time.Month(month), int(day), 0, 0, 0, 0, time.UTC).UnixMilli()}, nil
++	if s, err = expectChar(s, 'T'); err != nil {
++		return Datetime{}, err
++	if hour, s, err = parseUint(s, 2, 23, "hour"); err != nil {
++		return Datetime{}, err
++	if s, err = expectChar(s, ':'); err != nil {
++		return Datetime{}, err
++	if minute, s, err = parseUint(s, 2, 59, "minute"); err != nil {
++		return Datetime{}, err
++	if s, err = expectChar(s, ':'); err != nil {
++		return Datetime{}, err
++
++	if second, s, err = parseUint(s, 2, 59, "second"); err != nil {
++		return Datetime{}, err
++	if len(s) == 0 {
++		return Datetime{}, fmt.Errorf("%w: unexpected EOF", errDatetime)
++	}
++	// Parse optional milliseconds
++	if s[0] == '.' {
++		milli, s, err = parseUint(s[1:], 3, 999, "millisecond")
++		if err != nil {
++			return Datetime{}, err
++	if len(s) == 0 {
++		return Datetime{}, fmt.Errorf("%w: unexpected EOF", errDatetime)
++	switch s[0] {
++		s = s[1:]
++		if s[0] == '-' {
++		s = s[1:]
++		var hh uint
++		if hh, s, err = parseUint(s, 2, 23, "offset hours"); err != nil {
++			return Datetime{}, err
++		var mm uint
++		if mm, s, err = parseUint(s, 2, 59, "offset minutes"); err != nil {
++			return Datetime{}, err
+
+exit_code: 0
+timed_out: False
+stdout:
+src/Cedar.Ast/Values.cs
+src/Cedar.Ast/ExtensionOperators.cs
+src/Cedar.Types/CedarDatetime.cs
+src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs
+src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs
+src/Cedar.Core/Internal/Extensions/ConstructorExtensions.cs
+src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs
+src/Cedar.Core/Internal/Eval/Evaluators/ComparisonEvaluators.cs
+src/Cedar.Core/Internal/Eval/TypeConversion.cs
+src/Cedar.Core/Internal/Eval/EvalErrors.cs
+
+OK
+
+   1 | PORT
+   2 | 
+   3 | ## Commit Summary
+   4 | 
+   5 | **SHA:** 2a36626 (merge of c1177bf)
+   6 | **Title:** types: add support RFC 110 expanded year format
+   7 | **Files changed (Go):** `types/datetime.go`, `types/datetime_test.go`
+   8 | 
+   9 | Cedar RFC 110 extends the datetime string format to support ISO 8601 **expanded year** notation: a mandatory leading `+` or `-` sign followed by exactly **9 digits** for years outside the standard 0–9999 range. A `+` prefix is also valid for years 0–9999 when using expanded format.
+  10 | 
+  11 | ---
+  12 | 
+  13 | ## Semantic Analysis
+  14 | 
+  15 | ### What changed in Go
+  16 | 
+  17 | 1. **New min/max bounds constants** (`minDatetime`, `maxDatetime`) — int64 millisecond overflow guards at ±292 million years from epoch.
+  18 | 
+  19 | 2. **Rewritten `ParseDatetime`** — the old parser used fixed-offset string indexing (fragile, only handled 4-digit years). The new parser is character-stream based with helpers `expectChar` / `parseUint` / `checkValidDay`. Key behavior changes:
+  20 |    - If `s[0]` is `+` or `-`, parse **9-digit** year with a sign.
+  21 |    - If `s[0]` is a digit, parse **4-digit** year (unchanged range 0–9999).
+  22 |    - Validate the computed timestamp fits within int64 millisecond range; return `"timestamp out of range"` error if not.
+  23 |    - Day-validation now uses `time.Date` round-trip to reject wrapped dates (e.g. Feb 30 → Mar 2).
+  24 |    - Error messages changed: "X is out of range" → "X is greater than N".
+  25 | 
+  26 | 3. **Updated `MarshalCedar` / `String`** — years > 9999 are formatted as `+YYYYYYYYY-…` (9-digit, zero-padded, leading `+`). Years < 0 formatted as `-YYYYYYYYY-…`.
+  27 | 
+  28 | 4. **Updated `MarshalJSON` / `UnmarshalJSON`** — the arg string inside the `__extn` envelope now uses expanded format when applicable.
+  29 | 
+  30 | ### What needs porting to C#
+  31 | 
+  32 | The C# `CedarDatetime` type stores milliseconds as `long` (int64) and already round-trips through `DateTimeOffset`. The parsing and serialization must be extended to match the new Go behavior exactly so Cedar policy evaluation and JSON interchange remain conformant.
+  33 | 
+  34 | ---
+  35 | 
+  36 | ## Concrete Port Tasks
+  37 | 
+  38 | ### 1. `src/Cedar.Types/CedarDatetime.cs` — Parser
+  39 | 
+  40 | **Current state:** `ParseDatetime(string)` likely uses `DateTimeOffset.TryParseExact` or similar, limited to 4-digit years.
+  41 | 
+  42 | **Required changes:**
+  43 | - Before calling any framework parser, inspect `s[0]`:
+  44 |   - If `+` or `-`: consume the sign, read exactly **9** ASCII digits as `ulong`, multiply by sign → `year`. Validate remainder has format `-MM-DDT…`.
+  45 |   - Else if digit: read exactly **4** digits as `uint` → `year` (existing path).
+  46 |   - Else: return error.
+  47 | - After parsing, compute the `DateTimeOffset` and verify the resulting `UnixTimeMilliseconds` fits in `long` range (i.e. is between `long.MinValue` and `long.MaxValue`). Return an error if not. The Go boundary values are:
+  48 |   - Max: year=292278994, month=8, day=17, 07:12:55.807 UTC
+  49 |   - Min: year=-292275055, month=5, day=17, 16:47:04.192 UTC
+  50 | - Validate day/month bounds strictly (no calendar wrap-around). A `DateTimeOffset` constructed from an out-of-range day will throw or wrap in .NET — catch and return an error.
+  51 | - Validate field ranges explicitly (month ≤ 12, day ≤ 31, hour ≤ 23, minute ≤ 59, second ≤ 59, offset hours ≤ 23, offset minutes ≤ 59) before constructing the `DateTimeOffset`.
+  52 | - Error message strings should align with the Go messages (for conformance tests): `"X is greater than N"` pattern.
+  53 | 
+  54 | ### 2. `src/Cedar.Types/CedarDatetime.cs` — Serializer (`MarshalCedar` / `ToString`)
+  55 | 
+  56 | **Required changes:**
+  57 | - When formatting the stored millisecond value back to a string, reconstruct the year from `DateTimeOffset.FromUnixTimeMilliseconds(value)`.
+  58 | - If `year < 0`: format as `-{Math.Abs(year):D9}-MM-DDThh:mm:ss.SSSZ`.
+  59 | - If `year > 9999`: format as `+{year:D9}-MM-DDThh:mm:ss.SSSZ`.
+  60 | - If `0 ≤ year ≤ 9999`: format as `{year:D4}-MM-DDThh:mm:ss.SSSZ` (existing behavior).
+  61 | - Always include milliseconds (`.SSS`) in the output (the Go impl always does `.000` padding).
+  62 | 
+  63 | ### 3. `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs`
+  64 | 
+  65 | Review whether any parsing/formatting helpers here need updating to mirror the new expanded-year logic or delegate correctly to `CedarDatetime`.
+  66 | 
+  67 | ### 4. `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs`
+  68 | 
+  69 | Verify the `__extn` JSON roundtrip calls the same `ParseDatetime` / `MarshalCedar` paths so expanded-year JSON strings (`"+000010000-01-01T00:00:00.042Z"`) work correctly with no extra changes needed beyond fixing the underlying `CedarDatetime` methods.
+  70 | 
+  71 | ### 5. `test/Cedar.Tests/` — New test cases
+  72 | 
+  73 | Add `CedarDatetimeTests` (or extend existing) covering:
+  74 | 
+  75 | **Parse success (expanded year):**
+  76 | - `"+000010000-01-01T00:00:00Z"` → year 10000
+  77 | - `"-000000001-01-01T00:00:00Z"` → year -1
+  78 | - `"+292278994-08-17T07:12:55.807Z"` → max valid
+  79 | - `"-292275055-05-17T16:47:04.192Z"` → min valid
+  80 | 
+  81 | **Parse error (expanded year):**
+  82 | - `"+"` → unexpected EOF
+  83 | - `"-"` → unexpected EOF
+  84 | - `"+12345678"` → unexpected EOF (only 8 digits, not 9)
+  85 | - `"+1234-01-01"` → invalid year (4 digits after sign, not 9)
+  86 | - `"+292278994-08-17T07:12:55.808Z"` → timestamp out of range
+  87 | - `"-292275055-05-17T16:47:04.191Z"` → timestamp out of range
+  88 | 
+  89 | **MarshalCedar (formatting):**
+  90 | - year=10000 → `datetime("+000010000-01-01T00:00:00.000Z")`
+  91 | - year=-1 → `datetime("-000000001-01-01T00:00:00.000Z")`
+  92 | - year=9999 → `datetime("9999-12-31T00:00:00.000Z")` (no sign prefix)
+  93 | 
+  94 | **JSON roundtrip:**
+  95 | - Expanded year arg string marshals and unmarshals correctly via `__extn` envelope.
+  96 | 
+  97 | ---
+  98 | 
+  99 | ## Reference
+ 100 | 
+ 101 | - Go implementation: `inspiration/cedar-go/types/datetime.go` (commit c1177bf)
+ 102 | - C# target: `src/Cedar.Types/CedarDatetime.cs`
+ 103 | - Cedar RFC 110: https://github.com/cedar-policy/rfcs/pull/110
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:8:public sealed record CedarDatetime(long Value) : CedarValue
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:13:    public static CedarDatetime Parse(string value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:103:    public static CedarDatetime FromDateTimeOffset(DateTimeOffset value)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:105:        return new CedarDatetime(value.ToUnixTimeMilliseconds());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:110:        return DateTimeOffset.FromUnixTimeMilliseconds(Value).ToUniversalTime();
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:130:        return CedarHash.ForInt64(nameof(CedarDatetime), Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:133:    private static CedarDatetime CreateFromParts(int year, int month, int day, int hour, int minute, int second, int millisecond, long offsetMilliseconds)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:159:        return new CedarDatetime((long)totalMs);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:166:            return year.ToString("D4", CultureInfo.InvariantCulture);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Types/CedarDatetime.cs:171:        return sign + absoluteYear.ToString("D9", CultureInfo.InvariantCulture);
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:9:internal static class DatetimeExtensions
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:13:        CedarDatetime value = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:15:        return new CedarDatetime(millis);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:20:        CedarDatetime value = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:26:        CedarDatetime datetime = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:31:            return new CedarDatetime(checked(datetime.Value + duration.Value));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:41:        CedarDatetime left = TypeConversion.ValueToDatetime(args[0]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:42:        CedarDatetime right = TypeConversion.ValueToDatetime(args[1]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:56:        GregorianDateTimeParts value = GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:62:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Year);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:67:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Month);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:72:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Day);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:77:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).IsoDayOfWeek);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:82:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).DayOfYear);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:87:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Hour);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:92:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Minute);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:97:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Second);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:102:        return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Millisecond);
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:9:internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:11:    public override ICedarData Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:17:    public override void Write(Utf8JsonWriter writer, ICedarData value, JsonSerializerOptions options)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:52:            case CedarDatetime datetime:
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:53:                WriteExtension(writer, "datetime", datetime.MarshalCedar()[10..^2]);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:84:                EntityUidJsonConverter.WriteExplicit(writer, entityUid);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:114:        if (EntityUidJsonConverter.TryReadElement(element, out EntityUid? entityUid))
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:158:            "datetime" => CedarDatetime.Parse(argument),
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:170:        if (element.TryGetProperty("__extn", out JsonElement explicitExtension))
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs:202:        writer.WritePropertyName("__extn");
+
+[WARNING: Tool output was truncated. First 15576 characters were removed.]
+
+(new CedarDuration(3_600_000), CedarDuration.Parse("60m"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDurationTests.cs:87:        CedarAssert.HashStable(CedarDuration.Parse("42ms"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDurationTests.cs:91:    public void JsonRoundTripUsesDurationExtension()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDurationTests.cs:93:        CedarDuration expected = CedarDuration.Parse("42ms");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDurationTests.cs:95:        string json = CedarJson.SerializeData(expected);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDurationTests.cs:96:        ICedarData actual = CedarJson.DeserializeData(json);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:2:using Cedar.Core.Internal.Json;
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:21:    public void MarshalCedarFormatsSimpleUid()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:25:        Assert.Equal("User::\"alice\"", uid.MarshalCedar());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:29:    public void MarshalCedarEscapesIdentifierText()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:33:        Assert.Equal("User::\"a\\\"b\"", uid.MarshalCedar());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:59:        EntityUid uid = CedarJson.DeserializeEntityUid("{\"__entity\":{\"type\":\"User\",\"id\":\"alice\"}}");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:67:        EntityUid uid = CedarJson.DeserializeEntityUid("{\"type\":\"User\",\"id\":\"alice\"}");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:77:        Assert.Equal("{\"__entity\":{\"type\":\"User\",\"id\":\"alice\"}}", CedarJson.SerializeEntityUid(uid));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:83:        ICedarData actual = CedarJson.DeserializeData("{\"__entity\":{\"type\":\"User\",\"id\":\"alice\"}}");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:94:        ICedarData actual = CedarJson.DeserializeData(CedarJson.SerializeData(set));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:100:    public void ToStringMatchesMarshalCedar()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:104:        Assert.Equal(uid.MarshalCedar(), uid.ToString());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:108:    public void TryParseCedar_SimpleUid()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:110:        Assert.True(EntityUid.TryParseCedar("User::\"alice\"", out EntityUid? result));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:115:    public void TryParseCedar_NamespacedType()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:117:        Assert.True(EntityUid.TryParseCedar("Namespace::Type::\"id\"", out EntityUid? result));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:125:    public void TryParseCedar_RoundTrip(string input)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:127:        Assert.True(EntityUid.TryParseCedar(input, out EntityUid? parsed));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:128:        Assert.True(EntityUid.TryParseCedar(parsed!.MarshalCedar(), out EntityUid? reparsed));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:140:    public void TryParseCedar_RejectsInvalidInput(string input)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:142:        Assert.False(EntityUid.TryParseCedar(input, out EntityUid? result));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:147:    public void ParseCedar_ThrowsOnInvalidInput()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityUidTests.cs:149:        Assert.Throws<FormatException>(() => EntityUid.ParseCedar("Type::id"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:69:    public void JsonSerializeUsesImplicitUidForms()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:71:        string json = CedarJson.SerializeEntity(CreateEntity());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:78:    public void JsonDeserializeRoundTripsEntity()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:82:        Entity actual = CedarJson.DeserializeEntity(CedarJson.SerializeEntity(expected));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:88:    public void JsonTagsSupportEntityUidAndExtensionValues()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:97:                [new CedarString("expires")] = CedarDatetime.Parse("1970-01-01T00:00:00.042Z")
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:100:        Entity actual = CedarJson.DeserializeEntity(CedarJson.SerializeEntity(entity));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:108:        Entity entity = CedarJson.DeserializeEntity("{\"uid\":{\"type\":\"User\",\"id\":\"alice\"},\"attrs\":{},\"tags\":{}}");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityTests.cs:116:        Entity entity = CedarJson.DeserializeEntity("{\"uid\":{\"type\":\"User\",\"id\":\"alice\"},\"parents\":[]}");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarBoolTests.cs:62:    public void MarshalCedarFormatsTrue()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarBoolTests.cs:68:    public void MarshalCedarFormatsFalse()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:21:        CedarAssert.Equal(CedarDecimal.Parse("123.45"), CedarDecimal.NewDecimal(12_345, -2));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:27:        CedarAssert.Equal(CedarDecimal.Parse("900000000000000.0"), CedarDecimal.NewDecimal(9, 14));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:31:    public void ParseAcceptsLeadingZeroes()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:33:        CedarAssert.Equal(CedarDecimal.Parse("1.01"), CedarDecimal.Parse("01.0100"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:37:    public void ParseSupportsMinimumValue()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:39:        CedarAssert.Equal(new CedarDecimal(long.MinValue), CedarDecimal.Parse("-922337203685477.5808"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:43:    public void ParseRejectsMissingDecimalPoint()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:45:        Assert.Throws<FormatException>(() => CedarDecimal.Parse("42"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:49:    public void ParseRejectsTooManyFractionalDigits()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:51:        Assert.Throws<FormatException>(() => CedarDecimal.Parse("1.23456"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:69:        CedarAssert.Equal(CedarDecimal.Parse("42.0"), CedarDecimal.NewDecimal(42, 0));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:75:        CedarAssert.NotEqual(CedarDecimal.Parse("42.0"), CedarDecimal.Parse("43.0"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:81:        CedarAssert.HashStable(CedarDecimal.Parse("1234.5678"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:85:    public void MarshalCedarFormatsCanonicalDecimal()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:91:    public void JsonRoundTripUsesExplicitExtensionForm()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:93:        CedarDecimal expected = CedarDecimal.Parse("1234.5678");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:95:        string json = CedarJson.SerializeData(expected);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDecimalTests.cs:96:        ICedarData actual = CedarJson.DeserializeData(json);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarSetTests.cs:44:        CedarSet set = new(CedarDecimal.Parse("0.0"));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarSetTests.cs:68:    public void MarshalCedarFormatsSingleElementSet()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarSetTests.cs:82:    public void JsonRoundTripSupportsPrimitiveMembers()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarSetTests.cs:86:        ICedarData actual = CedarJson.DeserializeData(CedarJson.SerializeData(expected));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarSetTests.cs:92:    public void JsonRoundTripSupportsEntityMembers()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarSetTests.cs:97:        ICedarData actual = CedarJson.DeserializeData(CedarJson.SerializeData(expected));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:48:        Assert.Equal(["User::\"alice\"", "User::\"bob\""], map.Select(entity => entity.Uid.ToString()).ToArray());
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:52:    public void JsonSerializeUsesEntityArray()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:56:        string json = CedarJson.SerializeEntityMap(map);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:64:    public void JsonDeserializeRoundTripsEntityMap()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:68:        EntityMap actual = CedarJson.DeserializeEntityMap(CedarJson.SerializeEntityMap(expected));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:76:    public void JsonDeserializePreservesTwoEntities()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:78:        EntityMap actual = CedarJson.DeserializeEntityMap("[{\"uid\":{\"type\":\"User\",\"id\":\"alice\"},\"parents\":[],\"attrs\":{},\"tags\":{}},{\"uid\":{\"type\":\"User\",\"id\":\"bob\"},\"parents\":[],\"attrs\":{},\"tags\":{}}]");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:100:                    [new CedarString("ip")] = CedarIpAddress.Parse("10.0.0.1")
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:106:        EntityMap actual = CedarJson.DeserializeEntityMap(CedarJson.SerializeEntityMap(expected));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:115:        Assert.Equal("[]", CedarJson.SerializeEntityMap(new EntityMap()));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/EntityMapTests.cs:128:        EntityMap actual = CedarJson.DeserializeEntityMap(CedarJson.SerializeEntityMap(expected));
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:8:public sealed class CedarDatetimeTests
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:13:        CedarDatetime value = new(42);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:19:    public void ParseAcceptsDateOnlyForm()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:21:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:25:    public void ParseAcceptsZuluTime()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:27:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:01:01Z"), "datetime(\"1970-01-01T01:01:01.000Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:31:    public void ParseAcceptsMillisecondPrecision()
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:33:        CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:37:    [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:38:    [InlineData("+000000010-01-01", "datetime(\"0010-01-01T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:39:    [InlineData("+000001970-06-15", "datetime(\"1970-06-15T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:40:    [InlineData("+000009999-12-31", "datetime(\"9999-12-31T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:41:    [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:42:    [InlineData("+000100000-06-15", "datetime(\"+000100000-06-15T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:43:    [InlineData("+001000000-12-31", "datetime(\"+001000000-12-31T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:44:    [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:45:    [InlineData("-000001000-06-15", "datetime(\"-000001000-06-15T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:46:    [InlineData("-000010000-12-31", "datetime(\"-000010000-12-31T00:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:47:    [InlineData("+000010000-01-01T12:30:45.123Z", "datetime(\"+000010000-01-01T12:30:45.123Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:48:    [InlineData("-000000100-01-01T00:00:00.001Z", "datetime(\"-000000100-01-01T00:00:00.001Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:49:    [InlineData("+292278994-08-17T07:12:55.807Z", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:50:    [InlineData("+292278994-08-17T06:12:55.807-0100", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:51:    [InlineData("+292278994-08-17T08:12:55.807+0100", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:52:    [InlineData("-292275055-05-17T16:47:04.192Z", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:53:    [InlineData("-292275055-05-17T15:47:04.192-0100", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:54:    [InlineData("-292275055-05-17T17:47:04.192+0100", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:55:    public void ParseAcceptsExpandedYearForms(string input, string expected)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:57:        CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:61:    [InlineData("1970-01-01T00:00:00+0001", "datetime(\"1969-12-31T23:59:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:62:    [InlineData("1970-01-01T00:00:00+0010", "datetime(\"1969-12-31T23:50:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:63:    [InlineData("1970-01-01T00:00:00+0100", "datetime(\"1969-12-31T23:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:64:    [InlineData("1970-01-01T00:00:00+1000", "datetime(\"1969-12-31T14:00:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:65:    [InlineData("1970-01-01T00:00:00-0001", "datetime(\"1970-01-01T00:01:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:66:    [InlineData("1970-01-01T00:00:00-0010", "datetime(\"1970-01-01T00:10:00.000Z\")")]
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/test/Cedar.Tests/Types/CedarDatetimeTests.cs:67:    [InlineData("1970-01-01T00:00:00-0100", "datetime(\"1970-01-01T01:00:00.000Z\")")]
+
+   1 | using System;
+   2 | using System.Globalization;
+   3 | using Cedar.Core.Internal.Consts;
+   4 | using Cedar.Internal.DateTimeSupport;
+   5 | 
+   6 | namespace Cedar.Types;
+   7 | 
+   8 | public sealed record CedarDatetime(long Value) : CedarValue
+   9 | {
+  10 |     private static readonly GregorianDateTimeParts MinSupportedInstant = new(-292275055, 5, 17, 16, 47, 4, 192);
+  11 |     private static readonly GregorianDateTimeParts MaxSupportedInstant = new(292278994, 8, 17, 7, 12, 55, 807);
+  12 | 
+  13 |     public static CedarDatetime Parse(string value)
+  14 |     {
+  15 |         ArgumentNullException.ThrowIfNull(value);
+  16 | 
+  17 |         if (value.Length == 0)
+  18 |         {
+  19 |             throw new FormatException("Datetime values must not be empty.");
+  20 |         }
+  21 | 
+  22 |         int cursor = 0;
+  23 |         int yearSign = 1;
+  24 |         int yearDigits = 4;
+  25 | 
+  26 |         if (value[cursor] is '+' or '-')
+  27 |         {
+  28 |             yearDigits = 9;
+  29 |             if (value[cursor] == '-')
+  30 |             {
+  31 |                 yearSign = -1;
+  32 |             }
+  33 | 
+  34 |             cursor++;
+  35 |         }
+  36 | 
+  37 |         int yearMagnitude = ParseDigits(value, ref cursor, yearDigits, "year");
+  38 |         int year = checked(yearSign * yearMagnitude);
+  39 | 
+  40 |         ExpectCharacter(value, ref cursor, '-');
+  41 |         int month = ParseDigits(value, ref cursor, 2, "month");
+  42 |         ExpectCharacter(value, ref cursor, '-');
+  43 |         int day = ParseDigits(value, ref cursor, 2, "day");
+  44 | 
+  45 |         ValidateDate(year, month, day);
+  46 | 
+  47 |         if (cursor == value.Length)
+  48 |         {
+  49 |             return CreateFromParts(year, month, day, 0, 0, 0, 0, 0);
+  50 |         }
+  51 | 
+  52 |         ExpectCharacter(value, ref cursor, 'T');
+  53 |         int hour = ParseDigits(value, ref cursor, 2, "hour");
+  54 |         ExpectCharacter(value, ref cursor, ':');
+  55 |         int minute = ParseDigits(value, ref cursor, 2, "minute");
+  56 |         ExpectCharacter(value, ref cursor, ':');
+  57 |         int second = ParseDigits(value, ref cursor, 2, "second");
+  58 | 
+  59 |         if (hour > 23)
+  60 |         {
+  61 |             throw new FormatException("Hour is greater than 23.");
+  62 |         }
+  63 | 
+  64 |         if (minute > 59)
+  65 |         {
+  66 |             throw new FormatException("Minute is greater than 59.");
+  67 |         }
+  68 | 
+  69 |         if (second > 59)
+  70 |         {
+  71 |             throw new FormatException("Second is greater than 59.");
+  72 |         }
+  73 | 
+  74 |         int milliseconds = 0;
+  75 | 
+  76 |         if (cursor < value.Length && value[cursor] == '.')
+  77 |         {
+  78 |             cursor++;
+  79 |             milliseconds = ParseDigits(value, ref cursor, 3, "millisecond");
+  80 |         }
+  81 | 
+  82 |         if (cursor == value.Length)
+  83 |         {
+  84 |             throw new FormatException("Datetime values must include a time zone designator.");
+  85 |         }
+  86 | 
+  87 |         long offsetMilliseconds = value[cursor] switch
+  88 |         {
+  89 |             'Z' => ReadUtcTrailer(value, ref cursor),
+  90 |             '+' => ReadOffset(value, ref cursor, 1),
+  91 |             '-' => ReadOffset(value, ref cursor, -1),
+  92 |             _ => throw new FormatException("Invalid time zone designator.")
+  93 |         };
+  94 | 
+  95 |         if (cursor != value.Length)
+  96 |         {
+  97 |             throw new FormatException("Unexpected trailing characters after the time zone designator.");
+  98 |         }
+  99 | 
+ 100 |         return CreateFromParts(year, month, day, hour, minute, second, milliseconds, offsetMilliseconds);
+ 101 |     }
+ 102 | 
+ 103 |     public static CedarDatetime FromDateTimeOffset(DateTimeOffset value)
+ 104 |     {
+ 105 |         return new CedarDatetime(value.ToUnixTimeMilliseconds());
+ 106 |     }
+ 107 | 
+ 108 |     public DateTimeOffset ToDateTimeOffset()
+ 109 |     {
+ 110 |         return DateTimeOffset.FromUnixTimeMilliseconds(Value).ToUniversalTime();
+ 111 |     }
+ 112 | 
+ 113 |     private GregorianDateTimeParts GetParts()
+ 114 |     {
+ 115 |         return GregorianDateTime.FromUnixMilliseconds(Value);
+ 116 |     }
+ 117 | 
+ 118 |     public override string MarshalCedar()
+ 119 |     {
+ 120 |         GregorianDateTimeParts parts = GetParts();
+ 121 |         string year = FormatYear(parts.Year);
+ 122 | 
+ 123 |         return string.Create(
+ 124 |             CultureInfo.InvariantCulture,
+ 125 |             $"datetime(\"{year}-{parts.Month:D2}-{parts.Day:D2}T{parts.Hour:D2}:{parts.Minute:D2}:{parts.Second:D2}.{parts.Millisecond:D3}Z\")");
+ 126 |     }
+ 127 | 
+ 128 |     public override int GetHashCode()
+ 129 |     {
+ 130 |         return CedarHash.ForInt64(nameof(CedarDatetime), Value);
+ 131 |     }
+ 132 | 
+ 133 |     private static CedarDatetime CreateFromParts(int year, int month, int day, int hour, int minute, int second, int millisecond, long offsetMilliseconds)
+ 134 |     {
+ 135 |         GregorianDateTimeParts utcParts = NormalizeUtcParts(year, month, day, hour, minute, second, millisecond, offsetMilliseconds);
+ 136 |         if (CompareParts(utcParts, MinSupportedInstant) < 0 || CompareParts(utcParts, MaxSupportedInstant) > 0)
+ 137 |         {
+ 138 |             throw new FormatException("Timestamp is out of range.");
+ 139 |         }
+ 140 | 
+ 141 |         // Compute entirely in Int128 so that boundary dates with timezone offsets
+ 142 |         // are handled correctly. The offset must be applied before range-checking,
+ 143 |         // otherwise a pre-offset value that exceeds long range would be rejected
+ 144 |         // even if the final UTC result fits (e.g. +292278994-08-17T08:12:55.807+0100).
+ 145 |         long days = GregorianDateTime.DaysFromCivil(year, month, day);
+ 146 |         Int128 totalMs =
+ 147 |             (Int128)days * CedarConsts.MillisPerDay
+ 148 |             + hour * (long)CedarConsts.MillisPerHour
+ 149 |             + minute * (long)CedarConsts.MillisPerMinute
+ 150 |             + second * (long)CedarConsts.MillisPerSecond
+ 151 |             + millisecond
+ 152 |             - offsetMilliseconds;
+ 153 | 
+ 154 |         if (totalMs < long.MinValue || totalMs > long.MaxValue)
+ 155 |         {
+ 156 |             throw new FormatException("Timestamp is out of range.");
+ 157 |         }
+ 158 | 
+ 159 |         return new CedarDatetime((long)totalMs);
+ 160 |     }
+ 161 | 
+ 162 |     private static string FormatYear(int year)
+ 163 |     {
+ 164 |         if (year is >= 0 and <= 9999)
+ 165 |         {
+ 166 |             return year.ToString("D4", CultureInfo.InvariantCulture);
+ 167 |         }
+ 168 | 
+ 169 |         long absoluteYear = year < 0 ? -(long)year : year;
+ 170 |         string sign = year < 0 ? "-" : "+";
+ 171 |         return sign + absoluteYear.ToString("D9", CultureInfo.InvariantCulture);
+ 172 |     }
+ 173 | 
+ 174 |     private static GregorianDateTimeParts NormalizeUtcParts(int year, int month, int day, int hour, int minute, int second, int millisecond, long offsetMilliseconds)
+ 175 |     {
+ 176 |         long timeOfDayMilliseconds =
+ 177 |             (hour * (long)CedarConsts.MillisPerHour)
+ 178 |             + (minute * (long)CedarConsts.MillisPerMinute)
+ 179 |             + (second * (long)CedarConsts.MillisPerSecond)
+ 180 |             + millisecond
+ 181 |             - offsetMilliseconds;
+ 182 | 
+ 183 |         int dayAdjustment = 0;
+ 184 |         if (timeOfDayMilliseconds < 0)
+ 185 |         {
+ 186 |             dayAdjustment = -1;
+ 187 |             timeOfDayMilliseconds += CedarConsts.MillisPerDay;
+ 188 |         }
+ 189 |         else if (timeOfDayMilliseconds >= CedarConsts.MillisPerDay)
+ 190 |         {
+ 191 |             dayAdjustment = 1;
+ 192 |             timeOfDayMilliseconds -= CedarConsts.MillisPerDay;
+ 193 |         }
+ 194 | 
+ 195 |         AdjustCivilDate(ref year, ref month, ref day, dayAdjustment);
+ 196 | 
+ 197 |         int utcHour = (int)(timeOfDayMilliseconds / CedarConsts.MillisPerHour);
+ 198 |         timeOfDayMilliseconds %= CedarConsts.MillisPerHour;
+ 199 | 
+ 200 |         int utcMinute = (int)(timeOfDayMilliseconds / CedarConsts.MillisPerMinute);
+ 201 |         timeOfDayMilliseconds %= CedarConsts.MillisPerMinute;
+ 202 | 
+ 203 |         int utcSecond = (int)(timeOfDayMilliseconds / CedarConsts.MillisPerSecond);
+ 204 |         int utcMillisecond = (int)(timeOfDayMilliseconds % CedarConsts.MillisPerSecond);
+ 205 | 
+ 206 |         return new GregorianDateTimeParts(year, month, day, utcHour, utcMinute, utcSecond, utcMillisecond);
+ 207 |     }
+ 208 | 
+ 209 |     private static void AdjustCivilDate(ref int year, ref int month, ref int day, int dayAdjustment)
+ 210 |     {
+ 211 |         if (dayAdjustment == 0)
+ 212 |         {
+ 213 |             return;
+ 214 |         }
+ 215 | 
+ 216 |         if (dayAdjustment > 0)
+ 217 |         {
+ 218 |             day++;
+ 219 |             int daysInMonth = GregorianDateTime.DaysInMonth(year, month);
+ 220 |             if (day > daysInMonth)
+
+  45 |                 break;
+  46 |             case CedarString text:
+  47 |                 writer.WriteStringValue(text.Value);
+  48 |                 break;
+  49 |             case CedarDecimal decimalValue:
+  50 |                 WriteExtension(writer, "decimal", decimalValue.MarshalCedar()[9..^2]);
+  51 |                 break;
+  52 |             case CedarDatetime datetime:
+  53 |                 WriteExtension(writer, "datetime", datetime.MarshalCedar()[10..^2]);
+  54 |                 break;
+  55 |             case CedarDuration duration:
+  56 |                 WriteExtension(writer, "duration", duration.MarshalCedar()[10..^2]);
+  57 |                 break;
+  58 |             case CedarIpAddress ipAddress:
+  59 |                 WriteExtension(writer, "ip", ipAddress.MarshalCedar()[4..^2]);
+  60 |                 break;
+  61 |             case CedarPattern pattern:
+  62 |                 WriteExtension(writer, "pattern", pattern.ToPatternText());
+  63 |                 break;
+  64 |             case CedarSet set:
+  65 |                 writer.WriteStartArray();
+  66 |                 foreach (ICedarData item in set)
+  67 |                 {
+  68 |                     WriteValue(writer, item);
+  69 |                 }
+  70 | 
+  71 |                 writer.WriteEndArray();
+  72 |                 break;
+  73 |             case CedarRecord record:
+  74 |                 writer.WriteStartObject();
+  75 |                 foreach ((CedarString key, ICedarData item) in record)
+  76 |                 {
+  77 |                     writer.WritePropertyName(key.Value);
+  78 |                     WriteValue(writer, item);
+  79 |                 }
+  80 | 
+  81 |                 writer.WriteEndObject();
+  82 |                 break;
+  83 |             case EntityUid entityUid:
+  84 |                 EntityUidJsonConverter.WriteExplicit(writer, entityUid);
+  85 |                 break;
+  86 |             default:
+  87 |                 throw new JsonException($"Unsupported Cedar JSON type '{value.GetType().FullName}'.");
+  88 |         }
+  89 |     }
+  90 | 
+  91 |     private static CedarLong ReadLong(JsonElement element)
+  92 |     {
+  93 |         if (!element.TryGetInt64(out long value))
+  94 |         {
+  95 |             throw new JsonException("JSON numbers must fit in a signed 64-bit integer.");
+  96 |         }
+  97 | 
+  98 |         return new CedarLong(value);
+  99 |     }
+ 100 | 
+ 101 |     private static CedarSet ReadSet(JsonElement element)
+ 102 |     {
+ 103 |         List<ICedarData> values = [];
+ 104 |         foreach (JsonElement item in element.EnumerateArray())
+ 105 |         {
+ 106 |             values.Add(ReadElement(item));
+ 107 |         }
+ 108 | 
+ 109 |         return new CedarSet(values);
+ 110 |     }
+ 111 | 
+ 112 |     private static ICedarData ReadObject(JsonElement element)
+ 113 |     {
+ 114 |         if (EntityUidJsonConverter.TryReadElement(element, out EntityUid? entityUid))
+ 115 |         {
+ 116 |             return entityUid!;
+ 117 |         }
+ 118 | 
+ 119 |         if (TryReadExtension(element, out ICedarData? extension))
+ 120 |         {
+ 121 |             return extension!;
+ 122 |         }
+ 123 | 
+ 124 |         RecordMap values = [];
+ 125 |         foreach (JsonProperty property in element.EnumerateObject())
+ 126 |         {
+ 127 |             values.Add(new CedarString(property.Name), ReadElement(property.Value));
+ 128 |         }
+ 129 | 
+ 130 |         return new CedarRecord(values);
+ 131 |     }
+ 132 | 
+ 133 |     private static bool TryReadExtension(JsonElement element, out ICedarData? value)
+ 134 |     {
+ 135 |         value = null;
+ 136 | 
+ 137 |         if (!TryGetExtensionElement(element, out JsonElement extension))
+ 138 |         {
+ 139 |             return false;
+ 140 |         }
+ 141 | 
+ 142 |         if (!extension.TryGetProperty("fn", out JsonElement functionElement) || functionElement.ValueKind != JsonValueKind.String)
+ 143 |         {
+ 144 |             throw new JsonException("Extension values must contain a string fn property.");
+ 145 |         }
+ 146 | 
+ 147 |         if (!extension.TryGetProperty("arg", out JsonElement argumentElement) || argumentElement.ValueKind != JsonValueKind.String)
+ 148 |         {
+ 149 |             throw new JsonException("Extension values must contain a string arg property.");
+ 150 |         }
+ 151 | 
+ 152 |         string function = functionElement.GetString()!;
+ 153 |         string argument = argumentElement.GetString()!;
+ 154 | 
+ 155 |         value = function switch
+ 156 |         {
+ 157 |             "decimal" => CedarDecimal.Parse(argument),
+ 158 |             "datetime" => CedarDatetime.Parse(argument),
+ 159 |             "duration" => CedarDuration.Parse(argument),
+ 160 |             "ip" => CedarIpAddress.Parse(argument),
+ 161 |             "pattern" => CedarPattern.Parse(argument),
+ 162 |             _ => throw new JsonException($"Unsupported Cedar extension '{function}'.")
+ 163 |         };
+ 164 | 
+ 165 |         return true;
+ 166 |     }
+ 167 | 
+ 168 |     private static bool TryGetExtensionElement(JsonElement element, out JsonElement extension)
+ 169 |     {
+ 170 |         if (element.TryGetProperty("__extn", out JsonElement explicitExtension))
+ 171 |         {
+ 172 |             if (explicitExtension.ValueKind == JsonValueKind.Object
+ 173 |                 && explicitExtension.TryGetProperty("fn", out JsonElement explicitFunction)
+ 174 |                 && explicitFunction.ValueKind == JsonValueKind.String
+
+   1 | using System;
+   2 | using Cedar.Core.Internal.Consts;
+   3 | using Cedar.Core.Internal.Eval;
+   4 | using Cedar.Internal.DateTimeSupport;
+   5 | using Cedar.Types;
+   6 | 
+   7 | namespace Cedar.Core.Internal.Extensions;
+   8 | 
+   9 | internal static class DatetimeExtensions
+  10 | {
+  11 |     public static ICedarData ToDate(ICedarData[] args)
+  12 |     {
+  13 |         CedarDatetime value = TypeConversion.ValueToDatetime(args[0]);
+  14 |         long millis = value.Value - (value.Value % CedarConsts.MillisPerDay);
+  15 |         return new CedarDatetime(millis);
+  16 |     }
+  17 | 
+  18 |     public static ICedarData ToTime(ICedarData[] args)
+  19 |     {
+  20 |         CedarDatetime value = TypeConversion.ValueToDatetime(args[0]);
+  21 |         return new CedarDuration(value.Value % CedarConsts.MillisPerDay);
+  22 |     }
+  23 | 
+  24 |     public static ICedarData Offset(ICedarData[] args)
+  25 |     {
+  26 |         CedarDatetime datetime = TypeConversion.ValueToDatetime(args[0]);
+  27 |         CedarDuration duration = TypeConversion.ValueToDuration(args[1]);
+  28 | 
+  29 |         try
+  30 |         {
+  31 |             return new CedarDatetime(checked(datetime.Value + duration.Value));
+  32 |         }
+  33 |         catch (OverflowException)
+  34 |         {
+  35 |             throw new EvalException($"{EvalErrors.Overflow} while attempting to compute datetime offset");
+  36 |         }
+  37 |     }
+  38 | 
+  39 |     public static ICedarData DurationSince(ICedarData[] args)
+  40 |     {
+  41 |         CedarDatetime left = TypeConversion.ValueToDatetime(args[0]);
+  42 |         CedarDatetime right = TypeConversion.ValueToDatetime(args[1]);
+  43 | 
+  44 |         try
+  45 |         {
+  46 |             return new CedarDuration(checked(left.Value - right.Value));
+  47 |         }
+  48 |         catch (OverflowException)
+  49 |         {
+  50 |             throw new EvalException($"{EvalErrors.Overflow} while attempting to compute datetime duration");
+  51 |         }
+  52 |     }
+  53 | 
+  54 |     public static ICedarData DaysInMonth(ICedarData[] args)
+  55 |     {
+  56 |         GregorianDateTimeParts value = GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value);
+  57 |         return new CedarLong(GregorianDateTime.DaysInMonth(value.Year, value.Month));
+  58 |     }
+  59 | 
+  60 |     public static ICedarData Year(ICedarData[] args)
+  61 |     {
+  62 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Year);
+  63 |     }
+  64 | 
+  65 |     public static ICedarData Month(ICedarData[] args)
+  66 |     {
+  67 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Month);
+  68 |     }
+  69 | 
+  70 |     public static ICedarData Day(ICedarData[] args)
+  71 |     {
+  72 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Day);
+  73 |     }
+  74 | 
+  75 |     public static ICedarData DayOfWeek(ICedarData[] args)
+  76 |     {
+  77 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).IsoDayOfWeek);
+  78 |     }
+  79 | 
+  80 |     public static ICedarData DayOfYear(ICedarData[] args)
+  81 |     {
+  82 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).DayOfYear);
+  83 |     }
+  84 | 
+  85 |     public static ICedarData Hour(ICedarData[] args)
+  86 |     {
+  87 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Hour);
+  88 |     }
+  89 | 
+  90 |     public static ICedarData Minute(ICedarData[] args)
+  91 |     {
+  92 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Minute);
+  93 |     }
+  94 | 
+  95 |     public static ICedarData Second(ICedarData[] args)
+  96 |     {
+  97 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Second);
+  98 |     }
+  99 | 
+ 100 |     public static ICedarData Millisecond(ICedarData[] args)
+ 101 |     {
+ 102 |         return new CedarLong(GregorianDateTime.FromUnixMilliseconds(TypeConversion.ValueToDatetime(args[0]).Value).Millisecond);
+ 103 |     }
+ 104 | }
+
+   1 | using System;
+   2 | using Cedar.Tests.TestSupport;
+   3 | using Cedar.Types;
+   4 | using Xunit;
+   5 | 
+   6 | namespace Cedar.Tests.Types;
+   7 | 
+   8 | public sealed class CedarDatetimeTests
+   9 | {
+  10 |     [Fact]
+  11 |     public void ConstructorStoresMilliseconds()
+  12 |     {
+  13 |         CedarDatetime value = new(42);
+  14 | 
+  15 |         Assert.Equal(42, value.Value);
+  16 |     }
+  17 | 
+  18 |     [Fact]
+  19 |     public void ParseAcceptsDateOnlyForm()
+  20 |     {
+  21 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01"), "datetime(\"1970-01-01T00:00:00.000Z\")");
+  22 |     }
+  23 | 
+  24 |     [Fact]
+  25 |     public void ParseAcceptsZuluTime()
+  26 |     {
+  27 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T01:01:01Z"), "datetime(\"1970-01-01T01:01:01.000Z\")");
+  28 |     }
+  29 | 
+  30 |     [Fact]
+  31 |     public void ParseAcceptsMillisecondPrecision()
+  32 |     {
+  33 |         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
+  34 |     }
+  35 | 
+  36 |     [Theory]
+  37 |     [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
+  38 |     [InlineData("+000000010-01-01", "datetime(\"0010-01-01T00:00:00.000Z\")")]
+  39 |     [InlineData("+000001970-06-15", "datetime(\"1970-06-15T00:00:00.000Z\")")]
+  40 |     [InlineData("+000009999-12-31", "datetime(\"9999-12-31T00:00:00.000Z\")")]
+  41 |     [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+  42 |     [InlineData("+000100000-06-15", "datetime(\"+000100000-06-15T00:00:00.000Z\")")]
+  43 |     [InlineData("+001000000-12-31", "datetime(\"+001000000-12-31T00:00:00.000Z\")")]
+  44 |     [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+  45 |     [InlineData("-000001000-06-15", "datetime(\"-000001000-06-15T00:00:00.000Z\")")]
+  46 |     [InlineData("-000010000-12-31", "datetime(\"-000010000-12-31T00:00:00.000Z\")")]
+  47 |     [InlineData("+000010000-01-01T12:30:45.123Z", "datetime(\"+000010000-01-01T12:30:45.123Z\")")]
+  48 |     [InlineData("-000000100-01-01T00:00:00.001Z", "datetime(\"-000000100-01-01T00:00:00.001Z\")")]
+  49 |     [InlineData("+292278994-08-17T07:12:55.807Z", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+  50 |     [InlineData("+292278994-08-17T06:12:55.807-0100", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+  51 |     [InlineData("+292278994-08-17T08:12:55.807+0100", "datetime(\"+292278994-08-17T07:12:55.807Z\")")]
+  52 |     [InlineData("-292275055-05-17T16:47:04.192Z", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+  53 |     [InlineData("-292275055-05-17T15:47:04.192-0100", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+  54 |     [InlineData("-292275055-05-17T17:47:04.192+0100", "datetime(\"-292275055-05-17T16:47:04.192Z\")")]
+  55 |     public void ParseAcceptsExpandedYearForms(string input, string expected)
+  56 |     {
+  57 |         CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
+  58 |     }
+  59 | 
+  60 |     [Theory]
+  61 |     [InlineData("1970-01-01T00:00:00+0001", "datetime(\"1969-12-31T23:59:00.000Z\")")]
+  62 |     [InlineData("1970-01-01T00:00:00+0010", "datetime(\"1969-12-31T23:50:00.000Z\")")]
+  63 |     [InlineData("1970-01-01T00:00:00+0100", "datetime(\"1969-12-31T23:00:00.000Z\")")]
+  64 |     [InlineData("1970-01-01T00:00:00+1000", "datetime(\"1969-12-31T14:00:00.000Z\")")]
+  65 |     [InlineData("1970-01-01T00:00:00-0001", "datetime(\"1970-01-01T00:01:00.000Z\")")]
+  66 |     [InlineData("1970-01-01T00:00:00-0010", "datetime(\"1970-01-01T00:10:00.000Z\")")]
+  67 |     [InlineData("1970-01-01T00:00:00-0100", "datetime(\"1970-01-01T01:00:00.000Z\")")]
+  68 |     [InlineData("1970-01-01T00:00:00-1000", "datetime(\"1970-01-01T10:00:00.000Z\")")]
+  69 |     [InlineData("1972-02-29T10:00:00+1000", "datetime(\"1972-02-29T00:00:00.000Z\")")]
+  70 |     public void ParseAppliesTimezoneOffsetsUsingUtcSemantics(string input, string expected)
+  71 |     {
+  72 |         CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
+  73 |     }
+  74 | 
+  75 |     [Fact]
+  76 |     public void ParseRejectsShortInput()
+  77 |     {
+  78 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01"));
+  79 |     }
+  80 | 
+  81 |     [Fact]
+  82 |     public void ParseRejectsInvalidDate()
+  83 |     {
+  84 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse("2024-02-30T00:00:00Z"));
+  85 |     }
+  86 | 
+  87 |     [Fact]
+  88 |     public void ParseRejectsInvalidTimeZone()
+  89 |     {
+  90 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse("1970-01-01T00:00:00V"));
+  91 |     }
+  92 | 
+  93 |     [Theory]
+  94 |     [InlineData("+")]
+  95 |     [InlineData("-")]
+  96 |     [InlineData("+12345678")]
+  97 |     [InlineData("+1234-01-01")]
+  98 |     [InlineData("+00000000a-01-01")]
+  99 |     [InlineData("-abcdefghi-01-01")]
+ 100 |     [InlineData("+12345678A-01-01")]
+ 101 |     [InlineData("1972-02-29T10:00:00-1000x")]
+ 102 |     [InlineData("+292278994-08-17T07:12:55.808Z")]
+ 103 |     [InlineData("+292278994-08-17T06:12:55.808-0100")]
+ 104 |     [InlineData("+292278994-08-17T08:12:55.808+0100")]
+ 105 |     [InlineData("-292275055-05-17T16:47:04.191Z")]
+ 106 |     [InlineData("-292275055-05-17T15:47:04.191-0100")]
+ 107 |     [InlineData("-292275055-05-17T17:47:04.191+0100")]
+ 108 |     public void ParseRejectsInvalidExpandedYearInputs(string input)
+ 109 |     {
+ 110 |         Assert.Throws<FormatException>(() => CedarDatetime.Parse(input));
+ 111 |     }
+ 112 | 
+ 113 |     [Fact]
+ 114 |     public void LongMinValueUsesUpstreamCanonicalExpandedYearFormatting()
+ 115 |     {
+ 116 |         CedarAssert.CedarText(new CedarDatetime(long.MinValue), "datetime(\"-292275055-05-16T16:47:04.192Z\")");
+ 117 |     }
+ 118 | 
+ 119 |     [Theory]
+ 120 |     [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
+ 121 |     [InlineData("9999-12-31T00:00:00.000Z", "datetime(\"9999-12-31T00:00:00.000Z\")")]
+ 122 |     [InlineData("+000010000-01-01T00:00:00.000Z", "datetime(\"+000010000-01-01T00:00:00.000Z\")")]
+ 123 |     [InlineData("+000100000-06-15T00:00:00.000Z", "datetime(\"+000100000-06-15T00:00:00.000Z\")")]
+ 124 |     [InlineData("+001000000-12-31T00:00:00.000Z", "datetime(\"+001000000-12-31T00:00:00.000Z\")")]
+ 125 |     [InlineData("-000000001-01-01T00:00:00.000Z", "datetime(\"-000000001-01-01T00:00:00.000Z\")")]
+ 126 |     [InlineData("-000000100-06-15T00:00:00.000Z", "datetime(\"-000000100-06-15T00:00:00.000Z\")")]
+ 127 |     [InlineData("-000010000-12-31T00:00:00.000Z", "datetime(\"-000010000-12-31T00:00:00.000Z\")")]
+ 128 |     public void MarshalCedarUsesExpandedYearFormattingWhenNeeded(string input, string expected)
+ 129 |     {
+ 130 |         CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
+ 131 |     }
+ 132 | 
+ 133 |     [Fact]
+ 134 |     public void EqualValuesAreEqual()
+ 135 |     {
+ 136 |         CedarAssert.Equal(new CedarDatetime(42), CedarDatetime.Parse("1970-01-01T00:00:00.042Z"));
+ 137 |     }
+ 138 | 
+ 139 |     [Fact]
+ 140 |     public void DifferentValuesAreNotEqual()
+ 141 |     {
+ 142 |         CedarAssert.NotEqual(new CedarDatetime(42), new CedarDatetime(43));
+ 143 |     }
+ 144 | 
+ 145 |     [Fact]
+ 146 |     public void HashCodeIsStable()
+ 147 |     {
+ 148 |         CedarAssert.HashStable(new CedarDatetime(1234));
+ 149 |     }
+ 150 | 
+ 151 |     [Fact]
+ 152 |     public void JsonRoundTripUsesDatetimeExtension()
+ 153 |     {
+ 154 |         CedarDatetime expected = CedarDatetime.Parse("1970-01-01T00:00:00.042Z");
+ 155 | 
+ 156 |         string json = CedarJson.SerializeData(expected);
+ 157 |         ICedarData actual = CedarJson.DeserializeData(json);
+ 158 | 
+ 159 |         Assert.Equal("{\"__extn\":{\"fn\":\"datetime\",\"arg\":\"1970-01-01T00:00:00.042Z\"}}", json);
+ 160 |         CedarAssert.Equal(expected, Assert.IsType<CedarDatetime>(actual));
+ 161 |     }
+ 162 | 
+ 163 |     [Fact]
+ 164 |     public void JsonRoundTripUsesExpandedYearDatetimeExtension()
+ 165 |     {
+ 166 |         CedarDatetime expected = CedarDatetime.Parse("+000010000-01-01T00:00:00.042Z");
+ 167 | 
+ 168 |         string json = CedarJson.SerializeData(expected);
+ 169 |         ICedarData actual = CedarJson.DeserializeData(json);
+ 170 | 
+ 171 |         Assert.Equal("{\"__extn\":{\"fn\":\"datetime\",\"arg\":\"+000010000-01-01T00:00:00.042Z\"}}", json);
+ 172 |         CedarAssert.Equal(expected, Assert.IsType<CedarDatetime>(actual));
+ 173 |     }
+ 174 | }
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:15:// maxDatetime is the highest possible timestamp that will fit in 64 bits of millisecond-precision space.
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:16:var maxDatetime = time.Date(292278994, 8, 17, 7, 12, 55, 807*1e6, time.UTC)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:18:// minDatetime is the lowest possible timestamp that will fit in 64 bits of millisecond-precision space.
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:19:var minDatetime = time.Date(-292275055, 5, 17, 16, 47, 04, 192*1e6, time.UTC)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:32:func NewDatetime(t time.Time) Datetime {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:38:func NewDatetimeFromMillis(ms int64) Datetime {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:42:func expectChar(s string, c uint8) (string, error) {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:51:func parseUint(s string, chars int, maxValue uint, label string) (uint, string, error) {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:65:func checkValidDay(year int, month, day uint) error {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:95:func ParseDatetime(s string) (Datetime, error) {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:226:	if t.Before(minDatetime) || t.After(maxDatetime) {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:263:func (d Datetime) MarshalCedar() []byte {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime.go:270:func (d Datetime) String() string {
+
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:80:			{"", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:94:			{"1995-01", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:100:			{"1995-01-01T00:00:00", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:101:			{"1995-01-01T00:00:00.", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:102:			{"1995-01-01T00:00:00.0", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:103:			{"1995-01-01T00:00:00.00", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:106:			{"1995-01-01T00:00:00.001", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:108:			{"1995-01-01T00:00:00.000+", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:109:			{"1995-01-01T00:00:00.000-", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:111:			{"1995-01-01T00:00:00.000-0", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:112:			{"1995-01-01T00:00:00.000-00", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:113:			{"1995-01-01T00:00:00.000-000", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:114:			{"1995-01-01T00:00:00.000-000a", "error parsing datetime value: invalid offset minutes"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:115:			{"1995-01-01T00:00:00.000-00aa", "error parsing datetime value: invalid offset minutes"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:116:			{"1995-01-01T00:00:00.000-0aaa", "error parsing datetime value: invalid offset hours"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:117:			{"1995-01-01T00:00:00.000-aaaa", "error parsing datetime value: invalid offset hours"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:130:			{"1970-01-01T00:00:00+2400", "error parsing datetime value: offset hours is greater than 23"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:131:			{"1970-01-01T00:00:00-2400", "error parsing datetime value: offset hours is greater than 23"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:132:			{"1970-01-01T00:00:00+2360", "error parsing datetime value: offset minutes is greater than 59"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:133:			{"1970-01-01T00:00:00-2360", "error parsing datetime value: offset minutes is greater than 59"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:135:			{"+", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:136:			{"-", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:137:			{"+12345678", "error parsing datetime value: unexpected EOF"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:145:			{"+292278994-08-17T07:12:55.808Z", "error parsing datetime value: timestamp out of range"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:146:			{"+292278994-08-17T06:12:55.808-0100", "error parsing datetime value: timestamp out of range"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:147:			{"+292278994-08-17T08:12:55.808+0100", "error parsing datetime value: timestamp out of range"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:148:			{"-292275055-05-17T16:47:04.191Z", "error parsing datetime value: timestamp out of range"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:149:			{"-292275055-05-17T15:47:04.191-0100", "error parsing datetime value: timestamp out of range"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:150:			{"-292275055-05-17T17:47:04.191+0100", "error parsing datetime value: timestamp out of range"},
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:250:	t.Run("MarshalCedar", func(t *testing.T) {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:273:				testutil.Equals(t, dt.MarshalCedar(), []byte(tt.expected))
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:278:	t.Run("MarshalJSON", func(t *testing.T) {
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:288:			testutil.JSONMarshalsTo(t, dt1, expected)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:305:			testutil.JSONMarshalsTo(t, dt, expected)
+/Users/ryan.harris/go/src/github.com/TheFellow/cedar-dotnet/inspiration/cedar-go/types/datetime_test.go:314:	t.Run("UnmarshalJSON/error", func(t *testing.T) {
+
+ 220 |             if (day > daysInMonth)
+ 221 |             {
+ 222 |                 day = 1;
+ 223 |                 month++;
+ 224 |                 if (month > 12)
+ 225 |                 {
+ 226 |                     month = 1;
+ 227 |                     year = checked(year + 1);
+ 228 |                 }
+ 229 |             }
+ 230 | 
+ 231 |             return;
+ 232 |         }
+ 233 | 
+ 234 |         day--;
+ 235 |         if (day > 0)
+ 236 |         {
+ 237 |             return;
+ 238 |         }
+ 239 | 
+ 240 |         month--;
+ 241 |         if (month < 1)
+ 242 |         {
+ 243 |             month = 12;
+ 244 |             year = checked(year - 1);
+ 245 |         }
+ 246 | 
+ 247 |         day = GregorianDateTime.DaysInMonth(year, month);
+ 248 |     }
+ 249 | 
+ 250 |     private static int CompareParts(GregorianDateTimeParts left, GregorianDateTimeParts right)
+ 251 |     {
+ 252 |         int comparison = left.Year.CompareTo(right.Year);
+ 253 |         if (comparison != 0)
+ 254 |         {
+ 255 |             return comparison;
+ 256 |         }
+ 257 | 
+ 258 |         comparison = left.Month.CompareTo(right.Month);
+ 259 |         if (comparison != 0)
+ 260 |         {
+ 261 |             return comparison;
+ 262 |         }
+ 263 | 
+ 264 |         comparison = left.Day.CompareTo(right.Day);
+ 265 |         if (comparison != 0)
+ 266 |         {
+ 267 |             return comparison;
+ 268 |         }
+ 269 | 
+ 270 |         comparison = left.Hour.CompareTo(right.Hour);
+ 271 |         if (comparison != 0)
+ 272 |         {
+ 273 |             return comparison;
+ 274 |         }
+ 275 | 
+ 276 |         comparison = left.Minute.CompareTo(right.Minute);
+ 277 |         if (comparison != 0)
+ 278 |         {
+ 279 |             return comparison;
+ 280 |         }
+ 281 | 
+ 282 |         comparison = left.Second.CompareTo(right.Second);
+ 283 |         if (comparison != 0)
+ 284 |         {
+ 285 |             return comparison;
+ 286 |         }
+ 287 | 
+ 288 |         return left.Millisecond.CompareTo(right.Millisecond);
+ 289 |     }
+ 290 | 
+ 291 |     private static void ExpectCharacter(string value, ref int cursor, char expected)
+ 292 |     {
+ 293 |         if (value.Length <= cursor || value[cursor] != expected)
+ 294 |         {
+ 295 |             throw new FormatException($"Expected '{expected}' at position {cursor}.");
+ 296 |         }
+ 297 | 
+ 298 |         cursor++;
+ 299 |     }
+ 300 | 
+ 301 |     private static int ParseDigits(string value, ref int cursor, int length, string component)
+ 302 |     {
+ 303 |         if (value.Length < cursor + length)
+ 304 |         {
+ 305 |             throw new FormatException($"Invalid {component} component.");
+ 306 |         }
+ 307 | 
+ 308 |         int parsed = 0;
+ 309 |         for (int index = 0; index < length; index++)
+ 310 |         {
+ 311 |             char character = value[cursor + index];
+ 312 |             if (!char.IsAsciiDigit(character))
+ 313 |             {
+ 314 |                 throw new FormatException($"Invalid {component} component.");
+ 315 |             }
+ 316 | 
+ 317 |             parsed = checked(parsed * 10 + (character - '0'));
+ 318 |         }
+ 319 | 
+ 320 |         cursor += length;
+ 321 |         return parsed;
+ 322 |     }
+ 323 | 
+ 324 |     private static long ReadUtcTrailer(string value, ref int cursor)
+ 325 |     {
+ 326 |         cursor++;
+ 327 |         return 0;
+ 328 |     }
+ 329 | 
+ 330 |     private static long ReadOffset(string value, ref int cursor, int sign)
+ 331 |     {
+ 332 |         cursor++;
+ 333 | 
+ 334 |         if (value.Length != cursor + 4)
+ 335 |         {
+ 336 |             throw new FormatException("Time zone offsets must use the +hhmm or -hhmm form.");
+ 337 |         }
+ 338 | 
+ 339 |         int hours = ParseDigits(value, ref cursor, 2, "time zone hour");
+ 340 |         int minutes = ParseDigits(value, ref cursor, 2, "time zone minute");
+ 341 | 
+ 342 |         if (hours > 23)
+ 343 |         {
+ 344 |             throw new FormatException("Time zone offset hours are greater than 23.");
+ 345 |         }
+ 346 | 
+ 347 |         if (minutes > 59)
+ 348 |         {
+ 349 |             throw new FormatException("Time zone offset minutes are greater than 59.");
+ 350 |         }
+ 351 | 
+ 352 |         long magnitude = (hours * CedarConsts.MillisPerHour) + (minutes * CedarConsts.MillisPerMinute);
+ 353 |         return sign * magnitude;
+ 354 |     }
+ 355 | 
+ 356 |     private static void ValidateDate(int year, int month, int day)
+ 357 |     {
+ 358 |         if (month is < 1 or > 12)
+ 359 |         {
+ 360 |             throw new FormatException("Month is greater than 12.");
+ 361 |         }
+ 362 | 
+ 363 |         if (day is < 1 or > 31)
+ 364 |         {
+ 365 |             throw new FormatException("Day is greater than 31.");
+ 366 |         }
+ 367 | 
+ 368 |         int daysInMonth = GregorianDateTime.DaysInMonth(year, month);
+ 369 |         if (day > daysInMonth)
+ 370 |         {
+ 371 |             throw new FormatException("Date is invalid.");
+ 372 |         }
+ 373 |     }
+ 374 | }
+
+OK

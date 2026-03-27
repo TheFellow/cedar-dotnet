@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "Implemented the RFC 110 datetime port alignment.\n\nChanged:\n- \u0060src/Cedar.Types/CedarDatetime.cs\u0060\n- \u0060test/Cedar.Tests/Types/CedarDatetimeTests.cs\u0060\n\nWhat I updated:\n- Aligned \u0060CedarDatetime.Parse\u0060 error semantics more closely with upstream:\n  - \u0060unexpected EOF\u0060\n  - \u0060unexpected character X\u0060\n  - \u0060invalid \u003Ccomponent\u003E\u0060\n  - \u0060\u003Ccomponent\u003E is greater than \u003Cmax\u003E\u0060\n  - \u0060invalid time zone designator\u0060\n  - \u0060unexpected additional characters\u0060\n  - \u0060timestamp out of range\u0060\n- Kept the existing expanded-year parsing/formatting and int64-boundary logic intact.\n- Added message-sensitive tests for representative upstream invalid cases, including:\n  - empty/short inputs\n  - invalid components\n  - invalid separators\n  - invalid offsets\n  - trailing characters\n  - expanded-year edge cases\n  - out-of-range timestamps\n\nVerification:\n- \u0060dotnet test test/Cedar.Tests/Cedar.Tests.csproj --filter CedarDatetimeTests\u0060 \u2705\n- \u0060dotnet build cedar-dotnet.sln\u0060 \u2705\n\nDiff summary:\n- \u0060src/Cedar.Types/CedarDatetime.cs\u0060: semantic parser/error-message alignment\n- \u0060test/Cedar.Tests/Types/CedarDatetimeTests.cs\u0060: added upstream-aligned failure-message coverage",
+    "last_stage": "ImplementPort"
+  },
+  "failure_reason": "",
+  "notes": "Stage completed: ImplementPort",
+  "outcome": "success",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}

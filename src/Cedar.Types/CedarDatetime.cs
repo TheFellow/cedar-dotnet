@@ -16,7 +16,7 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
         if (value.Length == 0)
         {
-            throw new FormatException("Datetime values must not be empty.");
+            throw UnexpectedEof();
         }
 
         int cursor = 0;
@@ -33,14 +33,18 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
             cursor++;
         }
+        else if (!char.IsAsciiDigit(value[cursor]))
+        {
+            throw InvalidComponent("year");
+        }
 
-        int yearMagnitude = ParseDigits(value, ref cursor, yearDigits, "year");
+        int yearMagnitude = ParseDigits(value, ref cursor, yearDigits, yearDigits == 4 ? 9999 : 999_999_999, "year");
         int year = checked(yearSign * yearMagnitude);
 
         ExpectCharacter(value, ref cursor, '-');
-        int month = ParseDigits(value, ref cursor, 2, "month");
+        int month = ParseDigits(value, ref cursor, 2, 12, "month");
         ExpectCharacter(value, ref cursor, '-');
-        int day = ParseDigits(value, ref cursor, 2, "day");
+        int day = ParseDigits(value, ref cursor, 2, 31, "day");
 
         ValidateDate(year, month, day);
 
@@ -50,38 +54,23 @@ public sealed record CedarDatetime(long Value) : CedarValue
         }
 
         ExpectCharacter(value, ref cursor, 'T');
-        int hour = ParseDigits(value, ref cursor, 2, "hour");
+        int hour = ParseDigits(value, ref cursor, 2, 23, "hour");
         ExpectCharacter(value, ref cursor, ':');
-        int minute = ParseDigits(value, ref cursor, 2, "minute");
+        int minute = ParseDigits(value, ref cursor, 2, 59, "minute");
         ExpectCharacter(value, ref cursor, ':');
-        int second = ParseDigits(value, ref cursor, 2, "second");
-
-        if (hour > 23)
-        {
-            throw new FormatException("Hour is greater than 23.");
-        }
-
-        if (minute > 59)
-        {
-            throw new FormatException("Minute is greater than 59.");
-        }
-
-        if (second > 59)
-        {
-            throw new FormatException("Second is greater than 59.");
-        }
+        int second = ParseDigits(value, ref cursor, 2, 59, "second");
 
         int milliseconds = 0;
 
         if (cursor < value.Length && value[cursor] == '.')
         {
             cursor++;
-            milliseconds = ParseDigits(value, ref cursor, 3, "millisecond");
+            milliseconds = ParseDigits(value, ref cursor, 3, 999, "millisecond");
         }
 
         if (cursor == value.Length)
         {
-            throw new FormatException("Datetime values must include a time zone designator.");
+            throw UnexpectedEof();
         }
 
         long offsetMilliseconds = value[cursor] switch
@@ -89,12 +78,12 @@ public sealed record CedarDatetime(long Value) : CedarValue
             'Z' => ReadUtcTrailer(value, ref cursor),
             '+' => ReadOffset(value, ref cursor, 1),
             '-' => ReadOffset(value, ref cursor, -1),
-            _ => throw new FormatException("Invalid time zone designator.")
+            _ => throw new FormatException("invalid time zone designator")
         };
 
         if (cursor != value.Length)
         {
-            throw new FormatException("Unexpected trailing characters after the time zone designator.");
+            throw new FormatException("unexpected additional characters");
         }
 
         return CreateFromParts(year, month, day, hour, minute, second, milliseconds, offsetMilliseconds);
@@ -135,7 +124,7 @@ public sealed record CedarDatetime(long Value) : CedarValue
         GregorianDateTimeParts utcParts = NormalizeUtcParts(year, month, day, hour, minute, second, millisecond, offsetMilliseconds);
         if (CompareParts(utcParts, MinSupportedInstant) < 0 || CompareParts(utcParts, MaxSupportedInstant) > 0)
         {
-            throw new FormatException("Timestamp is out of range.");
+            throw new FormatException("timestamp out of range");
         }
 
         // Compute entirely in Int128 so that boundary dates with timezone offsets
@@ -153,7 +142,7 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
         if (totalMs < long.MinValue || totalMs > long.MaxValue)
         {
-            throw new FormatException("Timestamp is out of range.");
+            throw new FormatException("timestamp out of range");
         }
 
         return new CedarDatetime((long)totalMs);
@@ -290,19 +279,24 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
     private static void ExpectCharacter(string value, ref int cursor, char expected)
     {
-        if (value.Length <= cursor || value[cursor] != expected)
+        if (value.Length <= cursor)
         {
-            throw new FormatException($"Expected '{expected}' at position {cursor}.");
+            throw UnexpectedEof();
+        }
+
+        if (value[cursor] != expected)
+        {
+            throw new FormatException($"unexpected character {value[cursor]}");
         }
 
         cursor++;
     }
 
-    private static int ParseDigits(string value, ref int cursor, int length, string component)
+    private static int ParseDigits(string value, ref int cursor, int length, int maxValue, string component)
     {
         if (value.Length < cursor + length)
         {
-            throw new FormatException($"Invalid {component} component.");
+            throw UnexpectedEof();
         }
 
         int parsed = 0;
@@ -311,10 +305,15 @@ public sealed record CedarDatetime(long Value) : CedarValue
             char character = value[cursor + index];
             if (!char.IsAsciiDigit(character))
             {
-                throw new FormatException($"Invalid {component} component.");
+                throw InvalidComponent(component);
             }
 
             parsed = checked(parsed * 10 + (character - '0'));
+        }
+
+        if (parsed > maxValue)
+        {
+            throw GreaterThan(component, maxValue);
         }
 
         cursor += length;
@@ -331,23 +330,8 @@ public sealed record CedarDatetime(long Value) : CedarValue
     {
         cursor++;
 
-        if (value.Length != cursor + 4)
-        {
-            throw new FormatException("Time zone offsets must use the +hhmm or -hhmm form.");
-        }
-
-        int hours = ParseDigits(value, ref cursor, 2, "time zone hour");
-        int minutes = ParseDigits(value, ref cursor, 2, "time zone minute");
-
-        if (hours > 23)
-        {
-            throw new FormatException("Time zone offset hours are greater than 23.");
-        }
-
-        if (minutes > 59)
-        {
-            throw new FormatException("Time zone offset minutes are greater than 59.");
-        }
+        int hours = ParseDigits(value, ref cursor, 2, 23, "offset hours");
+        int minutes = ParseDigits(value, ref cursor, 2, 59, "offset minutes");
 
         long magnitude = (hours * CedarConsts.MillisPerHour) + (minutes * CedarConsts.MillisPerMinute);
         return sign * magnitude;
@@ -355,20 +339,40 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
     private static void ValidateDate(int year, int month, int day)
     {
-        if (month is < 1 or > 12)
+        if (month > 12)
         {
-            throw new FormatException("Month is greater than 12.");
+            throw GreaterThan("month", 12);
         }
 
-        if (day is < 1 or > 31)
+        if (day > 31)
         {
-            throw new FormatException("Day is greater than 31.");
+            throw GreaterThan("day", 31);
+        }
+
+        if (month == 0 || day == 0)
+        {
+            throw new FormatException("invalid date");
         }
 
         int daysInMonth = GregorianDateTime.DaysInMonth(year, month);
         if (day > daysInMonth)
         {
-            throw new FormatException("Date is invalid.");
+            throw new FormatException("invalid date");
         }
+    }
+
+    private static FormatException UnexpectedEof()
+    {
+        return new FormatException("unexpected EOF");
+    }
+
+    private static FormatException InvalidComponent(string component)
+    {
+        return new FormatException($"invalid {component}");
+    }
+
+    private static FormatException GreaterThan(string component, int maxValue)
+    {
+        return new FormatException($"{component} is greater than {maxValue}");
     }
 }

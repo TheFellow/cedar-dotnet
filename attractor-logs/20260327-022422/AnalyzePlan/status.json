@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "**Decision: PORT**\n\nThe plan has been written to \u0060.ai/semport_plan.md\u0060. Here\u0027s the summary:\n\n---\n\n### Why Port\n\nThis commit rewrites Cedar\u0027s \u0060ParseDatetime\u0060 and its marshaling logic to support **RFC 110 expanded year format** \u2014 ISO 8601 years outside 0\u20139999 represented with a mandatory sign and 9-digit year (e.g. \u0060\u002B000010000-01-01T00:00:00.000Z\u0060). This is a **semantic behavioral change** that affects:\n\n- What strings Cedar accepts as valid \u0060datetime\u0060 values\n- What strings Cedar emits when serializing \u0060datetime\u0060 values back to text/JSON\n- Overflow/range validation (int64 millisecond bounds \u2248 \u00B1292 million years)\n\nAny Cedar policy or entity that uses dates in the expanded range would fail to parse or serialize correctly in the C# implementation without this change.\n\n### Tasks Identified\n\n| # | File | Change |\n|---|------|--------|\n| 1 | \u0060src/Cedar.Types/CedarDatetime.cs\u0060 | Parser: handle \u0060\u002B\u0060/\u0060-\u0060 prefix \u2192 9-digit year; validate field bounds; check int64 overflow |\n| 2 | \u0060src/Cedar.Types/CedarDatetime.cs\u0060 | Formatter: emit \u0060\u002BYYYYYYYYY\u0060 / \u0060-YYYYYYYYY\u0060 for years outside 0\u20139999 |\n| 3 | \u0060src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs\u0060 | Review for any helpers that need updating |\n| 4 | \u0060src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs\u0060 | Verify JSON roundtrip works end-to-end |\n| 5 | \u0060test/Cedar.Tests/\u0060 | Add conformance test cases for expanded-year parsing, error cases, and marshaling |",
+    "last_stage": "AnalyzePlan"
+  },
+  "failure_reason": "",
+  "notes": "Stage completed: AnalyzePlan",
+  "outcome": "success",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}
