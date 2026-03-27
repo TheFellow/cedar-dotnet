@@ -1,3 +1,4 @@
+using System;
 using Cedar.Core.Internal.Json;
 using Cedar.Tests.TestSupport;
 using Cedar.Types;
@@ -101,5 +102,50 @@ public sealed class EntityUidTests
         EntityUid uid = new(new EntityType("User"), new CedarString("alice"));
 
         Assert.Equal(uid.MarshalCedar(), uid.ToString());
+    }
+
+    [Fact]
+    public void TryParseCedar_SimpleUid()
+    {
+        Assert.True(EntityUid.TryParseCedar("User::\"alice\"", out EntityUid? result));
+        Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), result);
+    }
+
+    [Fact]
+    public void TryParseCedar_NamespacedType()
+    {
+        Assert.True(EntityUid.TryParseCedar("Namespace::Type::\"id\"", out EntityUid? result));
+        Assert.Equal("Namespace::Type", result!.Type.Value);
+        Assert.Equal("id", result.Id.Value);
+    }
+
+    [Theory]
+    [InlineData("User::\"alice\"")]
+    [InlineData("Namespace::Type::\"id\"")]
+    public void TryParseCedar_RoundTrip(string input)
+    {
+        Assert.True(EntityUid.TryParseCedar(input, out EntityUid? parsed));
+        Assert.True(EntityUid.TryParseCedar(parsed!.MarshalCedar(), out EntityUid? reparsed));
+        Assert.Equal(parsed, reparsed);
+    }
+
+    [Theory]
+    [InlineData("Type::id")]
+    [InlineData("Type\"id\"")]
+    [InlineData("Type::id\"")]
+    [InlineData("Type::\"id")]
+    [InlineData("")]
+    [InlineData("\"id\"")]
+    [InlineData("::\"id\"")]
+    public void TryParseCedar_RejectsInvalidInput(string input)
+    {
+        Assert.False(EntityUid.TryParseCedar(input, out EntityUid? result));
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ParseCedar_ThrowsOnInvalidInput()
+    {
+        Assert.Throws<FormatException>(() => EntityUid.ParseCedar("Type::id"));
     }
 }
