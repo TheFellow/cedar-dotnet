@@ -1,0 +1,11 @@
+{
+  "context_updates": {
+    "last_response": "**Decision: PORT** \u2705\n\n\u0060.ai/semport_plan.md\u0060 has been written with \u0060PORT\u0060 as the first line. Here\u0027s the summary:\n\n---\n\n### Why PORT\nThis is a **real semantic change** \u2014 new input formats are accepted, new output formats are emitted, and new validation rules apply. Any C# code that parses or serializes Cedar datetime values will behave differently from the spec if this isn\u0027t ported.\n\n### What needs to change in C#\n| Task | Target |\n|------|--------|\n| Add \u0060MaxDatetime\u0060 / \u0060MinDatetime\u0060 boundary constants | \u0060src/Cedar.Types/Datetime.cs\u0060 |\n| Extend \u0060ParseDatetime\u0060 to accept \u0060\u00B1YYYYYYYYY-\u2026\u0060 expanded-year prefix | \u0060src/Cedar.Types/Datetime.cs\u0060 |\n| Extend \u0060MarshalCedar\u0060 / \u0060ToString\u0060 to emit expanded-year format for years outside 0\u20139999 | \u0060src/Cedar.Types/Datetime.cs\u0060 |\n| Extend JSON serialization to match | \u0060src/Cedar.Types/Datetime.cs\u0060 |\n| Add round-trip, error, and boundary xUnit tests | \u0060test/Cedar.Tests/\u0060 |",
+    "last_stage": "AnalyzePlan"
+  },
+  "failure_reason": "",
+  "notes": "Stage completed: AnalyzePlan",
+  "outcome": "success",
+  "preferred_label": "",
+  "suggested_next_ids": []
+}

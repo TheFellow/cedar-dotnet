@@ -7,6 +7,9 @@ namespace Cedar.Types;
 
 public sealed record CedarDatetime(long Value) : CedarValue
 {
+    private static readonly GregorianDateTimeParts MinSupportedInstant = new(-292275055, 5, 17, 16, 47, 4, 192);
+    private static readonly GregorianDateTimeParts MaxSupportedInstant = new(292278994, 8, 17, 7, 12, 55, 807);
+
     public static CedarDatetime Parse(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -129,6 +132,12 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
     private static CedarDatetime CreateFromParts(int year, int month, int day, int hour, int minute, int second, int millisecond, long offsetMilliseconds)
     {
+        GregorianDateTimeParts utcParts = NormalizeUtcParts(year, month, day, hour, minute, second, millisecond, offsetMilliseconds);
+        if (CompareParts(utcParts, MinSupportedInstant) < 0 || CompareParts(utcParts, MaxSupportedInstant) > 0)
+        {
+            throw new FormatException("Timestamp is out of range.");
+        }
+
         // Compute entirely in Int128 so that boundary dates with timezone offsets
         // are handled correctly. The offset must be applied before range-checking,
         // otherwise a pre-offset value that exceeds long range would be rejected
@@ -160,6 +169,123 @@ public sealed record CedarDatetime(long Value) : CedarValue
         long absoluteYear = year < 0 ? -(long)year : year;
         string sign = year < 0 ? "-" : "+";
         return sign + absoluteYear.ToString("D9", CultureInfo.InvariantCulture);
+    }
+
+    private static GregorianDateTimeParts NormalizeUtcParts(int year, int month, int day, int hour, int minute, int second, int millisecond, long offsetMilliseconds)
+    {
+        long timeOfDayMilliseconds =
+            (hour * (long)CedarConsts.MillisPerHour)
+            + (minute * (long)CedarConsts.MillisPerMinute)
+            + (second * (long)CedarConsts.MillisPerSecond)
+            + millisecond
+            - offsetMilliseconds;
+
+        int dayAdjustment = 0;
+        if (timeOfDayMilliseconds < 0)
+        {
+            dayAdjustment = -1;
+            timeOfDayMilliseconds += CedarConsts.MillisPerDay;
+        }
+        else if (timeOfDayMilliseconds >= CedarConsts.MillisPerDay)
+        {
+            dayAdjustment = 1;
+            timeOfDayMilliseconds -= CedarConsts.MillisPerDay;
+        }
+
+        AdjustCivilDate(ref year, ref month, ref day, dayAdjustment);
+
+        int utcHour = (int)(timeOfDayMilliseconds / CedarConsts.MillisPerHour);
+        timeOfDayMilliseconds %= CedarConsts.MillisPerHour;
+
+        int utcMinute = (int)(timeOfDayMilliseconds / CedarConsts.MillisPerMinute);
+        timeOfDayMilliseconds %= CedarConsts.MillisPerMinute;
+
+        int utcSecond = (int)(timeOfDayMilliseconds / CedarConsts.MillisPerSecond);
+        int utcMillisecond = (int)(timeOfDayMilliseconds % CedarConsts.MillisPerSecond);
+
+        return new GregorianDateTimeParts(year, month, day, utcHour, utcMinute, utcSecond, utcMillisecond);
+    }
+
+    private static void AdjustCivilDate(ref int year, ref int month, ref int day, int dayAdjustment)
+    {
+        if (dayAdjustment == 0)
+        {
+            return;
+        }
+
+        if (dayAdjustment > 0)
+        {
+            day++;
+            int daysInMonth = GregorianDateTime.DaysInMonth(year, month);
+            if (day > daysInMonth)
+            {
+                day = 1;
+                month++;
+                if (month > 12)
+                {
+                    month = 1;
+                    year = checked(year + 1);
+                }
+            }
+
+            return;
+        }
+
+        day--;
+        if (day > 0)
+        {
+            return;
+        }
+
+        month--;
+        if (month < 1)
+        {
+            month = 12;
+            year = checked(year - 1);
+        }
+
+        day = GregorianDateTime.DaysInMonth(year, month);
+    }
+
+    private static int CompareParts(GregorianDateTimeParts left, GregorianDateTimeParts right)
+    {
+        int comparison = left.Year.CompareTo(right.Year);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = left.Month.CompareTo(right.Month);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = left.Day.CompareTo(right.Day);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = left.Hour.CompareTo(right.Hour);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = left.Minute.CompareTo(right.Minute);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = left.Second.CompareTo(right.Second);
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        return left.Millisecond.CompareTo(right.Millisecond);
     }
 
     private static void ExpectCharacter(string value, ref int cursor, char expected)

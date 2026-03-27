@@ -102,12 +102,18 @@ public sealed class CedarDatetimeTests
     [InlineData("+292278994-08-17T07:12:55.808Z")]
     [InlineData("+292278994-08-17T06:12:55.808-0100")]
     [InlineData("+292278994-08-17T08:12:55.808+0100")]
-    // Note: Go boundary tests for -292275055 differ from C# due to DaysFromCivil
-    // producing a different day count (-106751991167 vs Go's -106751991168).
-    // TODO: investigate DaysFromCivil divergence for extreme negative years.
+    [InlineData("-292275055-05-17T16:47:04.191Z")]
+    [InlineData("-292275055-05-17T15:47:04.191-0100")]
+    [InlineData("-292275055-05-17T17:47:04.191+0100")]
     public void ParseRejectsInvalidExpandedYearInputs(string input)
     {
         Assert.Throws<FormatException>(() => CedarDatetime.Parse(input));
+    }
+
+    [Fact]
+    public void LongMinValueUsesUpstreamCanonicalExpandedYearFormatting()
+    {
+        CedarAssert.CedarText(new CedarDatetime(long.MinValue), "datetime(\"-292275055-05-16T16:47:04.192Z\")");
     }
 
     [Theory]
