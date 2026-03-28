@@ -1,87 +1,46 @@
-# Finalized Port Plan: c1a7b0a
+# Finalized Port Plan: ace189d
 
-## Summary
-Add validation in the C# Cedar JSON policy parser to reject unknown extension function names with a descriptive `JsonException`, mirroring the Go change to `extensionJSON.ToNode()`.
+## Status: NO CHANGES NEEDED — Already Implemented
 
----
+### Upstream Change
+- **SHA:** ace189d
+- **Go file:** `inspiration/cedar-go/types/record.go` line 94
+- **Change:** Remove space after `:` in Cedar record string output (`": "` → `":"`)
+- **Pattern:** `{"foo": true}` → `{"foo":true}` (space after comma between entries preserved)
 
-## Files to Change
+### C# Investigation Result
 
-### 1. `src/Cedar.Core/Internal/Json/NodeJsonModel.cs` — add guard in `ReadExtensionCall`
+**`src/Cedar.Types/CedarRecord.cs` — `MarshalCedar()` method (lines 51–71)**
 
-**Target method:** `ReadExtensionCall(string name, JsonNode node)` at **line 360**
-
-**Current body (lines 360–370):**
 ```csharp
-private static INode ReadExtensionCall(string name, JsonNode node)
-{
-    JsonArray argsNode = AsArray(node, $"extension call '{name}'");
-    ImmutableArray<INode>.Builder args = ImmutableArray.CreateBuilder<INode>(argsNode.Count);
-
-    foreach (JsonNode? arg in argsNode)
-    {
-        args.Add(ToAst(arg ?? throw new JsonException("Extension call arguments cannot be null.")));
-    }
-
-    return new NodeExtensionCall(name, args.ToImmutable());
-}
+// Line 65 — already correct, NO space after colon:
+builder.Append(':');
+builder.Append(CedarData.MarshalCedar(entry.Value));
 ```
 
-**Required change:** Before the `AsArray` call, add:
+The C# implementation **already** uses `':'` with no trailing space. This matches the upstream Go change exactly.
+
+**`test/Cedar.Tests/Types/CedarRecordTests.cs` line 49 — already correct:**
+
 ```csharp
-if (!ExtensionRegistry.TryGet(name, out _))
-    throw new JsonException($"`{name}` is not a known extension function or method");
+CedarAssert.CedarText(record, "{\"a\":1, \"b\":2}");
+// ✓ No space after colon, space after comma — matches upstream target format
 ```
 
-**Go equivalent:** `extensions.ExtMap[types.String(k)]` lookup in `json_unmarshal.go` line ~140.
+### Conclusion
 
-**Notes:**
-- `ExtensionRegistry` is in `Cedar.Core.Internal.Extensions` — no new `using` needed (same assembly, same internal access).
-- `ExtensionRegistry.TryGet(string, out ExtensionDefinition)` already exists at line 46 of `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs`.
-- The `_` discard on the `out` parameter is correct; we only care about existence.
-- Use `JsonException` (already the error type throughout this file, imported via `System.Text.Json`).
+The C# codebase was already implemented correctly with respect to this upstream commit. This commit should be **acknowledged** (no port work required).
 
-### 2. `test/Cedar.Tests/Json/PolicyJsonTests.cs` — add error test case
+### Action Required
 
-**Insert after:** line 58 (end of `UnmarshalJson_ScopeEqWithoutEntityThrowsJsonException` test), before line 61 `[Fact]`.
-
-**New test to add:**
-```csharp
-[Fact]
-public void UnmarshalJson_UnknownExtensionFunction_ThrowsJsonException()
-{
-    JsonException exception = Assert.Throws<JsonException>(
-        () => UnmarshalPolicyWithConditionBody("""{"not_an_extension_function": []}"""));
-
-    Assert.Contains("not_an_extension_function", exception.Message, StringComparison.Ordinal);
-    Assert.Contains("is not a known extension function or method", exception.Message, StringComparison.Ordinal);
-}
+Run:
+```
+python3 semport/ledger.py update ace189d acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv && git commit -m "semport: acknowledge ace189d - already implemented (no space after colon in Record Cedar output)"
+rm -f .ai/semport_new_commits.md
 ```
 
-**Pattern match:** Mirrors `UnmarshalJson_ScopeEqWithoutEntityThrowsJsonException` (lines 44–58): uses `Assert.Throws<JsonException>`, calls `Policy.UnmarshalJson` indirectly via `UnmarshalPolicyWithConditionBody` helper (line 444), asserts `exception.Message` content.
-
----
-
-## Acceptance Criteria
-
-1. `dotnet build cedar-dotnet.sln` produces zero errors and zero warnings.
-2. `dotnet test cedar-dotnet.sln` passes all existing tests.
-3. The new test `UnmarshalJson_UnknownExtensionFunction_ThrowsJsonException` passes.
-4. Parsing `{"not_an_extension_function": []}` as a policy body condition throws `JsonException` with message containing `` `not_an_extension_function` is not a known extension function or method ``.
-5. Parsing a valid extension call e.g. `{"ip": [{"Value": "10.0.0.1"}]}` continues to work (regression guard).
-
----
-
-## Go → C# Pattern Map
-
-| Go | C# |
-|---|---|
-| `extensions.ExtMap[types.String(k)]` | `ExtensionRegistry.TryGet(name, out _)` |
-| `fmt.Errorf("...")` returned as `error` | `throw new JsonException("...")` |
-| `extensionJSON.ToNode()` | `ReadExtensionCall(string name, JsonNode node)` |
-| `internal/extensions/extensions.go` `ExtMap` | `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs` `Definitions` dictionary |
-
----
-
-## No New Files Required
-Both changes are edits to existing files. `ExtensionRegistry.TryGet` is already the right API — no new constants, sets, or helpers needed.
+## Acceptance Criteria (already satisfied)
+- [x] `CedarRecord.MarshalCedar()` uses `':'` with no trailing space (line 65)
+- [x] Test `MarshalCedarSortsKeysLexicographically` asserts `{"a":1, "b":2}` format
+- [x] No other tests assert the old `": "` format for record key-value serialization

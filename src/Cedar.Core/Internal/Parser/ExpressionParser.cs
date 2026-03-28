@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using Cedar.Ast.Internal;
+using Cedar.Core.Internal.Extensions;
 using Cedar.Types;
 
 namespace Cedar.Core.Internal.Parser;
@@ -333,6 +334,16 @@ internal sealed class ExpressionParser
 
             if (_state.Match(TokenType.LParen))
             {
+                if (!ExtensionRegistry.TryGet(token.Text, out ExtensionDefinition functionDefinition))
+                {
+                    throw _state.Error(token, $"`{token.Text}` is not a function");
+                }
+
+                if (functionDefinition.IsMethod)
+                {
+                    throw _state.Error(token, $"`{token.Text}` is a method, not a function");
+                }
+
                 ImmutableArray<INode> args = ParseExpressionList(TokenType.RParen, "Expected ')' after function arguments.");
                 return new NodeExtensionCall(token.Text, args);
             }
@@ -379,8 +390,18 @@ internal sealed class ExpressionParser
         };
     }
 
-    private static INode ParseExtensionStyleMethodCall(INode lhs, Token method, ImmutableArray<INode> args)
+    private INode ParseExtensionStyleMethodCall(INode lhs, Token method, ImmutableArray<INode> args)
     {
+        if (!ExtensionRegistry.TryGet(method.Text, out ExtensionDefinition methodDefinition))
+        {
+            throw _state.Error(method, $"`{method.Text}` is not a method");
+        }
+
+        if (!methodDefinition.IsMethod)
+        {
+            throw _state.Error(method, $"`{method.Text}` is a function, not a method");
+        }
+
         ImmutableArray<INode>.Builder callArgs = ImmutableArray.CreateBuilder<INode>(args.Length + 1);
         callArgs.Add(lhs);
         foreach (INode arg in args)

@@ -53,13 +53,48 @@ public sealed class ParserErrorTests
     }
 
     [Fact]
-    public void UnknownMethodParsesAsExtensionStyleCall()
+    public void UnknownMethodProducesParseError()
     {
-        PolicyAst policy = Assert.Single(CedarParser.ParsePolicies("permit(principal, action, resource) when { context.unknown() };"));
-        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
-        Assert.Equal("unknown", call.Name);
-        Assert.Single(call.Args);
-        Assert.IsType<NodeVariable>(call.Args[0]);
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { context.unknown() };"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("`unknown` is not a method", parse.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnknownExtensionFunctionProducesParseError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { not_an_extension_fn() };"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("`not_an_extension_fn` is not a function", parse.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExtensionMethodUsedAsFunctionProducesParseError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { isIpv4() };"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("`isIpv4` is a method, not a function", parse.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnknownExtensionMethodProducesParseError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { context.not_an_extension_method() };"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("`not_an_extension_method` is not a method", parse.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExtensionFunctionUsedAsMethodProducesParseError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { context.ip() };"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("`ip` is a function, not a method", parse.Message, StringComparison.Ordinal);
     }
 
     [Fact]

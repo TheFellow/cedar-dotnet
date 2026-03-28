@@ -25,6 +25,13 @@ public sealed class PolicySet : IPolicyIterator
         _policies[id] = policy;
     }
 
+    /// <summary>
+    /// Inserts or replaces the policy with the given ID.
+    /// To assign custom policy IDs, create an empty <see cref="PolicySet" /> and call
+    /// <see cref="UpsertPolicy(PolicyId, Policy)" /> for each policy individually.
+    /// </summary>
+    public void UpsertPolicy(PolicyId id, Policy policy) => Add(id, policy);
+
     public Policy? Get(PolicyId id)
     {
         return _policies.TryGetValue(id, out Policy? policy) ? policy : null;
@@ -146,5 +153,24 @@ public sealed class PolicySet : IPolicyIterator
         }
 
         return set;
+    }
+
+    /// <summary>
+    /// Creates a <see cref="PolicySet" /> from an existing collection of policies,
+    /// assigning sequential IDs: <c>policy0</c>, <c>policy1</c>, and so on.
+    /// </summary>
+    public static PolicySet FromPolicies(IEnumerable<Policy> policies)
+    {
+        ArgumentNullException.ThrowIfNull(policies);
+
+        PolicySet result = new();
+        int i = 0;
+        foreach (Policy policy in policies)
+        {
+            result.Add(new PolicyId($"policy{i}"), policy);
+            i++;
+        }
+
+        return result;
     }
 }

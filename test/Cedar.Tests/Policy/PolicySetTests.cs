@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Cedar.Ast;
 using Cedar.Core;
 using Xunit;
 
@@ -166,5 +167,53 @@ public sealed class PolicySetTests
         Assert.Equal("example.cedar", second.Position.Filename);
         Assert.Equal(Effect.Permit, first.Effect);
         Assert.Equal(Effect.Forbid, second.Effect);
+    }
+
+    [Fact]
+    public void UpsertPolicy_InsertsNewPolicy()
+    {
+        PolicySet set = new();
+        Policy policy = Policy.UnmarshalCedar("forbid(principal, action, resource);");
+
+        set.UpsertPolicy(new PolicyId("a very strict policy"), policy);
+
+        Assert.Same(policy, set.Get(new PolicyId("a very strict policy")));
+    }
+
+    [Fact]
+    public void UpsertPolicy_ReplacesExistingPolicy()
+    {
+        PolicySet set = new();
+        Policy first = Policy.UnmarshalCedar("forbid(principal, action, resource);");
+        Policy second = Policy.UnmarshalCedar("permit(principal, action, resource);");
+
+        set.UpsertPolicy(new PolicyId("a wavering policy"), first);
+        set.UpsertPolicy(new PolicyId("a wavering policy"), second);
+
+        Assert.Same(second, set.Get(new PolicyId("a wavering policy")));
+    }
+
+    [Fact]
+    public void FromPolicies_EmptyCollection_ReturnsEmptySet()
+    {
+        PolicySet set = PolicySet.FromPolicies([]);
+
+        Assert.Null(set.Get(new PolicyId("policy0")));
+    }
+
+    [Fact]
+    public void FromPolicies_AssignsSequentialIds()
+    {
+        Policy first = Policy.FromAst(CedarAst.Forbid());
+        Policy second = Policy.UnmarshalJson(
+            """
+            {"effect":"permit","principal":{"op":"All"},"action":{"op":"All"},"resource":{"op":"All"}}
+            """);
+
+        PolicySet set = PolicySet.FromPolicies([first, second]);
+
+        Assert.Same(first, set.Get(new PolicyId("policy0")));
+        Assert.Same(second, set.Get(new PolicyId("policy1")));
+        Assert.Null(set.Get(new PolicyId("policy2")));
     }
 }
