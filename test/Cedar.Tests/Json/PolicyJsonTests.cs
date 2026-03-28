@@ -59,6 +59,16 @@ public sealed class PolicyJsonTests
     }
 
     [Fact]
+    public void UnmarshalJson_UnknownExtensionFunction_ThrowsJsonException()
+    {
+        JsonException exception = Assert.Throws<JsonException>(
+            () => UnmarshalPolicyWithConditionBody("""{"not_an_extension_function": []}"""));
+
+        Assert.Contains("not_an_extension_function", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("is not a known extension function or method", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void UnmarshalJson_ValueNode_BoolTrue_IsCedarBoolTrue()
     {
         NodeValue node = UnmarshalConditionValueNode("true");

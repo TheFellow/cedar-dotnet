@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cedar.Ast.Internal;
+using Cedar.Core.Internal.Extensions;
 using Cedar.Types;
 
 namespace Cedar.Core.Internal.Json;
@@ -359,6 +360,11 @@ internal static class NodeJsonModel
 
     private static INode ReadExtensionCall(string name, JsonNode node)
     {
+        if (!ExtensionRegistry.TryGet(name, out _))
+        {
+            throw new JsonException($"`{name}` is not a known extension function or method");
+        }
+
         JsonArray argsNode = AsArray(node, $"extension call '{name}'");
         ImmutableArray<INode>.Builder args = ImmutableArray.CreateBuilder<INode>(argsNode.Count);
 
