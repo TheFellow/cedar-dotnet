@@ -17,3 +17,6 @@ packages/
 # Test results
 TestResults/
 attractor-logs/
+
+# Drafts
+docs/drafts/
