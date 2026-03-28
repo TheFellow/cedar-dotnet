@@ -182,9 +182,13 @@ internal static class SchemaJsonConverter
                     appliesTo.ResourceTypes.Add(action.AppliesTo.Resources[entityIndex].Value);
                 }
 
-                if (action.AppliesTo.Context is not null)
+                if (action.AppliesTo.ContextRecord is not null)
                 {
-                    appliesTo.Context = ToJsonType(action.AppliesTo.Context);
+                    appliesTo.Context = ToJsonType(action.AppliesTo.ContextRecord);
+                }
+                else if (action.AppliesTo.ContextPath is not null)
+                {
+                    appliesTo.Context = ToJsonType(action.AppliesTo.ContextPath);
                 }
 
                 jsonAction.AppliesTo = appliesTo;
@@ -271,11 +275,16 @@ internal static class SchemaJsonConverter
                     resources.Add(new EntityType(pair.Value.AppliesTo.ResourceTypes[index]));
                 }
 
+                SchemaType? contextType = pair.Value.AppliesTo.Context is null
+                    ? null
+                    : FromJsonType(pair.Value.AppliesTo.Context);
+
                 appliesTo = new AppliesToDecl
                 {
                     Principals = principals,
                     Resources = resources,
-                    Context = pair.Value.AppliesTo.Context is null ? null : FromJsonType(pair.Value.AppliesTo.Context)
+                    ContextRecord = contextType as RecordType,
+                    ContextPath = contextType as TypeRef
                 };
             }
 

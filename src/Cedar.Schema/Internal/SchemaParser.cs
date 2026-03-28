@@ -498,7 +498,8 @@ internal static class SchemaParser
 
             List<EntityType>? principals = null;
             List<EntityType>? resources = null;
-            SchemaType? context = null;
+            RecordType? contextRecord = null;
+            TypeRef? contextPath = null;
 
             while (!_state.Check(SchemaTokenType.RightBrace))
             {
@@ -539,12 +540,20 @@ internal static class SchemaParser
 
                         break;
                     case "context":
-                        if (context is not null)
+                        if (contextRecord is not null || contextPath is not null)
                         {
                             throw _state.Error("duplicate context declaration in appliesTo");
                         }
 
-                        context = ParseType();
+                        if (_state.Check(SchemaTokenType.LeftBrace))
+                        {
+                            contextRecord = ParseRecordType();
+                        }
+                        else
+                        {
+                            contextPath = new TypeRef(ParsePath());
+                        }
+
                         break;
                     default:
                         throw _state.Error($"expected 'principal', 'resource', or 'context', got {Quote(name.Text)}");
@@ -569,7 +578,8 @@ internal static class SchemaParser
             {
                 Principals = principals,
                 Resources = resources,
-                Context = context
+                ContextRecord = contextRecord,
+                ContextPath = contextPath
             };
         }
 

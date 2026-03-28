@@ -190,7 +190,7 @@ internal static class SchemaWriter
                 wrote = true;
             }
 
-            if (appliesTo.Context is not null)
+            if (appliesTo.ContextRecord is not null || appliesTo.ContextPath is not null)
             {
                 if (wrote)
                 {
@@ -199,7 +199,15 @@ internal static class SchemaWriter
 
                 WriteIndent();
                 _builder.Append("context: ");
-                WriteType(appliesTo.Context);
+                if (appliesTo.ContextRecord is not null)
+                {
+                    WriteType(appliesTo.ContextRecord);
+                }
+                else
+                {
+                    WriteType(appliesTo.ContextPath!);
+                }
+
                 wrote = true;
             }
 

@@ -1,64 +1,61 @@
 PORT
 
-## Commit: 7ca921b
-**"feat: add decoder to read policies from an io.Reader"**
-Date: 2025-09-26T13:21:38+02:00
+## Commit: 5fdb1c7
+**Date:** 2025-10-21T14:50:09-07:00
+**Subject:** internal/schema/parser: support Path type in context decl
 
 ---
 
 ## Semantic Analysis
 
-The Go commit adds a symmetric `Decoder` counterpart to the existing `Encoder` in `stream.go`. The `Decoder` wraps an `io.Reader` and supports sequential single-policy reads via `Decode(*Policy)`, returning `io.EOF` when the stream is exhausted. This is a genuine API surface addition — stateful streaming parse of Cedar policy text.
+The upstream change allows an action's `appliesTo` context to be specified as either:
+1. An **inline record type**: `context: { field: Type, ... }` (already supported)
+2. A **named type path reference**: `context: commonContext` or `context: Foo::Bar` (NEW)
 
-Key semantics:
-- `NewDecoder(r io.Reader) *Decoder` — factory wrapping a parser-level decoder
-- `Decoder.Decode(p *Policy) error` — reads exactly one policy statement from the stream; returns `io.EOF` at end
-- Internally delegates to `parser.Decoder` (the low-level tokenizing decoder)
-- The resulting `Policy` is constructed via `NewPolicyFromAST`
-
-.NET idiom mapping:
-- `io.Reader` → `System.IO.TextReader` (or `Stream` with a `StreamReader` wrapper)
-- Stateful `Decoder` struct → `sealed class PolicyDecoder` (not a record — it holds mutable reader state)
-- `io.EOF` → return `null` or `bool` from `TryDecode`, OR throw `EndOfStreamException` — prefer a `bool TryDecode(out Policy? policy)` pattern which is idiomatic C#
-- `Encode` already exists — match its home location for `Decode`
+### Go changes summary:
+- **`internal/schema/ast/ast.go`**: `AppliesTo.Context *RecordType` split into `AppliesTo.ContextPath *Path` and `AppliesTo.ContextRecord *RecordType`
+- **`internal/schema/parser/parser.go`**: Parser now peeks at the next token — if `{` parse as RecordType, else parse as Path
+- **`internal/schema/ast/convert_human.go`**: When converting to JSON schema, checks `ContextRecord` first then falls back to `ContextPath` (converted via `convertType`)
+- **`internal/schema/ast/convert_json.go`**: When loading from JSON, dispatches on type: `*RecordType` → `ContextRecord`, `*Path` → `ContextPath`
+- **`internal/schema/ast/format.go`**: Formatter prints either `ContextRecord` or `ContextPath` depending on which is set
+- **`internal/schema/ast/walk_test.go`**: Walk visits both fields independently
 
 ---
 
-## Port Tasks
+## Concrete Port Tasks
 
-### 1. Locate the existing Encoder in C# to establish placement
-- Find where `PolicyEncoder` or equivalent lives (likely `src/Cedar.Ast` or `src/Cedar.Core`)
-- Search for `Encode` or `Encoder` in the solution to find the existing streaming write API
+### 1. Locate the C# AppliesTo model in `src/Cedar.Schema`
+- Find the schema AST/model type representing `AppliesTo` (likely in `src/Cedar.Schema/`)
+- Currently the `Context` property is likely typed as a record/inline type only
+- **Change**: Split into two nullable properties: `ContextRecord` (inline record shape) and `ContextPath` (named type reference string or Path type)
+  - If C# uses a discriminated union / sealed hierarchy for schema types, add a new `NamedTypeRef` or reuse existing `EntityOrCommonType` variant
+  - If C# uses a flat model, add a nullable `string? ContextTypeName` alongside existing context record
 
-### 2. Create `PolicyDecoder` class alongside the existing encoder
-- Target file: same namespace/project as the existing encoder (expected: `src/Cedar.Ast/PolicyDecoder.cs`)
-- Implement:
-  ```csharp
-  public sealed class PolicyDecoder
-  {
-      private readonly TextReader _reader;
-      public PolicyDecoder(TextReader reader) { _reader = reader; }
-      // Returns true and sets policy if a policy was read; false at end-of-stream
-      public bool TryDecode(out Policy? policy);
-  }
-  ```
-- Internally reuse whatever `PolicyParser.Parse(string)` or equivalent method already exists, feeding it one policy-worth of text at a time from the reader
-- Handle EOF by returning `false` / `null`
+### 2. Update the Cedar schema text parser (`.cedarschema` human-readable format)
+- **File**: Wherever the human-readable schema is parsed (search for `appliesTo`, `context:` token handling in `src/Cedar.Schema/`)
+- **Change**: After consuming `context :`, peek at the next character/token:
+  - If `{` → parse as inline record (existing behavior)
+  - Otherwise → parse as a path identifier (e.g. `commonContext` or `Foo::Bar`) and store as `ContextPath`/`ContextTypeName`
 
-### 3. Add `TextReader`/`Stream` convenience factory (optional overload)
-- `public static PolicyDecoder FromStream(Stream stream, Encoding? encoding = null)`
-  wrapping `new StreamReader(stream, encoding ?? Encoding.UTF8)`
+### 3. Update JSON schema serialization/deserialization
+- **File**: JSON converter for the schema (search for `"context"` handling in `src/Cedar.Schema/`)
+- **Change**: When deserializing `context`, handle both `{"type":"Record","attributes":{...}}` and `{"type":"EntityOrCommon","name":"..."}` shapes
+- When serializing a path-based context, emit `{"type":"EntityOrCommon","name":"<path>"}` (matching cedar-go's JSON output)
 
-### 4. Add xUnit tests in `test/Cedar.Tests` (or `test/Cedar.Ast.Tests` if it exists)
-- Mirror the Go test: create a `TextReader` over a multi-policy string
-- Decode policy 0 → assert it is `permit(principal, action, resource);`
-- Decode policy 1 → assert it is `forbid(principal, action, resource);`  
-- Decode again → assert `TryDecode` returns `false` (EOF)
+### 4. Update the formatter / pretty-printer (if one exists in Cedar.Schema)
+- **File**: Any `Format`/`Print` method for schema actions
+- **Change**: Print `context: <TypeName>` when path-based, `context: { ... }` when record-based
 
-### Go source references
-- `inspiration/cedar-go/stream.go` lines 27–53 — `Decoder` struct, `NewDecoder`, `Decode`
-- `inspiration/cedar-go/stream_test.go` lines 72–113 — `TestDecoder`
+### 5. Add tests in `test/Cedar.Schema.Tests`
+- Test parsing `context: commonContext` (named type reference) in a `.cedarschema` string
+- Test round-trip: parse → serialize to JSON → deserialize
+- Test that the JSON representation uses `{"type":"EntityOrCommon","name":"commonContext"}`
+- Mirror the upstream test data in `internal/schema/parser/testdata/cases/example.cedarschema`
 
-### C# target references (to locate before editing)
-- Grep for `Encoder` or `Encode` in `src/` to find the existing encoder file
-- Grep for `PolicyParser` or `ParsePolicy` to find the parser entry point used internally
+---
+
+## Key Files to Investigate First
+- `src/Cedar.Schema/` — find the AppliesTo / action schema model
+- `src/Cedar.Schema/` — find the human-readable parser (search for `context` keyword handling)
+- `src/Cedar.Schema/` — find JSON schema serialization
+- `test/Cedar.Schema.Tests/` — existing schema parser tests to understand test patterns

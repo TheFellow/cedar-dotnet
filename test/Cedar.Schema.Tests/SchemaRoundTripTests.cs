@@ -84,4 +84,31 @@ public sealed class SchemaRoundTripTests
 
         Assert.Equal(SchemaDocument.UnmarshalCedar(SchemaTestData.SampleCedar).MarshalCedar(), cedar);
     }
+
+    [Fact]
+    public void CrossFormat_ConvertersPreserveNamedContextType()
+    {
+        const string schema =
+            """
+            type CommonCtx = {
+                authenticated: Bool,
+            };
+
+            action edit appliesTo {
+                principal: User,
+                resource: Document,
+                context: CommonCtx,
+            };
+            """;
+
+        string json = HumanToJsonConverter.ConvertCedarToJson(schema);
+        string cedar = HumanToJsonConverter.ConvertJsonToCedar(json);
+        SchemaDocument roundTripped = SchemaDocument.UnmarshalCedar(cedar);
+
+        ActionDecl action = Assert.Single(roundTripped.GlobalNamespace.Actions).Value;
+        Assert.NotNull(action.AppliesTo);
+        Assert.Null(action.AppliesTo!.ContextRecord);
+        Assert.NotNull(action.AppliesTo.ContextPath);
+        Assert.Equal("CommonCtx", action.AppliesTo.ContextPath!.Name);
+    }
 }

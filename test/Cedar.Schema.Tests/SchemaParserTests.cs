@@ -162,10 +162,35 @@ public sealed class SchemaParserTests
         Assert.Equal("User", Assert.Single(action.AppliesTo!.Principals).Value);
         Assert.Equal("Document", action.AppliesTo.Resources[0].Value);
         Assert.Equal("Photo", action.AppliesTo.Resources[1].Value);
-        SchemaType contextType = action.AppliesTo.Context!;
-        Assert.NotNull(contextType);
-        RecordType context = SchemaAssert.RequireRecordType(contextType);
+        Assert.Null(action.AppliesTo.ContextPath);
+        RecordType context = action.AppliesTo.ContextRecord!;
+        Assert.NotNull(context);
         Assert.Equal("ipaddr", SchemaAssert.RequireTypeRef(context.Attributes["ip"].Type).Name);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_ParsesActionWithNamedContextType()
+    {
+        const string cedar =
+            """
+            type CommonContext = {
+            	ip: ipaddr
+            };
+
+            action edit appliesTo {
+            	principal: User,
+            	resource: Document,
+            	context: CommonContext
+            };
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(cedar);
+        ActionDecl action = Assert.Single(document.GlobalNamespace.Actions).Value;
+
+        Assert.NotNull(action.AppliesTo);
+        Assert.Null(action.AppliesTo!.ContextRecord);
+        TypeRef contextPath = Assert.IsType<TypeRef>(action.AppliesTo.ContextPath);
+        Assert.Equal("CommonContext", contextPath.Name);
     }
 
     [Fact]

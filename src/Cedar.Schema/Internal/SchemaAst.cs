@@ -59,7 +59,9 @@ public sealed record AppliesToDecl
 
     public IReadOnlyList<EntityType> Resources { get; init; } = Array.Empty<EntityType>();
 
-    public SchemaType? Context { get; init; }
+    public RecordType? ContextRecord { get; init; }
+
+    public TypeRef? ContextPath { get; init; }
 }
 
 public sealed record ParentRef(EntityType? Type, string Id);

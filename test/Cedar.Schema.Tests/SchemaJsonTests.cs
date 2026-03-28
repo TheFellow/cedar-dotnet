@@ -161,4 +161,60 @@ public sealed class SchemaJsonTests
         Assert.True(address.Attributes["zipcode"].Optional);
         Assert.Equal("town", address.Attributes["city"].Annotations[0].Value);
     }
+
+    [Fact]
+    public void MarshalJson_SerializesNamedContextTypeAsEntityOrCommon()
+    {
+        const string cedar =
+            """
+            type CommonCtx = {
+                ok: Bool,
+            };
+
+            action go appliesTo {
+                principal: User,
+                resource: Doc,
+                context: CommonCtx,
+            };
+            """;
+
+        string json = SchemaDocument.UnmarshalCedar(cedar).MarshalJson();
+
+        Assert.Contains("\"context\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"EntityOrCommon\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"CommonCtx\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_DeserializesNamedContextTypeAsContextPath()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {},
+                "actions": {
+                  "go": {
+                    "appliesTo": {
+                      "principalTypes": ["User"],
+                      "resourceTypes": ["Doc"],
+                      "context": {
+                        "type": "EntityOrCommon",
+                        "name": "CommonCtx"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+        ActionDecl action = Assert.Single(document.GlobalNamespace.Actions).Value;
+
+        Assert.NotNull(action.AppliesTo);
+        Assert.Null(action.AppliesTo!.ContextRecord);
+        Assert.NotNull(action.AppliesTo.ContextPath);
+        Assert.Equal("CommonCtx", action.AppliesTo.ContextPath!.Name);
+    }
 }
