@@ -29,3 +29,24 @@ public static class Encoder
         writer.Flush();
     }
 }
+
+public sealed class PolicyEncoder
+{
+    private readonly TextWriter _writer;
+
+    public PolicyEncoder(TextWriter writer)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+
+        _writer = writer;
+    }
+
+    public void Encode(Policy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        _writer.Write(policy.MarshalCedar());
+        _writer.Write('\n');
+        _writer.Flush();
+    }
+}

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 using Cedar.Core;
@@ -60,5 +61,90 @@ public sealed class StreamTests
         Assert.Equal(2, decoded.Length);
         Assert.Equal("permit(principal, action, resource);", decoded[0].MarshalCedar());
         Assert.Equal("forbid(principal, action, resource);", decoded[1].MarshalCedar());
+    }
+
+    [Fact]
+    public void PolicyEncoder_EncodePolicies_WritesConcatenatedCedarText()
+    {
+        Policy policy0 = Policy.UnmarshalJson("""
+            {
+                "effect": "permit",
+                "principal": {
+                    "op": "==",
+                    "entity": { "type": "User", "id": "bob" }
+                },
+                "action": {
+                    "op": "==",
+                    "entity": { "type": "Action", "id": "view" }
+                },
+                "resource": {
+                    "op": "in",
+                    "entity": { "type": "Folder", "id": "abc" }
+                }
+            }
+            """);
+        Policy policy1 = Policy.UnmarshalJson("""
+            {
+                "effect": "permit",
+                "principal": {
+                    "op": "==",
+                    "entity": { "type": "User", "id": "bob" }
+                },
+                "action": {
+                    "op": "==",
+                    "entity": { "type": "Action", "id": "view" }
+                },
+                "resource": {
+                    "op": "in",
+                    "entity": { "type": "Folder", "id": "abc" }
+                }
+            }
+            """);
+
+        using StringWriter writer = new();
+        PolicyEncoder encoder = new(writer);
+
+        encoder.Encode(policy0);
+        encoder.Encode(policy1);
+
+        string result = writer.ToString();
+
+        // Each Encode call writes one Cedar policy line followed by '\n'.
+        // The exact whitespace is governed by MarshalCedar (tested separately);
+        // here we verify two complete policy texts are present and concatenated.
+        string[] lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        Assert.All(lines, line =>
+        {
+            Assert.StartsWith("permit", line, StringComparison.Ordinal);
+            Assert.Contains("User::\"bob\"", line, StringComparison.Ordinal);
+            Assert.Contains("Action::\"view\"", line, StringComparison.Ordinal);
+            Assert.Contains("Folder::\"abc\"", line, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void PolicyEncoder_Encode_WhenWriterThrows_PropagatesIOException()
+    {
+        Policy policy = Policy.UnmarshalCedar("permit(principal, action, resource);");
+        using ThrowingWriter writer = new();
+        PolicyEncoder encoder = new(writer);
+
+        Assert.Throws<IOException>(() => encoder.Encode(policy));
+    }
+
+    private sealed class ThrowingWriter : TextWriter
+    {
+        public override Encoding Encoding => Encoding.UTF8;
+
+        public override void Write(char value)
+        {
+            throw new IOException("Simulated write failure");
+        }
+
+        public override void Write(string? value)
+        {
+            throw new IOException("Simulated write failure");
+        }
     }
 }
