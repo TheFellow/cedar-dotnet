@@ -1,196 +1,82 @@
-# Finalized Port Plan — a752ce1
-**Subject:** types: Replace UnsafeDecimal with three new, safe constructors  
-**Date:** 2024-11-05T13:34:07-08:00
+# Finalized Port Plan: d3f7472
+
+## Verdict: ACKNOWLEDGE — Already Implemented
+
+The C# codebase already fully implements the semantic equivalent of this upstream commit. No code changes are required.
 
 ---
 
-## Go → C# Pattern Map
+## Go → C# Mapping
 
-| Go pattern | C# equivalent used in this codebase |
-|---|---|
-| `func NewFoo(...) (T, error)` | `public static T NewFoo(...)` — throws `ArgumentOutOfRangeException` on bad input |
-| `constraints.Signed` generic | Not needed — use `long` directly (C# has no need for generic int wrappers here) |
-| `constraints.Float` generic | Not needed — use `double` directly |
-| `var DecimalMax = Decimal{value: math.MaxInt64}` | `public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);` |
-| `math.MaxInt64` / `math.MinInt64` | `long.MaxValue` / `long.MinValue` |
-| `testutil.ErrorIs(t, err, types.ErrDecimal)` | `Assert.Throws<ArgumentOutOfRangeException>(...)` |
-| `testutil.Equals(t, d.String(), tt.want)` | `Assert.Equal(tt.want, d.MarshalCedar())` ... actually `CedarDecimal.Parse(want)` round-trip via `CedarAssert.Equal` |
-
----
-
-## File 1: `src/Cedar.Types/CedarDecimal.cs`
-
-**Current state (149 lines):**
-- Line 6: `public sealed record CedarDecimal(long Value) : CedarValue`
-- Lines 8–11: `private const long Precision`, `MaxIntegerPart`, `MaxFractionalPart`, `MinFractionalPart`
-- Lines 13–44: `public static CedarDecimal NewDecimal(long value, int exponent)` ← insert after closing `}`
-- Lines 46–79: `public static CedarDecimal Parse(string value)`
-- Lines 81–84: `public double ToDouble()`
-
-### Change 1a — Insert `DecimalMax`/`DecimalMin` after the private constants (after line 11, before line 13)
-
-**Insert point:** after `private const short MinFractionalPart = -5_808;` (line 11), before `public static CedarDecimal NewDecimal`
-
-```csharp
-    public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);
-    public static CedarDecimal DecimalMin { get; } = new(long.MinValue);
-```
-
-**Acceptance criteria:** `CedarDecimal.DecimalMax.Value == long.MaxValue` and `CedarDecimal.DecimalMin.Value == long.MinValue`.
-
-### Change 1b — Insert `NewDecimalFromInt` after `NewDecimal` closing `}` (after line 44)
-
-```csharp
-    public static CedarDecimal NewDecimalFromInt(long value)
-    {
-        return NewDecimal(value, 0);
-    }
-```
-
-**Acceptance criteria:** `CedarDecimal.NewDecimalFromInt(42)` equals `CedarDecimal.Parse("42.0")`. `NewDecimalFromInt(922337203685478)` throws `ArgumentOutOfRangeException`.
-
-### Change 1c — Insert `NewDecimalFromFloat` after `NewDecimalFromInt` closing `}`
-
-```csharp
-    public static CedarDecimal NewDecimalFromFloat(double value)
-    {
-        double scaled = value * Precision;
-        if (scaled > long.MaxValue)
-            throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would overflow.");
-        if (scaled < long.MinValue)
-            throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would underflow.");
-        return NewDecimal((long)scaled, -4);
-    }
-```
-
-**Logic notes:**
-- `Precision` = 10_000 (private const already present at line 8)
-- Multiply first, then range-check before casting to `long` — this matches the Go: `f = f * DecimalPrecision` then check vs `math.MaxInt64`/`math.MinInt64`
-- The cast `(long)scaled` truncates toward zero, same as Go's `int64(f)` conversion
-- Then delegates to existing `NewDecimal(long, int)` with exponent `-4`, which performs the final bounds check (covers the "surprising overflow/underflow" edge cases from the Go tests)
-
-**Acceptance criteria:**
-- `NewDecimalFromFloat(1.0)` equals `Parse("1.0")`
-- `NewDecimalFromFloat(1.23451)` equals `Parse("1.2345")` (truncation)
-- `NewDecimalFromFloat(1000000000000000.0)` throws `ArgumentOutOfRangeException`
-- `NewDecimalFromFloat(-1000000000000000.0)` throws `ArgumentOutOfRangeException`
+| Go (upstream d3f7472) | C# (cedar-dotnet) | Status |
+|---|---|---|
+| `types.EntityLoader` interface with `Load(EntityUID) (Entity, bool)` | `IEntityGetter` interface with `TryGet(EntityUid uid, out Entity entity)` | ✅ Exists — `src/Cedar.Types/IEntityGetter.cs:3` |
+| `Entities.Load(k)` map method | `EntityMap.TryGet(uid, out entity)` | ✅ Exists — `src/Cedar.Types/EntityMap.cs:37` |
+| `eval.Env.Entities types.EntityLoader` | `EvalEnv.Entities IEntityGetter` | ✅ Exists — `src/Cedar.Core/Internal/Eval/EvalEnv.cs:5` |
+| `PolicySet.IsAuthorized(entities EntityLoader, req Request)` | `Authorization.Authorize(IPolicyIterator, IEntityGetter, Request)` | ✅ Exists — `src/Cedar.Core/Authorization.cs:11` |
+| `batch.Authorize(…, entityMap types.EntityLoader, …)` | `BatchAuthorization.Authorize(…, IEntityGetter? entities, …)` | ✅ Exists — `src/Cedar.Batch/BatchAuthorization.cs:19-69` |
+| `env.Entities[uid]` → `env.Entities.Load(uid)` in evalers | `env.Entities.TryGet(uid, out …)` in all evaluators | ✅ Exists — `AccessEvaluators.cs:20,60`, `MembershipEvaluators.cs:52-90`, `PartialEvaluator.cs:232,239,698` |
+| Custom `EntityLoader` test | `CountingEntityGetter : IEntityGetter` test double | ✅ Exists — `test/Cedar.Tests/Eval/EvaluatorTests.cs:40` |
 
 ---
 
-## File 2: `test/Cedar.Tests/Types/CedarDecimalTests.cs`
+## Evidence
 
-**Current state (128 lines):**
-- Usings at lines 1–4: `System`, `Cedar.Tests.TestSupport`, `Cedar.Types`, `Xunit`
-- Last test ends at line 127, closing `}` at line 128
-- No existing tests for `NewDecimalFromInt` or `NewDecimalFromFloat`
-- Existing `NewDecimalRejectsOverflow` at line 88 only covers `(922337203685478, 0)`
+### `IEntityGetter` — already the abstraction interface
+**File:** `src/Cedar.Types/IEntityGetter.cs`
+```
+namespace Cedar.Types;
 
-**Insert all new tests before the final closing `}` at line 128.**
-
-### Change 2a — `NewDecimalFromInt` happy-path theory (insert before line 128)
-
-```csharp
-    [Theory]
-    [InlineData(0L, "0.0")]
-    [InlineData(1L, "1.0")]
-    [InlineData(-1L, "-1.0")]
-    [InlineData(922337203685477L, "922337203685477.0")]
-    [InlineData(-922337203685477L, "-922337203685477.0")]
-    public void NewDecimalFromIntProducesExpectedString(long input, string expected)
-    {
-        CedarAssert.Equal(CedarDecimal.Parse(expected), CedarDecimal.NewDecimalFromInt(input));
-    }
-
-    [Fact]
-    public void NewDecimalFromIntRejectsOverflow()
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromInt(922337203685478L));
-    }
+public interface IEntityGetter
+{
+    bool TryGet(EntityUid uid, out Entity entity);
+}
 ```
 
-### Change 2b — `NewDecimalFromFloat` happy-path theory (insert after 2a)
-
+### `EntityMap` — already implements `IEntityGetter`
+**File:** `src/Cedar.Types/EntityMap.cs:8`
 ```csharp
-    [Theory]
-    [InlineData(0.0, "0.0")]
-    [InlineData(1.0, "1.0")]
-    [InlineData(-1.0, "-1.0")]
-    [InlineData(1.23451, "1.2345")]
-    [InlineData(1.23456, "1.2345")]
-    [InlineData(922337203685477.5807, "922337203685477.5807")]
-    [InlineData(-922337203685477.5808, "-922337203685477.5808")]
-    public void NewDecimalFromFloatProducesExpectedString(double input, string expected)
-    {
-        CedarAssert.Equal(CedarDecimal.Parse(expected), CedarDecimal.NewDecimalFromFloat(input));
-    }
+public sealed class EntityMap : IEntityGetter, IReadOnlyCollection<Entity>
+```
+`TryGet` at line 37 delegates to `Dictionary.TryGetValue` — exact semantic match to Go's nil-guard + map lookup.
+
+### `EvalEnv` — already uses `IEntityGetter`
+**File:** `src/Cedar.Core/Internal/Eval/EvalEnv.cs:5`
+```csharp
+internal sealed record EvalEnv(IEntityGetter Entities, ...)
 ```
 
-### Change 2c — `NewDecimalFromFloat` overflow theory (insert after 2b)
-
+### `Authorization.Authorize` — already accepts `IEntityGetter`
+**File:** `src/Cedar.Core/Authorization.cs:11`
 ```csharp
-    [Theory]
-    [InlineData(922337203685477.6875)]
-    [InlineData(-922337203685477.6876)]
-    [InlineData(1000000000000000.0)]
-    [InlineData(-1000000000000000.0)]
-    public void NewDecimalFromFloatRejectsOutOfRange(double input)
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromFloat(input));
-    }
+public static (Decision Decision, Diagnostic Diagnostic) Authorize(
+    IPolicyIterator policies, IEntityGetter entities, Request request)
 ```
 
-### Change 2d — Full `NewDecimal` overflow matrix (insert after 2c)
+### `BatchAuthorization.Authorize` — already accepts `IEntityGetter?`
+**File:** `src/Cedar.Batch/BatchAuthorization.cs:21,30,43,53,69`
+All overloads use `IEntityGetter?` with `?? new EntityMap()` fallback (line 85).
 
-Replaces/expands on the single existing `NewDecimalRejectsOverflow` fact — keep the existing fact, add this theory:
+### All eval call-sites — already use `TryGet`
+- `AccessEvaluators.cs:20` — `env.Entities.TryGet(entityUid, ...)`
+- `AccessEvaluators.cs:60` — `env.Entities.TryGet(attribute, ...)`
+- `MembershipEvaluators.cs:90` — `entities.TryGet(current, out Entity found)`
+- `PartialEvaluator.cs:700` — `entities.TryGet(entityUid, out Entity entity)`
 
+### Custom `IEntityGetter` test double already exists
+**File:** `test/Cedar.Tests/Eval/EvaluatorTests.cs:40`
 ```csharp
-    [Theory]
-    [InlineData(922337203685477581L, -3)]
-    [InlineData(92233720368547759L, -2)]
-    [InlineData(9223372036854776L, -1)]
-    [InlineData(922337203685478L, 0)]
-    [InlineData(92233720368548L, 1)]
-    [InlineData(10L, 14)]
-    [InlineData(1L, 15)]
-    public void NewDecimalRejectsOverflowMatrix(long significand, int exponent)
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimal(significand, exponent));
-    }
-
-    [Theory]
-    [InlineData(-922337203685477581L, -3)]
-    [InlineData(-92233720368547759L, -2)]
-    [InlineData(-9223372036854776L, -1)]
-    [InlineData(-922337203685478L, 0)]
-    [InlineData(-92233720368548L, 1)]
-    [InlineData(-10L, 14)]
-    [InlineData(-1L, 15)]
-    public void NewDecimalRejectsUnderflowMatrix(long significand, int exponent)
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimal(significand, exponent));
-    }
+private sealed class CountingEntityGetter : IEntityGetter
 ```
+Used in tests at lines 445, 469, 486, 487 — validates the abstraction boundary end-to-end.
 
 ---
 
-## Build & Test Validation
+## Action Required
 
-After changes, run:
+**None.** Run:
 ```
-dotnet build cedar-dotnet.sln
-dotnet test test/Cedar.Tests/Cedar.Tests.csproj --filter "FullyQualifiedName~CedarDecimalTests"
-```
-
-Expected: all new tests pass, no new warnings (warnings-as-errors is enforced).
-
----
-
-## Ledger Update (after implementation)
-
-```
-python3 semport/ledger.py update a752ce1 implemented
-python3 semport/ledger.py sort
-git add semport/ledger.tsv
-git commit -m "semport: implement a752ce1 - add NewDecimalFromInt, NewDecimalFromFloat, DecimalMax/Min"
-rm -f .ai/semport_new_commits.md .ai/semport_plan.md .ai/semport_plan_finalized.md
+python3 semport/ledger.py update d3f7472 acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv && git commit -m "semport: acknowledge d3f7472 - IEntityGetter already implements EntityLoader abstraction"
+rm -f .ai/semport_new_commits.md
 ```

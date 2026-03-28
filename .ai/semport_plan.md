@@ -1,108 +1,58 @@
 PORT
 
 ## Commit
-**SHA:** a752ce1
-**Date:** 2024-11-05T13:34:07-08:00
-**Subject:** types: Replace UnsafeDecimal with three new, safe constructors
+- **SHA:** d3f7472
+- **Date:** 2024-11-06T14:15:42-07:00
+- **Subject:** types: add EntityLoader interface for cases where a simple map isn't adequate for entity storage
 
 ## Semantic Analysis
+The upstream cedar-go commit introduces an `EntityLoader` interface with a single method `Load(EntityUID) (Entity, bool)` and makes the concrete `Entities` map type implement it. All authorization and evaluation entry-points (`PolicySet.IsAuthorized`, `eval.Env`, `batch.Authorize`) are widened to accept `EntityLoader` instead of the concrete `Entities` map. This is a pure abstraction-widening change: callers who already pass `Entities` continue to work, but callers can now supply any custom entity store.
 
-The upstream Go commit removes the single unsafe `UnsafeDecimal[T int|int64|float64](v T)` constructor (which blindly multiplied by `DecimalPrecision` with no bounds checking) and replaces it with three safe constructors:
+This is directly relevant to C#: the same abstraction should exist so consumers can implement lazy/remote/database-backed entity storage without materializing a full dictionary.
 
-1. **`NewDecimal(i int64, exponent int) (Decimal, error)`** — already exists in C# as `CedarDecimal.NewDecimal(long, int)` (throws on error rather than returning error, consistent with .NET idioms). ✅ Already ported.
+## Port Tasks
 
-2. **`NewDecimalFromInt[T constraints.Signed](i T) (Decimal, error)`** — convenience wrapper that calls `NewDecimal(int64(i), 0)`. **Missing in C#.**
+### 1. Add `IEntityLoader` interface — `src/Cedar.Types`
+- **Target file:** `src/Cedar.Types/Entities.cs` (or a new `src/Cedar.Types/IEntityLoader.cs`)
+- Define:
+  ```csharp
+  public interface IEntityLoader
+  {
+      bool TryLoad(EntityUid uid, out Entity entity);
+  }
+  ```
+- Go source: `types/entities.go` lines 10-13 (`EntityLoader` interface with `Load(EntityUID) (Entity, bool)`)
 
-3. **`NewDecimalFromFloat[T constraints.Float](f T) (Decimal, error)`** — multiplies float by `DecimalPrecision`, range-checks against `MaxInt64`/`MinInt64`, then calls `NewDecimal(int64(f), -4)`. **Missing in C#.**
+### 2. Implement `IEntityLoader` on the `Entities` type — `src/Cedar.Types`
+- **Target file:** `src/Cedar.Types/Entities.cs`
+- The existing `Entities` type (dictionary wrapper or `ImmutableDictionary<EntityUid, Entity>`) should implement `IEntityLoader.TryLoad` by delegating to the dictionary lookup.
+- Handle `null`/empty case gracefully (return `false`), mirroring the Go nil-map guard.
+- Go source: `types/entities.go` lines 15-22 (`Entities.Load` method)
 
-4. **`DecimalMax` / `DecimalMin`** — sentinel `Decimal` values at `math.MaxInt64` / `math.MinInt64`. **Missing in C#.**
+### 3. Update `IsAuthorized` signature — `src/Cedar.Ast`
+- **Target file:** wherever `IsAuthorized(Entities entityMap, Request req)` is declared (search for `IsAuthorized` in `src/Cedar.Ast`).
+- Change parameter type from `Entities` (or `IReadOnlyDictionary<EntityUid, Entity>`) to `IEntityLoader`.
+- Go source: `authorize.go` line 21 (`func (p PolicySet) IsAuthorized(entities EntityLoader, req Request)`)
 
-5. **`ToFloat()`** — a `double ToDouble()` equivalent already exists in C# (`ToDouble()`). ✅ Already ported.
+### 4. Update the internal eval `Env` struct — `src/Cedar.Core` or `src/Cedar.Ast`
+- **Target file:** `src/Cedar.Core/Internal/Eval/Env.cs` (or equivalent linked file)
+- Change the `Entities` field/property type from `Entities` / `IReadOnlyDictionary<EntityUid, Entity>` to `IEntityLoader`.
+- Go source: `internal/eval/evalers.go` line 25 (`Entities types.EntityLoader`)
 
-6. The Go commit also fixed a variable-name bug in `MarshalCedar` and `String` (`v` → `d`). Our C# equivalent uses `this`/`Value` so not applicable.
+### 5. Update all eval call-sites that do `env.Entities[uid]` — `src/Cedar.Core/Internal/Eval` (linked into `Cedar.Ast`)
+- Replace direct dictionary index access with `env.Entities.TryLoad(uid, out var entity)`.
+- Go source sites:
+  - `evalers.go` line 857 (attribute access)
+  - `evalers.go` line 895 (`has` eval)
+  - `evalers.go` lines 964, 968 (`entityInOne`)
+  - `evalers.go` lines 993, 997 (`entityInSet`)
+  - `partial.go` line 507 (partial `has` eval)
 
-The upstream also adds extensive tests for the three constructors covering normal cases, overflow, underflow, and float precision loss. Our test file has some `NewDecimal` tests but none for `NewDecimalFromInt` or `NewDecimalFromFloat`.
+### 6. Update `Cedar.Batch` — `src/Cedar.Batch`
+- **Target file:** wherever `Authorize(…, Entities entityMap, …)` is declared in `src/Cedar.Batch`.
+- Change parameter type to `IEntityLoader`.
+- Go source: `x/exp/batch/batch.go` line 105
 
-## Concrete Port Tasks
-
-### Task 1 — Add `NewDecimalFromInt` to `CedarDecimal`
-**Go source:** `types/decimal.go` lines ~40-42  
-**C# target:** `src/Cedar.Types/CedarDecimal.cs`
-
-Add after `NewDecimal`:
-```csharp
-public static CedarDecimal NewDecimalFromInt(long value)
-{
-    return NewDecimal(value, 0);
-}
-```
-
-### Task 2 — Add `NewDecimalFromFloat` to `CedarDecimal`
-**Go source:** `types/decimal.go` lines ~44-52  
-**C# target:** `src/Cedar.Types/CedarDecimal.cs`
-
-Add after `NewDecimalFromInt`. The Go logic multiplies by `DecimalPrecision`, checks against `MaxInt64`/`MinInt64`, then calls `NewDecimal(int64(f), -4)`. In C# use `double` and `checked` cast:
-```csharp
-public static CedarDecimal NewDecimalFromFloat(double value)
-{
-    double scaled = value * Precision;
-    if (scaled > long.MaxValue)
-        throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would overflow.");
-    if (scaled < long.MinValue)
-        throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would underflow.");
-    return NewDecimal((long)scaled, -4);
-}
-```
-
-### Task 3 — Add `DecimalMax` and `DecimalMin` constants
-**Go source:** `types/decimal.go` lines ~20-21  
-**C# target:** `src/Cedar.Types/CedarDecimal.cs`
-
-Add as public static properties:
-```csharp
-public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);
-public static CedarDecimal DecimalMin { get; } = new(long.MinValue);
-```
-
-### Task 4 — Add tests for `NewDecimalFromInt`
-**Go source:** `types/decimal_test.go` (`NewDecimalFromInt` section)  
-**C# target:** `test/Cedar.Tests/Types/CedarDecimalTests.cs`
-
-Add `[Theory]` test cases mirroring the upstream `NewDecimalFromInt` cases:
-- `0` → `"0.0"`
-- `1` → `"1.0"`
-- `-1` → `"-1.0"`
-- `922337203685477` → `"922337203685477.0"`
-- `-922337203685477` → `"-922337203685477.0"`
-
-And overflow case:
-- `922337203685478` → throws `ArgumentOutOfRangeException`
-
-### Task 5 — Add tests for `NewDecimalFromFloat`
-**Go source:** `types/decimal_test.go` (`NewDecimalFromFloat`, `NewDecimalFromFloatPrecisionLoss`, `NewDecimalFromFloatOverflow` sections)  
-**C# target:** `test/Cedar.Tests/Types/CedarDecimalTests.cs`
-
-Normal cases:
-- `0.0` → `"0.0"`, `1.0` → `"1.0"`, `-1.0` → `"-1.0"`
-- `1.23451` → `"1.2345"` (truncates), `1.23456` → `"1.2345"`
-- `922337203685477.5807` → `"922337203685477.5807"`
-- `-922337203685477.5808` → `"-922337203685477.5808"`
-
-Overflow cases (throw `ArgumentOutOfRangeException`):
-- `922337203685477.6875`
-- `-922337203685477.6876`
-- `1000000000000000.0`
-- `-1000000000000000.0`
-
-### Task 6 — Add overflow/underflow tests for `NewDecimal` to match upstream matrix
-**Go source:** `types/decimal_test.go` (`NewDecimalOverflow`, `NewDecimalUnderflow` sections)  
-**C# target:** `test/Cedar.Tests/Types/CedarDecimalTests.cs`
-
-The upstream enumerates specific (significand, exponent) pairs that overflow/underflow. We have one overflow test; add the full matrix:
-
-Overflow cases: `(922337203685477581, -3)`, `(92233720368547759, -2)`, `(9223372036854776, -1)`, `(922337203685478, 0)`, `(92233720368548, 1)`, `(10, 14)`, `(1, 15)`  
-Underflow cases: negations of above.
-
-## Files to Change
-- `src/Cedar.Types/CedarDecimal.cs` — Tasks 1, 2, 3
-- `test/Cedar.Tests/Types/CedarDecimalTests.cs` — Tasks 4, 5, 6
+### 7. Add tests — `test/Cedar.Tests` (and/or `test/Cedar.Batch.Tests`)
+- Add a test that implements `IEntityLoader` with a custom backing store (e.g., a `Dictionary` behind a class) and passes it to `IsAuthorized`, verifying the result is identical to passing the equivalent `Entities` value.
+- This validates the abstraction boundary works end-to-end.
