@@ -226,6 +226,135 @@ public sealed class ParserTests
     }
 
     [Fact]
+    public void ParseDoubleNot()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { !!true };");
+
+        NodeNot outer = Assert.IsType<NodeNot>(Assert.Single(policy.Conditions));
+        NodeNot inner = Assert.IsType<NodeNot>(outer.Arg);
+        NodeValue value = Assert.IsType<NodeValue>(inner.Arg);
+        Assert.Equal(CedarBool.True, value.Value);
+    }
+
+    [Fact]
+    public void ParseChainedMultiplication()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 * 2 * 1 };");
+
+        NodeMult outer = Assert.IsType<NodeMult>(Assert.Single(policy.Conditions));
+        NodeMult inner = Assert.IsType<NodeMult>(outer.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(inner.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(inner.Right);
+        NodeValue outerRight = Assert.IsType<NodeValue>(outer.Right);
+
+        Assert.Equal(new CedarLong(42), innerLeft.Value);
+        Assert.Equal(new CedarLong(2), innerRight.Value);
+        Assert.Equal(new CedarLong(1), outerRight.Value);
+    }
+
+    [Fact]
+    public void ParseChainedAddition()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 + 2 + 1 };");
+
+        NodeAdd outer = Assert.IsType<NodeAdd>(Assert.Single(policy.Conditions));
+        NodeAdd inner = Assert.IsType<NodeAdd>(outer.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(inner.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(inner.Right);
+        NodeValue outerRight = Assert.IsType<NodeValue>(outer.Right);
+
+        Assert.Equal(new CedarLong(42), innerLeft.Value);
+        Assert.Equal(new CedarLong(2), innerRight.Value);
+        Assert.Equal(new CedarLong(1), outerRight.Value);
+    }
+
+    [Fact]
+    public void ParseChainedSubtraction()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 - 2 - 1 };");
+
+        NodeSub outer = Assert.IsType<NodeSub>(Assert.Single(policy.Conditions));
+        NodeSub inner = Assert.IsType<NodeSub>(outer.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(inner.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(inner.Right);
+        NodeValue outerRight = Assert.IsType<NodeValue>(outer.Right);
+
+        Assert.Equal(new CedarLong(42), innerLeft.Value);
+        Assert.Equal(new CedarLong(2), innerRight.Value);
+        Assert.Equal(new CedarLong(1), outerRight.Value);
+    }
+
+    [Fact]
+    public void ParseMixedAddAndSubtract()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 - 2 + 1 };");
+
+        NodeAdd outer = Assert.IsType<NodeAdd>(Assert.Single(policy.Conditions));
+        NodeSub inner = Assert.IsType<NodeSub>(outer.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(inner.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(inner.Right);
+        NodeValue outerRight = Assert.IsType<NodeValue>(outer.Right);
+
+        Assert.Equal(new CedarLong(42), innerLeft.Value);
+        Assert.Equal(new CedarLong(2), innerRight.Value);
+        Assert.Equal(new CedarLong(1), outerRight.Value);
+    }
+
+    [Fact]
+    public void ParseChainedAnd()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { true && false && true };");
+
+        NodeAnd outer = Assert.IsType<NodeAnd>(Assert.Single(policy.Conditions));
+        NodeAnd inner = Assert.IsType<NodeAnd>(outer.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(inner.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(inner.Right);
+        NodeValue outerRight = Assert.IsType<NodeValue>(outer.Right);
+
+        Assert.Equal(CedarBool.True, innerLeft.Value);
+        Assert.Equal(CedarBool.False, innerRight.Value);
+        Assert.Equal(CedarBool.True, outerRight.Value);
+    }
+
+    [Fact]
+    public void ParseChainedOr()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { true || false || true };");
+
+        NodeOr outer = Assert.IsType<NodeOr>(Assert.Single(policy.Conditions));
+        NodeOr inner = Assert.IsType<NodeOr>(outer.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(inner.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(inner.Right);
+        NodeValue outerRight = Assert.IsType<NodeValue>(outer.Right);
+
+        Assert.Equal(CedarBool.True, innerLeft.Value);
+        Assert.Equal(CedarBool.False, innerRight.Value);
+        Assert.Equal(CedarBool.True, outerRight.Value);
+    }
+
+    [Fact]
+    public void ParseParenthesizedMultiAddThenMultiply()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { (2 + 3 + 4) * 5 == 18 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeMult mult = Assert.IsType<NodeMult>(equals.Left);
+        NodeAdd outerAdd = Assert.IsType<NodeAdd>(mult.Left);
+        NodeAdd innerAdd = Assert.IsType<NodeAdd>(outerAdd.Left);
+        NodeValue innerLeft = Assert.IsType<NodeValue>(innerAdd.Left);
+        NodeValue innerRight = Assert.IsType<NodeValue>(innerAdd.Right);
+        NodeValue outerAddRight = Assert.IsType<NodeValue>(outerAdd.Right);
+        NodeValue multRight = Assert.IsType<NodeValue>(mult.Right);
+        NodeValue equalsRight = Assert.IsType<NodeValue>(equals.Right);
+
+        Assert.Equal(new CedarLong(2), innerLeft.Value);
+        Assert.Equal(new CedarLong(3), innerRight.Value);
+        Assert.Equal(new CedarLong(4), outerAddRight.Value);
+        Assert.Equal(new CedarLong(5), multRight.Value);
+        Assert.Equal(new CedarLong(18), equalsRight.Value);
+    }
+
+    [Fact]
     public void ParseEntityReferencePrimary()
     {
         PolicyAst policy = ParseSingle("permit(principal, action, resource) when { User::\"alice\" };");
@@ -328,7 +457,7 @@ public sealed class ParserTests
         PolicyAst policy = ParseSingle(source);
         string cedar = CedarWriter.Write(policy);
 
-        Assert.Contains("when { {a: 1, \"b\": 2} }", cedar, StringComparison.Ordinal);
+        Assert.Contains("when { {a: 1, b: 2} }", cedar, StringComparison.Ordinal);
     }
 
     [Fact]
