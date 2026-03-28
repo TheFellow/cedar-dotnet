@@ -1,5 +1,6 @@
 using Cedar.Tests.TestSupport;
 using Cedar.Types;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Cedar.Tests.Types;
@@ -108,6 +109,69 @@ public sealed class CedarRecordTests
         CedarRecord record = new();
 
         Assert.False(record.TryGetValue(new CedarString("missing"), out _));
+    }
+
+    [Fact]
+    public void ConstructorDefensivelyCopiesSourceEntries()
+    {
+        RecordMap source = new()
+        {
+            [new CedarString("key")] = new CedarLong(1)
+        };
+
+        CedarRecord record = new(source);
+
+        source[new CedarString("key")] = new CedarLong(99);
+        source[new CedarString("other")] = new CedarString("value");
+
+        Assert.True(record.TryGetValue(new CedarString("key"), out ICedarData value));
+        CedarAssert.Equal(new CedarLong(1), Assert.IsType<CedarLong>(value));
+        Assert.False(record.TryGetValue(new CedarString("other"), out _));
+    }
+
+    [Fact]
+    public void DeepCloneOfEmptyRecordDoesNotThrowAndRemainsEmpty()
+    {
+        CedarRecord record = new();
+
+        CedarRecord clone = record.DeepClone();
+
+        CedarAssert.Equal(record, clone);
+        Assert.Equal(0, clone.Count);
+    }
+
+    [Fact]
+    public void DeepClonePreservesEntries()
+    {
+        CedarRecord record = new(new RecordMap
+        {
+            [new CedarString("x")] = new CedarLong(5),
+            [new CedarString("nested")] = new CedarRecord(new RecordMap
+            {
+                [new CedarString("flag")] = new CedarBool(true)
+            })
+        });
+
+        CedarRecord clone = record.DeepClone();
+
+        CedarAssert.Equal(record, clone);
+    }
+
+    [Fact]
+    public void ToRecordMapReturnsIndependentCopy()
+    {
+        CedarRecord record = new(new RecordMap
+        {
+            [new CedarString("k")] = new CedarString("v")
+        });
+
+        RecordMap copy = record.ToRecordMap();
+        copy[new CedarString("k")] = new CedarString("mutated");
+        copy[new CedarString("new")] = new CedarLong(1);
+
+        Assert.True(record.TryGetValue(new CedarString("k"), out ICedarData value));
+        CedarAssert.Equal(new CedarString("v"), Assert.IsType<CedarString>(value));
+        Assert.False(record.TryGetValue(new CedarString("new"), out _));
     }
 
     [Fact]

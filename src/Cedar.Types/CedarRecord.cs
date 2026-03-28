@@ -37,6 +37,11 @@ public sealed record CedarRecord : CedarValue, IEnumerable<KeyValuePair<CedarStr
 
     public int Count => _entries.Count;
 
+    public RecordMap ToRecordMap()
+    {
+        return new RecordMap(_entries);
+    }
+
     public IEnumerable<CedarString> Keys => _orderedEntries.Select(static entry => entry.Key);
 
     public IEnumerable<ICedarData> Values => _orderedEntries.Select(static entry => entry.Value);
@@ -108,5 +113,10 @@ public sealed record CedarRecord : CedarValue, IEnumerable<KeyValuePair<CedarStr
     IEnumerator IEnumerable.GetEnumerator()
     {
         return GetEnumerator();
+    }
+
+    public CedarRecord DeepClone()
+    {
+        return new CedarRecord(_entries);
     }
 }

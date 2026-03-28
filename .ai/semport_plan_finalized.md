@@ -1,102 +1,122 @@
-# Semport Plan Finalized: d1f59f4
+# Finalized Port Plan: b7a52e1 — Deterministic Set JSON Serialization
 
-## Status: ALREADY FULLY IMPLEMENTED ✅
-
-After surveying the codebase, **all semantic changes from commit `d1f59f4` are already implemented** in cedar-dotnet. No porting work is needed. The ledger should be updated to `implemented`.
-
----
-
-## Evidence of Completion
-
-### Task 1: `CedarDatetime` value type
-**File:** `src/Cedar.Types/CedarDatetime.cs` (385 lines)
-- `sealed record CedarDatetime(long Value) : CedarValue` — line 8
-- `static Parse(string value)` — line 13, full ISO-8601 parser including timezone offsets, expanded year ranges
-- `static FromDateTimeOffset(DateTimeOffset)` — line 92
-- `ToDateTimeOffset()` — line 97
-- `MarshalCedar()` — line 107, renders `datetime("yyyy-MM-ddTHH:mm:ss.fffZ")`
-- `GetHashCode()` — line 117
-- Range validation against `MinSupportedInstant` / `MaxSupportedInstant` — lines 10–11, 125–128
-
-### Task 2: `CedarDuration` value type
-**File:** `src/Cedar.Types/CedarDuration.cs` (200 lines)
-- `sealed record CedarDuration(long Value) : CedarValue` — line 8
-- `static Parse(string value)` — line 19, enforces unit order (d→h→m→s→ms), each once, overflow detection, negative prefix
-- `ToDays()`, `ToHours()`, `ToMinutes()`, `ToSeconds()`, `ToMilliseconds()` — lines 81–104
-- `ToTimeSpan()` / `FromTimeSpan(TimeSpan)` — lines 106–113
-- `MarshalCedar()` — line 116, renders `duration("NdNhNmNsNms")`
-- `GetHashCode()` — line 121
-- `FormatValue()` — line 169, canonical serialization
-
-### Task 3: Extension constants
-**File:** `src/Cedar.Core/Internal/Consts/CedarConsts.cs`
-- `MillisPerSecond`, `MillisPerMinute`, `MillisPerHour`, `MillisPerDay` present (referenced at `CedarDatetime.cs:136–140`, `CedarDuration.cs:12–16`)
-
-### Task 4: Extension function registration
-**File:** `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs` (65 lines)
-- `datetime` (arity 1) — line 14
-- `duration` (arity 1) — line 15
-- `toDate` (arity 1, method) — line 25
-- `toTime` (arity 1, method) — line 26
-- `offset` (arity 2, method) — line 27
-- `durationSince` (arity 2, method) — line 28
-- `toDays`, `toHours`, `toMinutes`, `toSeconds`, `toMilliseconds` (arity 1, method) — lines 39–43
-- Additional calendar methods also registered: `daysInMonth`, `year`, `month`, `day`, `dayOfWeek`, `dayOfYear`, `hour`, `minute`, `second`, `millisecond`
-
-### Task 5: Extension method implementations
-**File:** `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs` (104 lines)
-- `ToDate`, `ToTime`, `Offset`, `DurationSince` — lines 11–52
-- Additional calendar accessors: `DaysInMonth`, `Year`, `Month`, `Day`, `DayOfWeek`, `DayOfYear`, `Hour`, `Minute`, `Second`, `Millisecond`
-
-**File:** `src/Cedar.Core/Internal/Extensions/DurationExtensions.cs` (32 lines)
-- `ToDays`, `ToHours`, `ToMinutes`, `ToSeconds`, `ToMilliseconds` — lines 8–31
-
-### Task 6: Comparison support
-**File:** `src/Cedar.Core/Internal/Eval/Evaluators/ComparisonEvaluators.cs` (83 lines)
-- `ComparableValues.Compare()` — line 56, handles `CedarDatetime` (line 63) and `CedarDuration` (line 64)
-- Type-mismatch → `EvalException(EvalErrors.IncompatibleComparison)` — lines 73–76
-- `LessThanEvaluator`, `LessThanOrEqualEvaluator`, `GreaterThanEvaluator`, `GreaterThanOrEqualEvaluator` — lines 22–52
-
-### Task 7: JSON serialization
-**File:** `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs` (212 lines)
-- Write `CedarDatetime` as `{"__extn":{"fn":"datetime","arg":"..."}}` — line 52–53
-- Write `CedarDuration` as `{"__extn":{"fn":"duration","arg":"..."}}` — line 55–56
-- Read `datetime` extension → `CedarDatetime.Parse(argument)` — line 161
-- Read `duration` extension → `CedarDuration.Parse(argument)` — line 162
-- Supports both `__extn`-wrapped and bare `{fn,arg}` forms — lines 173–196
-
-### Task 8: Tests
-All three test files confirmed present with 78 test facts/theories:
-- `test/Cedar.Tests/Types/CedarDatetimeTests.cs` (19 public members)
-- `test/Cedar.Tests/Types/CedarDurationTests.cs` (23 public members)
-- `test/Cedar.Tests/Eval/ExtensionTests.cs` (39 public members, covers datetime/duration eval, arity errors, durationSince, etc.)
-
-**Test run result:** 63,162 total tests, 0 failures.
+## Summary
+Upstream Go commit makes `MapSet[T].MarshalJSON()` sort elements by their lexicographic JSON byte representation before emitting a JSON array. The C# equivalent must do the same in `CedarValueJsonConverter.WriteValue`.
 
 ---
 
-## Go → C# Pattern Mapping (for reference)
+## Exact Change Location
 
-| Go Pattern | C# Equivalent | Location |
-|---|---|---|
-| `type Datetime struct { value int64 }` | `sealed record CedarDatetime(long Value)` | `CedarDatetime.cs:8` |
-| `type Duration struct { value int64 }` | `sealed record CedarDuration(long Value)` | `CedarDuration.cs:8` |
-| `ComparableValue` interface | `ComparableValues.Compare()` switch — no interface needed | `ComparisonEvaluators.cs:56` |
-| `ErrNotComparable` sentinel | `EvalErrors.IncompatibleComparison` string constant | `EvalErrors.cs` |
-| `ErrDatetime` / `ErrDuration` | `FormatException` (thrown from `Parse()`) | `CedarDatetime.cs`, `CedarDuration.cs` |
-| `newExtensionEval` switch | `ExtensionRegistry` dictionary dispatch | `ExtensionRegistry.cs:10` |
-| Go `time.Time` | `DateTimeOffset` | `CedarDatetime.cs:92–100` |
-| Go `time.Duration` | `TimeSpan` / `long` milliseconds | `CedarDuration.cs:106–113` |
-| Go method-style extensions via receiver | Static methods with `args[0]` as receiver | `DatetimeExtensions.cs`, `DurationExtensions.cs` |
+### File to modify: `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs` — lines 64–71
 
----
+**Current code (lines 64–71):**
+```csharp
+case CedarSet set:
+    writer.WriteStartArray();
+    foreach (ICedarData item in set)
+    {
+        WriteValue(writer, item);
+    }
 
-## Action Required
-
-```bash
-python3 semport/ledger.py update d1f59f4 implemented
-python3 semport/ledger.py sort
-git add semport/ledger.tsv
-git commit -m "semport: implement d1f59f4 - datetime and duration extension types (already in codebase)"
-rm -f .ai/semport_new_commits.md
+    writer.WriteEndArray();
+    break;
 ```
+
+**Required change:**
+Instead of writing each element directly to the writer in iteration order (non-deterministic, since `CedarSet` wraps an `ImmutableHashSet`), serialize each element to a `string` first, sort those strings with `StringComparer.Ordinal`, then write each pre-serialized JSON fragment to the array.
+
+**Go → C# pattern mapping:**
+| Go | C# |
+|---|---|
+| `json.Marshal(elem)` → `[]byte` | `JsonSerializer.Serialize<ICedarData>(item, options)` → `string` |
+| `slices.SortFunc(elems, slices.Compare)` | `.OrderBy(s => s, StringComparer.Ordinal)` |
+| `bytes.Join(...)` | Write each raw string via `writer.WriteRawValue(s)` |
+
+**New code:**
+```csharp
+case CedarSet set:
+    writer.WriteStartArray();
+    // Serialize each element independently, sort lexicographically, then emit — matching
+    // the deterministic ordering introduced in cedar-go b7a52e1.
+    JsonSerializerOptions innerOptions = new(options);
+    // Reuse the same converters already on the writer's options.
+    List<string> serialized = new(set.Count);
+    foreach (ICedarData item in set)
+    {
+        serialized.Add(JsonSerializer.Serialize<ICedarData>(item, options));
+    }
+    serialized.Sort(StringComparer.Ordinal);
+    foreach (string s in serialized)
+    {
+        writer.WriteRawValue(s, skipInputValidation: true);
+    }
+    writer.WriteEndArray();
+    break;
+```
+
+> **Note on `options`**: The `Write` method signature is `Write(Utf8JsonWriter writer, ICedarData value, JsonSerializerOptions options)`. The `options` parameter is already in scope and carries all registered converters, so passing it directly to `JsonSerializer.Serialize` will correctly recurse through nested sets/records.
+
+---
+
+## File to modify: `test/Cedar.Tests/Types/CedarSetTests.cs`
+
+Add a new test class/region for JSON serialization ordering (after line 101, end of file).
+
+**New tests to add:**
+```csharp
+[Fact]
+public void JsonSerializesEmptySetAsEmptyArray()
+{
+    string json = CedarJson.SerializeData(new CedarSet());
+    Assert.Equal("[]", json);
+}
+
+[Fact]
+public void JsonSerializesIntegerSetInLexicographicOrder()
+{
+    // Input order is 3,2,1 — output must be sorted: 1,2,3
+    CedarSet set = new(new CedarLong(3), new CedarLong(2), new CedarLong(1));
+    string json = CedarJson.SerializeData(set);
+    Assert.Equal("[1,2,3]", json);
+}
+
+[Fact]
+public void JsonSerializesSingleElementSet()
+{
+    CedarSet set = new(new CedarLong(1));
+    string json = CedarJson.SerializeData(set);
+    Assert.Equal("[1]", json);
+}
+
+[Fact]
+public void JsonSerializesStringSetInLexicographicOrder()
+{
+    CedarSet set = new(new CedarString("3"), new CedarString("1"), new CedarString("2"));
+    string json = CedarJson.SerializeData(set);
+    Assert.Equal("""["1","2","3"]""", json);
+}
+```
+
+**Required `using` at top of `CedarSetTests.cs`** (check if already present):
+- `using Cedar.Tests.TestSupport;`
+
+---
+
+## Acceptance Criteria
+
+1. `dotnet build cedar-dotnet.sln` — no warnings or errors.
+2. `dotnet test cedar-dotnet.sln` — all tests pass including the 4 new ones.
+3. Serializing `new CedarSet(new CedarLong(3), new CedarLong(2), new CedarLong(1))` produces `"[1,2,3]"`.
+4. Serializing `new CedarSet()` produces `"[]"`.
+5. Existing round-trip tests (`JsonRoundTripSupportsPrimitiveMembers`, `JsonRoundTripSupportsEntityMembers`) still pass — they only check equality not order, so they are order-independent.
+
+---
+
+## Files to touch (exhaustive list)
+
+| File | Change |
+|---|---|
+| `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs` | Lines 64–71: replace `foreach` write loop with sort-then-write-raw pattern |
+| `test/Cedar.Tests/Types/CedarSetTests.cs` | Append 4 new `[Fact]` tests for deterministic JSON output |
+
+No other files require changes. No schema, conformance, or batch tests reference set serialization order.

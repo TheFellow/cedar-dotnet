@@ -16,7 +16,7 @@ internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
 
     public override void Write(Utf8JsonWriter writer, ICedarData value, JsonSerializerOptions options)
     {
-        WriteValue(writer, value);
+        WriteValue(writer, value, options);
     }
 
     internal static ICedarData ReadElement(JsonElement element)
@@ -33,7 +33,7 @@ internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
         };
     }
 
-    internal static void WriteValue(Utf8JsonWriter writer, ICedarData value)
+    internal static void WriteValue(Utf8JsonWriter writer, ICedarData value, JsonSerializerOptions options)
     {
         switch (value)
         {
@@ -63,9 +63,17 @@ internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
                 break;
             case CedarSet set:
                 writer.WriteStartArray();
+
+                List<byte[]> serializedItems = new(set.Count);
                 foreach (ICedarData item in set)
                 {
-                    WriteValue(writer, item);
+                    serializedItems.Add(JsonSerializer.SerializeToUtf8Bytes<ICedarData>(item, options));
+                }
+
+                serializedItems.Sort(static (left, right) => left.AsSpan().SequenceCompareTo(right));
+                foreach (byte[] serializedItem in serializedItems)
+                {
+                    writer.WriteRawValue(serializedItem, skipInputValidation: true);
                 }
 
                 writer.WriteEndArray();
@@ -75,7 +83,7 @@ internal sealed class CedarValueJsonConverter : JsonConverter<ICedarData>
                 foreach ((CedarString key, ICedarData item) in record)
                 {
                     writer.WritePropertyName(key.Value);
-                    WriteValue(writer, item);
+                    WriteValue(writer, item, options);
                 }
 
                 writer.WriteEndObject();

@@ -53,10 +53,10 @@ internal sealed class EntityJsonConverter : JsonConverter<Entity>
         writer.WriteEndArray();
 
         writer.WritePropertyName("attrs");
-        CedarValueJsonConverter.WriteValue(writer, value.Attributes);
+        CedarValueJsonConverter.WriteValue(writer, value.Attributes, options);
 
         writer.WritePropertyName("tags");
-        CedarValueJsonConverter.WriteValue(writer, value.Tags);
+        CedarValueJsonConverter.WriteValue(writer, value.Tags, options);
 
         writer.WriteEndObject();
     }

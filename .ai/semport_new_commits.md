@@ -1,11 +1,5 @@
-# Semport: Next New Commit to Process
+b7a52e1	2024-09-26T10:47:38-07:00
 
-## Commit: d1f59f4
-**Date:** 2024-09-19T12:29:46-07:00
+internal/mapset: give MarshalJSON a deterministic output
 
-**Full Commit Message:**
-```
-Merge pull request #35 from strongdm/apg/po-515-add-datetime
-
-Add the extension types, datetime and duration
-```
+Signed-off-by: Patrick Jakubowski <patrick.jakubowski@strongdm.com>

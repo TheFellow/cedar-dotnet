@@ -98,4 +98,42 @@ public sealed class CedarSetTests
 
         CedarAssert.Equal(expected, Assert.IsType<CedarSet>(actual));
     }
+
+    [Fact]
+    public void JsonSerializesEmptySetAsEmptyArray()
+    {
+        string actual = CedarJson.SerializeData(new CedarSet());
+
+        Assert.Equal("[]", actual);
+    }
+
+    [Fact]
+    public void JsonSerializesSingleElementSet()
+    {
+        CedarSet set = new(new CedarLong(1));
+
+        string actual = CedarJson.SerializeData(set);
+
+        Assert.Equal("[1]", actual);
+    }
+
+    [Fact]
+    public void JsonSerializesIntegerSetInLexicographicJsonOrder()
+    {
+        CedarSet set = new(new CedarLong(3), new CedarLong(2), new CedarLong(1));
+
+        string actual = CedarJson.SerializeData(set);
+
+        Assert.Equal("[1,2,3]", actual);
+    }
+
+    [Fact]
+    public void JsonSerializesStringSetInLexicographicJsonOrder()
+    {
+        CedarSet set = new(new CedarString("3"), new CedarString("1"), new CedarString("2"));
+
+        string actual = CedarJson.SerializeData(set);
+
+        Assert.Equal("[\"1\",\"2\",\"3\"]", actual);
+    }
 }
