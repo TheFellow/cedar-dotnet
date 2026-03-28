@@ -480,7 +480,7 @@ internal static class SchemaJsonConverter
         [JsonPropertyName("shape")]
         public JsonTypeModel? Shape { get; set; }
 
-        [JsonPropertyName("tags")]
+        [JsonPropertyName("additionalAttributes")]
         public JsonTypeModel? Tags { get; set; }
 
         [JsonPropertyName("annotations")]

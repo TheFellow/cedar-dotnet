@@ -87,6 +87,40 @@ public sealed class SchemaJsonTests
     }
 
     [Fact]
+    public void MarshalJson_SerializesEntityTagsAsAdditionalAttributes()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("""entity Photo tags String;""");
+
+        string json = document.MarshalJson();
+
+        Assert.Contains("additionalAttributes", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"tags\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ReadsAdditionalAttributesAsTags()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {
+                  "Photo": {
+                    "additionalAttributes": { "type": "String" }
+                  }
+                },
+                "actions": {}
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+        EntityDecl entity = Assert.Single(document.GlobalNamespace.Entities).Value;
+
+        Assert.NotNull(entity.Tags);
+    }
+
+    [Fact]
     public void HumanToJsonConverter_ConvertsBothDirections()
     {
         string json = HumanToJsonConverter.ConvertCedarToJson(SchemaTestData.SampleCedar);

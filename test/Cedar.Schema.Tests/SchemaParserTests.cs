@@ -6,6 +6,34 @@ namespace Cedar.Schema.Tests;
 
 public sealed class SchemaParserTests
 {
+    public static TheoryData<string, string> ValidStringEscapeCases =>
+        new()
+        {
+            { "\"\\u{0041}\"", "A" },
+            { "\"\\u{1F600}\"", "😀" },
+            { "\"\\0\"", "\0" },
+            { "\"\\n\"", "\n" },
+            { "\"\\t\"", "\t" },
+            { "\"\\r\"", "\r" },
+            { "\"\\\\\"", "\\" },
+            { "\"\\\"\"", "\"" },
+            { "\"\\'\"", "'" }
+        };
+
+    public static TheoryData<string> InvalidStringEscapeCases =>
+        new()
+        {
+            "\"\\a\"",
+            "\"\\b\"",
+            "\"\\f\"",
+            "\"\\v\"",
+            "\"\\?\"",
+            "\"\\u{}\"",
+            "\"\\u{GGGG}\"",
+            "\"\\u{D800}\"",
+            "\"\\u{110000}\""
+        };
+
     public static TheoryData<string, string> DuplicateDeclarationCases =>
         new()
         {
@@ -220,6 +248,25 @@ public sealed class SchemaParserTests
         Assert.Equal("__cedar::String", SchemaAssert.RequireTypeRef(shape.Attributes["internal"].Type).Name);
     }
 
+    [Theory]
+    [MemberData(nameof(ValidStringEscapeCases))]
+    public void UnmarshalCedar_ParsesValidStringEscapesInStringNames(string literal, string expectedName)
+    {
+        SchemaDocument document = ParseEntityWithStringAttributeName(literal);
+        EntityDecl entity = Assert.Single(document.GlobalNamespace.Entities).Value;
+
+        Assert.Contains(expectedName, entity.Shape!.Attributes.Keys);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidStringEscapeCases))]
+    public void UnmarshalCedar_RejectsInvalidStringEscapesInStringNames(string literal)
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() => ParseEntityWithStringAttributeName(literal));
+
+        Assert.Contains("invalid string escape", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void UnmarshalCedar_AccumulatesErrorsAcrossDeclarations()
     {
@@ -295,5 +342,10 @@ public sealed class SchemaParserTests
     public void UnmarshalCedar_RejectsAnnotationAndAppliesToErrors(string _, string cedar)
     {
         Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
+    }
+
+    private static SchemaDocument ParseEntityWithStringAttributeName(string literal)
+    {
+        return SchemaDocument.UnmarshalCedar($"entity User {{ {literal}: String }};");
     }
 }
