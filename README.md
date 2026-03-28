@@ -1,0 +1,122 @@
+# cedar-dotnet
+
+![Build and Test](https://github.com/TheFellow/cedar-dotnet/actions/workflows/ci.yml/badge.svg)
+
+A C# implementation of the [Cedar](https://www.cedarpolicy.com/) policy language, semantically ported from [cedar-go](https://github.com/cedar-policy/cedar-go).
+
+Cedar is a language for writing and enforcing authorization policies in your applications. Using Cedar, you can write policies that specify fine-grained permissions. Your applications then authorize access requests by calling Cedar's authorization engine. Policies are separate from application code and can be independently authored, updated, analyzed, and audited.
+
+## Quick Start
+
+```csharp
+using Cedar.Core;
+using Cedar.Types;
+
+// Define a policy
+Policy policy = Policy.UnmarshalCedar("""
+    permit (
+        principal == User::"alice",
+        action == Action::"view",
+        resource in Album::"jane_vacation"
+    );
+    """);
+
+// Build a policy set
+PolicySet ps = new();
+ps.Add(new PolicyId("policy0"), policy);
+
+// Load entities
+EntityMap entities = EntityMap.UnmarshalJson("""
+    [
+        { "uid": { "type": "User", "id": "alice" }, "attrs": {}, "parents": [] },
+        { "uid": { "type": "Photo", "id": "VacationPhoto94.jpg" }, "attrs": {},
+          "parents": [{ "type": "Album", "id": "jane_vacation" }] }
+    ]
+    """);
+
+// Authorize
+Request request = new(
+    new EntityUid(new EntityType("User"), new CedarString("alice")),
+    new EntityUid(new EntityType("Action"), new CedarString("view")),
+    new EntityUid(new EntityType("Photo"), new CedarString("VacationPhoto94.jpg")),
+    new CedarRecord());
+
+(Decision decision, Diagnostic diagnostic) = Authorization.Authorize(ps, entities, request);
+// decision == Decision.Allow
+```
+
+## Batch Authorization
+
+Authorize multiple variable combinations in a single call. The batch engine uses partial evaluation to prune irrelevant policies, then iterates over the cartesian product of variable domains.
+
+```csharp
+using Cedar.Batch;
+
+BatchRequest batchRequest = new(
+    Principal: BatchVariable.Variable("user"),
+    Action: new EntityUid(new EntityType("Action"), new CedarString("view")),
+    Resource: new EntityUid(new EntityType("Photo"), new CedarString("VacationPhoto94.jpg")),
+    Context: new CedarRecord())
+{
+    Variables = new Dictionary<string, IReadOnlyList<ICedarData>>
+    {
+        ["user"] = new ICedarData[]
+        {
+            new EntityUid(new EntityType("User"), new CedarString("alice")),
+            new EntityUid(new EntityType("User"), new CedarString("bob")),
+            new EntityUid(new EntityType("User"), new CedarString("charlie")),
+        }
+    }
+};
+
+BatchAuthorization.Authorize(
+    ps.All(), entities, batchRequest,
+    result => Console.WriteLine($"{result.Values["user"]}: {result.Decision}"));
+
+// User::"alice": Allow
+// User::"bob": Deny
+// User::"charlie": Deny
+```
+
+Supports `CancellationToken` for aborting long-running batches.
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `Cedar.Types` | Value types, entities, collections |
+| `Cedar.Ast` | AST nodes and fluent policy builder |
+| `Cedar.Core` | Authorize, Policy, PolicySet, parser, evaluator |
+| `Cedar.Schema` | Schema parsing (Cedar text + JSON), formatting, round-trip |
+| `Cedar.Batch` | Batch authorization with variable substitution |
+| `Cedar.Experimental` | Node evaluation, partial evaluation, DOT export |
+
+## Conformance
+
+cedar-dotnet passes 62,000/62,000 tests from the official Cedar conformance corpus (the same suite used by cedar-go and the Rust reference implementation).
+
+## Benchmarks
+
+Run with [BenchmarkDotNet](https://benchmarkdotnet.org/):
+
+```
+dotnet run -c Release --project benchmarks/Cedar.Benchmarks/
+```
+
+## Building
+
+```
+dotnet build cedar-dotnet.sln
+dotnet test cedar-dotnet.sln
+dotnet pack cedar-dotnet.sln --configuration Release
+```
+
+Requires .NET 10.0 SDK. TreatWarningsAsErrors is enabled.
+
+## Upstream Sync
+
+cedar-dotnet tracks upstream cedar-go changes via an automated [semport pipeline](semport/semport.dot) that analyzes each upstream commit and ports semantic changes while respecting C# idioms. The pipeline runs daily via [Attractor](https://github.com/TheFellow/fkyeah).
+
+## License
+
+This project is licensed under the Apache-2.0 License.
