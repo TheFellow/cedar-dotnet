@@ -133,6 +133,47 @@ public sealed class StreamTests
         Assert.Throws<IOException>(() => encoder.Encode(policy));
     }
 
+    [Fact]
+    public void PolicyDecoder_TryDecode_ReadsPoliciesSequentially()
+    {
+        const string input = "permit(principal, action, resource);\nforbid(principal, action, resource);\n";
+        using StringReader reader = new(input);
+        PolicyDecoder decoder = new(reader);
+
+        bool got0 = decoder.TryDecode(out Policy? policy0);
+        bool got1 = decoder.TryDecode(out Policy? policy1);
+        bool got2 = decoder.TryDecode(out Policy? policy2);
+
+        Assert.True(got0);
+        Assert.NotNull(policy0);
+        Assert.Equal("permit(principal, action, resource);", policy0.MarshalCedar());
+
+        Assert.True(got1);
+        Assert.NotNull(policy1);
+        Assert.Equal("forbid(principal, action, resource);", policy1.MarshalCedar());
+
+        Assert.False(got2);
+        Assert.Null(policy2);
+    }
+
+    [Fact]
+    public void PolicyDecoder_TryDecode_EmptyReader_ReturnsFalse()
+    {
+        using StringReader reader = new(string.Empty);
+        PolicyDecoder decoder = new(reader);
+
+        bool got = decoder.TryDecode(out Policy? policy);
+
+        Assert.False(got);
+        Assert.Null(policy);
+    }
+
+    [Fact]
+    public void PolicyDecoder_Constructor_NullReader_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => new PolicyDecoder(null!));
+    }
+
     private sealed class ThrowingWriter : TextWriter
     {
         public override Encoding Encoding => Encoding.UTF8;
