@@ -1,249 +1,386 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
+using Cedar.Ast;
+using Cedar.Ast.Internal;
 using Cedar.Core;
-using Cedar.Core.Internal.Parser;
+using Cedar.Types;
 using Xunit;
+using static Cedar.Ast.Values;
 
 namespace Cedar.Tests.Json;
 
 public sealed class PolicyJsonTests
 {
     [Fact]
-    public void MarshalJson_WritesSimplePolicyShape()
+    public void MarshalJson_OmitsNullOptionalScopeFieldsAnnotationsAndConditions()
     {
-        string json = Policy.UnmarshalCedar("permit(principal, action, resource);").MarshalJson();
+        Policy policy = new(CedarAst.Permit().Ast);
 
-        Assert.Equal(
-            "{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"}}",
-            json);
+        string json = policy.MarshalJson();
+
+        Assert.DoesNotContain("\"conditions\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"annotations\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"entity\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"entities\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"entity_type\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"in\"", json, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void UnmarshalJson_ReadsSimplePolicy()
+    public void MarshalJson_IncludesConditionAndAnnotationWhenPresent()
     {
-        Policy policy = Policy.UnmarshalJson("{\"effect\":\"forbid\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"}}\n");
+        Policy policy = new(CedarAst.Annotation("env", "prod")
+            .Permit()
+            .When(Boolean(true))
+            .Ast);
 
-        Assert.Equal(Effect.Forbid, policy.Effect);
-        Assert.Equal("forbid(principal, action, resource);", policy.MarshalCedar());
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"conditions\":[{\"kind\":\"when\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"annotations\":{\"env\":\"prod\"}", json, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void RoundTrip_CedarToJsonToCedar_PreservesSemantics()
+    public void UnmarshalJson_ScopeEqWithoutEntityThrowsJsonException()
     {
-        const string cedar = "@env(\"prod\") permit(principal == User::\"alice\", action in [Action::\"read\"], resource) when { principal.getTag(\"team\") == \"infra\" } unless { false };";
-        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "==" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
 
-        Policy roundTripped = Policy.UnmarshalJson(Policy.UnmarshalCedar(cedar).MarshalJson());
+        JsonException exception = Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
 
-        Assert.Equal(expected, roundTripped.MarshalCedar());
-    }
-
-    [Theory]
-    [InlineData("permit(principal == User::\"alice\", action, resource);", "\"principal\":{\"op\":\"==\",\"entity\":{\"type\":\"User\",\"id\":\"alice\"}}")]
-    [InlineData("permit(principal in User::\"alice\", action, resource);", "\"principal\":{\"op\":\"in\",\"entity\":{\"type\":\"User\",\"id\":\"alice\"}}")]
-    [InlineData("permit(principal is User, action, resource);", "\"principal\":{\"op\":\"is\",\"entity_type\":\"User\"}")]
-    [InlineData("permit(principal is User in Org::\"acme\", action, resource);", "\"principal\":{\"op\":\"is\",\"entity_type\":\"User\",\"in\":{\"type\":\"Org\",\"id\":\"acme\"}}")]
-    [InlineData("permit(principal, action in [Action::\"read\", Action::\"write\"], resource);", "\"action\":{\"op\":\"in\",\"entities\":[{\"type\":\"Action\",\"id\":\"read\"},{\"type\":\"Action\",\"id\":\"write\"}]}")]
-    [InlineData("permit(principal, action, resource is Doc in Folder::\"f1\");", "\"resource\":{\"op\":\"is\",\"entity_type\":\"Doc\",\"in\":{\"type\":\"Folder\",\"id\":\"f1\"}}")]
-    public void MarshalJson_EncodesScopeVariants(string cedar, string expectedFragment)
-    {
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
-
-        Assert.Contains(expectedFragment, json, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("1 == 2", "==")]
-    [InlineData("1 != 2", "!=")]
-    [InlineData("1 < 2", "<")]
-    [InlineData("1 <= 2", "<=")]
-    [InlineData("1 > 2", ">")]
-    [InlineData("1 >= 2", ">=")]
-    [InlineData("principal && action", "&&")]
-    [InlineData("principal || action", "||")]
-    [InlineData("1 + 2", "+")]
-    [InlineData("1 - 2", "-")]
-    [InlineData("1 * 2", "*")]
-    [InlineData("principal in resource", "in")]
-    [InlineData("-principal", "neg")]
-    [InlineData("context.attr", ".")]
-    [InlineData("context has attr", "has")]
-    [InlineData("context.name like \"ab*\"", "like")]
-    [InlineData("if true then 1 else 2", "if-then-else")]
-    [InlineData("[1,2]", "Set")]
-    [InlineData("{a:1}", "Record")]
-    [InlineData("[1].contains(1)", ".contains")]
-    [InlineData("[1].containsAll([1])", ".containsAll")]
-    [InlineData("[1].containsAny([1])", ".containsAny")]
-    [InlineData("[].isEmpty()", ".isEmpty")]
-    [InlineData("principal.getTag(\"k\")", ".getTag")]
-    [InlineData("principal.hasTag(\"k\")", ".hasTag")]
-    [InlineData("resource is Folder", "is")]
-    [InlineData("resource is Folder in Org::\"acme\"", "is")]
-    [InlineData("myExt(1, true)", "myExt")]
-    public void MarshalJson_UsesExpectedNodeDiscriminators(string expression, string expectedDiscriminator)
-    {
-        string cedar = $"permit(principal, action, resource) when {{ {expression} }};";
-        using JsonDocument document = JsonDocument.Parse(Policy.UnmarshalCedar(cedar).MarshalJson());
-        JsonElement body = document.RootElement.GetProperty("conditions")[0].GetProperty("body");
-        JsonProperty discriminator = Assert.Single(body.EnumerateObject());
-
-        Assert.Equal(expectedDiscriminator, discriminator.Name);
+        Assert.Contains("Scope with op '==' must include 'entity'.", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void MarshalJson_EmptySetSerializesAsSetEmptyArray()
+    public void UnmarshalJson_ValueNode_BoolTrue_IsCedarBoolTrue()
     {
-        const string cedar = "permit(principal, action, resource) when { [] };";
-        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
+        NodeValue node = UnmarshalConditionValueNode("true");
 
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement body = document.RootElement.GetProperty("conditions")[0].GetProperty("body");
+        Assert.Equal(CedarBool.True, node.Value);
+    }
 
-        Assert.True(body.TryGetProperty("Set", out JsonElement setElement));
-        Assert.Equal(JsonValueKind.Array, setElement.ValueKind);
-        Assert.Equal(0, setElement.GetArrayLength());
-        Assert.Single(body.EnumerateObject());
+    [Fact]
+    public void UnmarshalJson_ValueNode_BoolFalse_IsCedarBoolFalse()
+    {
+        NodeValue node = UnmarshalConditionValueNode("false");
 
+        Assert.Equal(CedarBool.False, node.Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ValueNode_Long_IsCedarLong()
+    {
+        NodeValue node = UnmarshalConditionValueNode("42");
+
+        Assert.Equal(new CedarLong(42), node.Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ValueNode_ExplicitEntity_IsEntityUid()
+    {
+        NodeValue node = UnmarshalConditionValueNode("""
+            { "__entity": { "type": "User", "id": "alice" } }
+            """);
+
+        EntityUid uid = Assert.IsType<EntityUid>(node.Value);
+        Assert.Equal(new EntityType("User"), uid.Type);
+        Assert.Equal(new CedarString("alice"), uid.Id);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ValueNode_NonIntegerNumber_ThrowsJsonException()
+    {
+        JsonException exception = Assert.Throws<JsonException>(() => UnmarshalConditionValueNode("3.14"));
+
+        Assert.Contains("signed 64-bit integer", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyDecimalExtensionCall_IsNodeExtensionCall()
+    {
+        const string bodyJson = """
+            { "decimal": [{ "Value": "1.0" }] }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal("decimal", call.Name);
+
+        NodeValue arg = Assert.IsType<NodeValue>(Assert.Single(call.Args));
+        Assert.Equal(new CedarString("1.0"), Assert.IsType<CedarString>(arg.Value));
+
+        string remarshaled = policy.MarshalJson();
+        Assert.Contains("\"decimal\":[{\"Value\":\"1.0\"}]", remarshaled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyIpExtensionCall_IsNodeExtensionCall()
+    {
+        const string bodyJson = """
+            { "ip": [{ "Value": "127.0.0.1" }] }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal("ip", call.Name);
+
+        NodeValue arg = Assert.IsType<NodeValue>(Assert.Single(call.Args));
+        Assert.Equal(new CedarString("127.0.0.1"), Assert.IsType<CedarString>(arg.Value));
+
+        string remarshaled = policy.MarshalJson();
+        Assert.Contains("\"ip\":[{\"Value\":\"127.0.0.1\"}]", remarshaled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyLessThanExtensionCall_RoundTripsNestedDecimalCalls()
+    {
+        const string bodyJson = """
+            {
+              "lessThan": [
+                { "decimal": [{ "Value": "1.0" }] },
+                { "decimal": [{ "Value": "2.0" }] }
+              ]
+            }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal("lessThan", call.Name);
+        Assert.Equal(2, call.Args.Length);
+
+        NodeExtensionCall left = Assert.IsType<NodeExtensionCall>(call.Args[0]);
+        NodeExtensionCall right = Assert.IsType<NodeExtensionCall>(call.Args[1]);
+
+        Assert.Equal("decimal", left.Name);
+        Assert.Equal("decimal", right.Name);
+        Assert.Equal(new CedarString("1.0"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(left.Args)).Value));
+        Assert.Equal(new CedarString("2.0"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(right.Args)).Value));
+
+        string remarshaled = policy.MarshalJson();
+        Assert.Contains("\"lessThan\":[{\"decimal\":[{\"Value\":\"1.0\"}]},{\"decimal\":[{\"Value\":\"2.0\"}]}]", remarshaled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyIsIpv4ExtensionCall_RoundTripsNestedIpCall()
+    {
+        const string bodyJson = """
+            {
+              "isIpv4": [
+                { "ip": [{ "Value": "127.0.0.1" }] }
+              ]
+            }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal("isIpv4", call.Name);
+
+        NodeExtensionCall arg = Assert.IsType<NodeExtensionCall>(Assert.Single(call.Args));
+        Assert.Equal("ip", arg.Name);
+        Assert.Equal(new CedarString("127.0.0.1"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(arg.Args)).Value));
+
+        string remarshaled = policy.MarshalJson();
+        Assert.Contains("\"isIpv4\":[{\"ip\":[{\"Value\":\"127.0.0.1\"}]}]", remarshaled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyIsInRangeExtensionCall_RoundTripsNestedIpCalls()
+    {
+        const string bodyJson = """
+            {
+              "isInRange": [
+                { "ip": [{ "Value": "192.168.1.10" }] },
+                { "ip": [{ "Value": "192.168.1.0/24" }] }
+              ]
+            }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal("isInRange", call.Name);
+        Assert.Equal(2, call.Args.Length);
+
+        NodeExtensionCall left = Assert.IsType<NodeExtensionCall>(call.Args[0]);
+        NodeExtensionCall right = Assert.IsType<NodeExtensionCall>(call.Args[1]);
+
+        Assert.Equal("ip", left.Name);
+        Assert.Equal("ip", right.Name);
+        Assert.Equal(new CedarString("192.168.1.10"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(left.Args)).Value));
+        Assert.Equal(new CedarString("192.168.1.0/24"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(right.Args)).Value));
+
+        string remarshaled = policy.MarshalJson();
+        Assert.Contains("\"isInRange\":[{\"ip\":[{\"Value\":\"192.168.1.10\"}]},{\"ip\":[{\"Value\":\"192.168.1.0/24\"}]}]", remarshaled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyIsSet_DeserializesSetNode()
+    {
+        const string bodyJson = """
+            {
+              "Set": [
+                { "Value": true },
+                { "Value": 42 }
+              ]
+            }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeSet set = Assert.IsType<NodeSet>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(2, set.Elements.Length);
+
+        NodeValue first = Assert.IsType<NodeValue>(set.Elements[0]);
+        Assert.Equal(CedarBool.True, first.Value);
+
+        NodeValue second = Assert.IsType<NodeValue>(set.Elements[1]);
+        Assert.Equal(new CedarLong(42), second.Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ConditionBodyIsRecord_DeserializesRecordNode()
+    {
+        const string bodyJson = """
+            {
+              "Record": {
+                "x": { "Value": "hello" }
+              }
+            }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeRecord record = Assert.IsType<NodeRecord>(Assert.Single(policy.Ast.Conditions));
+        NodeRecordElement element = Assert.Single(record.Elements);
+
+        Assert.Equal(new CedarString("x"), element.Key);
+        Assert.Equal(new CedarString("hello"), Assert.IsType<NodeValue>(element.Value).Value);
+    }
+
+    [Fact]
+    public void RoundTrip_SetNodeCondition_PreservesStructure()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(Set(Long(1), Long(2)))
+            .Ast);
+
+        string json = policy.MarshalJson();
         Policy roundTripped = Policy.UnmarshalJson(json);
 
-        Assert.Equal(expected, roundTripped.MarshalCedar());
+        NodeSet set = Assert.IsType<NodeSet>(Assert.Single(roundTripped.Ast.Conditions));
+        Assert.Equal(2, set.Elements.Length);
+        Assert.Equal(new CedarLong(1), Assert.IsType<NodeValue>(set.Elements[0]).Value);
+        Assert.Equal(new CedarLong(2), Assert.IsType<NodeValue>(set.Elements[1]).Value);
     }
 
     [Fact]
-    public void MarshalJson_UsesRecordPairsShape()
+    public void RoundTrip_RecordNodeCondition_PreservesStructure()
     {
-        string json = Policy.UnmarshalCedar("permit(principal, action, resource) when { {a: 1, b: 2} };").MarshalJson();
+        Policy policy = new(CedarAst.Permit()
+            .When(RecordNodes(new Dictionary<string, Node>
+            {
+                ["name"] = Boolean(true)
+            }))
+            .Ast);
 
-        Assert.Contains("\"Record\":{\"pairs\":[{\"key\":\"a\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"key\":\"b\"", json, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void MarshalJson_EncodesEmptyStringLikePatternAsLiteralComponent()
-    {
-        string json = Policy.UnmarshalCedar("permit(principal, action, resource) when { context.name like \"\" };").MarshalJson();
-
-        Assert.Contains("\"pattern\":[{\"Literal\":\"\"}]", json, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void RoundTrip_EmptyStringLikePattern_PreservesSemantics()
-    {
-        const string cedar = "permit(principal, action, resource) when { context.name like \"\" };";
-        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
-
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
+        string json = policy.MarshalJson();
         Policy roundTripped = Policy.UnmarshalJson(json);
 
-        Assert.Contains("\"pattern\":[{\"Literal\":\"\"}]", json, StringComparison.Ordinal);
-        Assert.Equal(expected, roundTripped.MarshalCedar());
+        NodeRecord record = Assert.IsType<NodeRecord>(Assert.Single(roundTripped.Ast.Conditions));
+        NodeRecordElement element = Assert.Single(record.Elements);
+
+        Assert.Equal(new CedarString("name"), element.Key);
+        Assert.Equal(CedarBool.True, Assert.IsType<NodeValue>(element.Value).Value);
     }
 
     [Fact]
-    public void UnmarshalJson_ReadsEmptyStringLikePatternLiteralComponent()
+    public void UnmarshalJson_ConditionBodyIfThenElse_DeserializesNodeIfThenElse()
     {
-        const string json = "{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"},\"conditions\":[{\"kind\":\"when\",\"body\":{\"like\":{\"left\":{\".\":{\"left\":{\"Var\":\"context\"},\"attr\":\"name\"}},\"pattern\":[{\"Literal\":\"\"}]}}}]}";
+        const string bodyJson = """
+            {
+              "if-then-else": {
+                "if": { "Value": true },
+                "then": { "Value": 1 },
+                "else": { "Value": 2 }
+              }
+            }
+            """;
 
-        Policy policy = Policy.UnmarshalJson(json);
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
-        Assert.Equal("permit(principal, action, resource)\n  when { context.name like \"\" };", policy.MarshalCedar());
+        NodeIfThenElse node = Assert.IsType<NodeIfThenElse>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(CedarBool.True, Assert.IsType<NodeValue>(node.If).Value);
+        Assert.Equal(new CedarLong(1), Assert.IsType<NodeValue>(node.Then).Value);
+        Assert.Equal(new CedarLong(2), Assert.IsType<NodeValue>(node.Else).Value);
     }
 
     [Fact]
-    public void UnmarshalJson_ReadsRecordPairsShape()
+    public void RoundTrip_IfThenElseCondition_PreservesIfThenElseJsonShape()
     {
-        const string json = "{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"},\"conditions\":[{\"kind\":\"when\",\"body\":{\"Record\":{\"pairs\":[{\"key\":\"a\",\"value\":{\"Value\":1}},{\"key\":\"b\",\"value\":{\"Value\":2}}]}}}]}";
+        const string bodyJson = """
+            {
+              "if-then-else": {
+                "if": { "Value": true },
+                "then": { "Value": 1 },
+                "else": { "Value": 2 }
+              }
+            }
+            """;
 
-        Policy policy = Policy.UnmarshalJson(json);
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
-        Assert.Equal("permit(principal, action, resource)\n  when { {a: 1, b: 2} };", policy.MarshalCedar());
-    }
-
-    [Fact]
-    public void MarshalJson_SortsAnnotationKeys()
-    {
-        string json = Policy.UnmarshalCedar("@z(\"last\") @a(\"first\") permit(principal, action, resource);").MarshalJson();
-
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement annotations = document.RootElement.GetProperty("annotations");
-        JsonElement.ObjectEnumerator enumerator = annotations.EnumerateObject();
-
-        Assert.True(enumerator.MoveNext());
-        Assert.Equal("a", enumerator.Current.Name);
-        Assert.True(enumerator.MoveNext());
-        Assert.Equal("z", enumerator.Current.Name);
-        Assert.False(enumerator.MoveNext());
-    }
-
-    [Fact]
-    public void RoundTrip_PreservesLiteralSentinelKeysInRecord()
-    {
-        const string cedar = "permit(principal, action, resource) when { {\"__entity\": \"literal\", \"__extn\": \"also-literal\"} };";
-        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
-
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
+        string json = policy.MarshalJson();
         Policy roundTripped = Policy.UnmarshalJson(json);
 
-        Assert.Contains("\"key\":\"__entity\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"key\":\"__extn\"", json, StringComparison.Ordinal);
-        Assert.Equal(expected, roundTripped.MarshalCedar());
+        Assert.Contains("\"if-then-else\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"if\":{\"Value\":true}", json, StringComparison.Ordinal);
+        Assert.Contains("\"then\":{\"Value\":1}", json, StringComparison.Ordinal);
+        Assert.Contains("\"else\":{\"Value\":2}", json, StringComparison.Ordinal);
+
+        NodeIfThenElse node = Assert.IsType<NodeIfThenElse>(Assert.Single(roundTripped.Ast.Conditions));
+        Assert.Equal(CedarBool.True, Assert.IsType<NodeValue>(node.If).Value);
+        Assert.Equal(new CedarLong(1), Assert.IsType<NodeValue>(node.Then).Value);
+        Assert.Equal(new CedarLong(2), Assert.IsType<NodeValue>(node.Else).Value);
     }
 
-    [Fact]
-    public void UnmarshalJson_AcceptsDotMethodDiscriminators()
+    private static NodeValue UnmarshalConditionValueNode(string valueJson)
     {
-        const string json = "{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"},\"conditions\":[{\"kind\":\"when\",\"body\":{\".contains\":{\"left\":{\"Set\":[{\"Value\":1}]},\"arg\":{\"Value\":1}}}}]}";
+        Policy policy = UnmarshalPolicyWithConditionBody($$"""
+            { "Value": {{valueJson}} }
+            """);
 
-        Policy policy = Policy.UnmarshalJson(json);
-
-        Assert.Equal("permit(principal, action, resource)\n  when { [1].contains(1) };", policy.MarshalCedar());
+        INode condition = Assert.Single(policy.Ast.Conditions);
+        return Assert.IsType<NodeValue>(condition);
     }
 
-    [Fact]
-    public void MarshalJson_RoundTripsThroughParserAst()
+    private static Policy UnmarshalPolicyWithConditionBody(string bodyJson)
     {
-        const string cedar = "permit(principal, action, resource) when { context has user.name };";
+        string json = $$"""
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" },
+              "conditions": [
+                {
+                  "kind": "when",
+                  "body": {{bodyJson}}
+                }
+              ]
+            }
+            """;
 
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
-        Policy reparsed = Policy.UnmarshalJson(json);
-
-        Assert.Equal(CedarWriter.Write(Assert.Single(CedarParser.ParsePolicies(cedar))), reparsed.MarshalCedar());
-    }
-
-    [Fact]
-    public void MarshalJson_EmptyRecord_PreservesRecordDiscriminator()
-    {
-        string json = Policy.UnmarshalCedar("permit(principal, action, resource) when { {} };").MarshalJson();
-
-        Assert.Contains("\"Record\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"pairs\":[]", json, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void RoundTrip_EmptyRecord_PreservesStructure()
-    {
-        const string cedar = "permit(principal, action, resource) when { {} };";
-        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
-
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
-        Policy roundTripped = Policy.UnmarshalJson(json);
-
-        Assert.Equal(expected, roundTripped.MarshalCedar());
-    }
-
-    [Fact]
-    public void RoundTrip_RecordWithExtensionCallValues_PreservesExtensionCalls()
-    {
-        const string cedar = "permit(principal, action, resource) when { {d: duration(\"1h\"), dt: datetime(\"2024-01-01T00:00:00Z\")} };";
-        string expected = Policy.UnmarshalCedar(cedar).MarshalCedar();
-
-        string json = Policy.UnmarshalCedar(cedar).MarshalJson();
-        Policy roundTripped = Policy.UnmarshalJson(json);
-
-        Assert.Contains("\"duration\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"datetime\"", json, StringComparison.Ordinal);
-        Assert.Equal(expected, roundTripped.MarshalCedar());
+        return Policy.UnmarshalJson(json);
     }
 }

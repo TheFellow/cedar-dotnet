@@ -15,15 +15,19 @@ internal sealed record ScopeJsonModel
     public required string Op { get; init; }
 
     [JsonPropertyName("entity")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public EntityUidJsonModel? Entity { get; init; }
 
     [JsonPropertyName("entity_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? EntityType { get; init; }
 
     [JsonPropertyName("entities")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<EntityUidJsonModel>? Entities { get; init; }
 
     [JsonPropertyName("in")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public EntityUidJsonModel? In { get; init; }
 
     internal static ScopeJsonModel FromAst(IScope scope)

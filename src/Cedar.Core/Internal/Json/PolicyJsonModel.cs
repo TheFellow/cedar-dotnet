@@ -30,10 +30,12 @@ internal sealed record PolicyJsonModel
 
     [JsonPropertyName("conditions")]
     [JsonPropertyOrder(4)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ConditionJsonModel>? Conditions { get; init; }
 
     [JsonPropertyName("annotations")]
     [JsonPropertyOrder(5)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SortedDictionary<string, string>? Annotations { get; init; }
 
     internal static PolicyJsonModel FromAst(PolicyAst policy)
