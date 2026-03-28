@@ -24,7 +24,21 @@ public sealed record SchemaDocument
 
     public string MarshalCedar()
     {
+        if (IsEmpty())
+        {
+            throw new InvalidOperationException("Schema is empty.");
+        }
+
         return SchemaWriter.Write(this);
+    }
+
+    private bool IsEmpty()
+    {
+        return this.Namespaces.Count == 0
+            && this.GlobalNamespace.Entities.Count == 0
+            && this.GlobalNamespace.Enums.Count == 0
+            && this.GlobalNamespace.Actions.Count == 0
+            && this.GlobalNamespace.CommonTypes.Count == 0;
     }
 
     public string MarshalJson()

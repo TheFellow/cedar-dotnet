@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cedar.Types;
 using Xunit;
@@ -7,9 +8,17 @@ namespace Cedar.Schema.Tests;
 public sealed class SchemaWriterTests
 {
     [Fact]
-    public void MarshalCedar_WritesEmptyDocumentAsEmptyString()
+    public void MarshalCedar_ThrowsForEmptyDocument()
     {
-        Assert.Equal(string.Empty, new SchemaDocument().MarshalCedar());
+        Assert.Throws<InvalidOperationException>(() => new SchemaDocument().MarshalCedar());
+    }
+
+    [Fact]
+    public void MarshalCedar_ThrowsWithMessage_ForEmptyDocument()
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => new SchemaDocument().MarshalCedar());
+
+        Assert.Equal("Schema is empty.", exception.Message);
     }
 
     [Fact]

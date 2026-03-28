@@ -16,8 +16,9 @@ public static class BatchAuthorization
 
     private readonly record struct AuthorizationOptions(Action<BatchResult> Callback, Effect IgnoreBias, bool IncludeDiagnostics);
 
+    /// <param name="policies">The policies to evaluate. Callers with a <see cref="PolicySet" /> should pass <see cref="PolicySet.All" />.</param>
     public static void Authorize(
-        PolicySet policies,
+        IEnumerable<KeyValuePair<PolicyId, Policy>> policies,
         IEntityGetter? entities,
         BatchRequest request,
         params BatchOption[] options)
@@ -25,22 +26,25 @@ public static class BatchAuthorization
         Authorize(policies, entities, request, (IReadOnlyList<BatchOption>)options, CancellationToken.None);
     }
 
+    /// <param name="policies">The policies to evaluate. Callers with a <see cref="PolicySet" /> should pass <see cref="PolicySet.All" />.</param>
     public static void Authorize(
-        PolicySet policies,
+        IEnumerable<KeyValuePair<PolicyId, Policy>> policies,
         IEntityGetter? entities,
         BatchRequest request,
         IReadOnlyList<BatchOption> options,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(policies);
         ArgumentNullException.ThrowIfNull(options);
 
         AuthorizationOptions authorizationOptions = ParseOptionCallback(options);
         AuthorizeCore(policies, entities, request, authorizationOptions, cancellationToken);
     }
 
+    /// <param name="policies">The policies to evaluate. Callers with a <see cref="PolicySet" /> should pass <see cref="PolicySet.All" />.</param>
     /// <exception cref="Exception">Any exception thrown by <paramref name="callback"/> propagates directly to the caller.</exception>
     public static void Authorize(
-        PolicySet policies,
+        IEnumerable<KeyValuePair<PolicyId, Policy>> policies,
         IEntityGetter? entities,
         BatchRequest request,
         Action<BatchResult> callback,
@@ -49,9 +53,10 @@ public static class BatchAuthorization
         Authorize(policies, entities, request, callback, options: null, cancellationToken);
     }
 
+    /// <param name="policies">The policies to evaluate. Callers with a <see cref="PolicySet" /> should pass <see cref="PolicySet.All" />.</param>
     /// <exception cref="Exception">Any exception thrown by <paramref name="callback"/> propagates directly to the caller.</exception>
     public static void Authorize(
-        PolicySet policies,
+        IEnumerable<KeyValuePair<PolicyId, Policy>> policies,
         IEntityGetter? entities,
         BatchRequest request,
         Action<BatchResult> callback,
@@ -67,7 +72,7 @@ public static class BatchAuthorization
     }
 
     private static void AuthorizeCore(
-        PolicySet policies,
+        IEnumerable<KeyValuePair<PolicyId, Policy>> policies,
         IEntityGetter? entities,
         BatchRequest request,
         AuthorizationOptions options,
@@ -85,7 +90,7 @@ public static class BatchAuthorization
         cancellationToken.ThrowIfCancellationRequested();
 
         IEntityGetter effectiveEntities = entities ?? new EntityMap();
-        IReadOnlyDictionary<PolicyId, Policy> policyMap = policies.Map();
+        IReadOnlyDictionary<PolicyId, Policy> policyMap = policies.ToDictionary(static entry => entry.Key, static entry => entry.Value);
         PolicyBatch policyBatch = new(policyMap);
         EvalEnv env = new(
             effectiveEntities,

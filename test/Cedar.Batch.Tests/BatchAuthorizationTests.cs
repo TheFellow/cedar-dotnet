@@ -28,7 +28,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1, Doc2, Doc3]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request);
 
         Assert.Equal(3, results.Count);
         Assert.All(results, static result => Assert.Equal(Decision.Allow, result.Decision));
@@ -44,7 +44,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("action", [Read, Write]), ("resource", [Doc1, Doc2]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request);
 
         Assert.Equal(4, results.Count);
         Assert.Equal(4, results.Select(static result => (result.Request.Action, result.Request.Resource)).Distinct().Count());
@@ -58,7 +58,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1, Doc2]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(new PolicySet(), request);
+        IReadOnlyList<BatchResult> results = Collect(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), request);
 
         Assert.Equal(2, results.Count);
         Assert.All(results, static result =>
@@ -76,7 +76,7 @@ public sealed class BatchAuthorizationTests
             ("allow_all", "permit(principal, action, resource);"),
             ("deny_all", "forbid(principal, action, resource);"));
 
-        BatchResult result = Assert.Single(Collect(policies, new BatchRequest(Alice, Read, Doc1, new CedarRecord())));
+        BatchResult result = Assert.Single(Collect(policies.All(), new BatchRequest(Alice, Read, Doc1, new CedarRecord())));
 
         Assert.Equal(Decision.Deny, result.Decision);
         DiagnosticReason reason = Assert.Single(result.Diagnostic.Reasons);
@@ -94,7 +94,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1, Doc2]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request)
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request)
             .OrderBy(static result => result.Request.Resource!.Id.Value)
             .ToArray();
 
@@ -121,7 +121,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1, Doc2]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request);
 
         Assert.Equal(2, results.Count);
         Assert.All(results, static result =>
@@ -146,7 +146,7 @@ public sealed class BatchAuthorizationTests
                     [Record(("level", new CedarLong(41))), Record(("level", new CedarLong(42)))]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request);
 
         Assert.Equal(new[] { Decision.Deny, Decision.Allow }, results.Select(static result => result.Decision));
     }
@@ -163,7 +163,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("level", [new CedarLong(41), new CedarLong(42)]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request);
 
         Assert.Equal(new[] { Decision.Deny, Decision.Allow }, results.Select(static result => result.Decision));
     }
@@ -177,7 +177,7 @@ public sealed class BatchAuthorizationTests
             """));
         BatchRequest request = new(Alice, Read, Doc1, Record(("key", new CedarLong(42))));
 
-        BatchResult result = Assert.Single(Collect(policies, request));
+        BatchResult result = Assert.Single(Collect(policies.All(), request));
 
         Assert.Equal(Decision.Allow, result.Decision);
         Assert.Equal(new Request(Alice, Read, Doc1, Record(("key", new CedarLong(42)))), result.Request);
@@ -192,7 +192,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1, Doc2]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request, null);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request, null);
 
         Assert.Equal(2, results.Count);
         Assert.All(results, static result => Assert.Equal(Decision.Allow, result.Decision));
@@ -211,7 +211,7 @@ public sealed class BatchAuthorizationTests
             """));
         BatchRequest request = new(Alice, Read, Doc1, BatchVariable.Ignore());
 
-        BatchResult result = Assert.Single(Collect(policies, request));
+        BatchResult result = Assert.Single(Collect(policies.All(), request));
 
         Assert.Equal(Decision.Allow, result.Decision);
         Assert.Null(result.Request.Context);
@@ -237,7 +237,7 @@ public sealed class BatchAuthorizationTests
                 when { context.level == 42 };
                 """));
 
-        BatchResult result = Assert.Single(Collect(policies, new BatchRequest(Alice, Read, Doc1, BatchVariable.Ignore())));
+        BatchResult result = Assert.Single(Collect(policies.All(), new BatchRequest(Alice, Read, Doc1, BatchVariable.Ignore())));
 
         Assert.Equal(Decision.Allow, result.Decision);
         Assert.Single(result.Diagnostic.Reasons);
@@ -266,8 +266,8 @@ public sealed class BatchAuthorizationTests
 
         BatchRequest request = new(Alice, Read, Doc1, BatchVariable.Ignore());
 
-        BatchResult defaultResult = Assert.Single(Collect(policies, request));
-        BatchResult explicitResult = Assert.Single(Collect(policies, request, options: [BatchOption.WithIgnorePermit()]));
+        BatchResult defaultResult = Assert.Single(Collect(policies.All(), request));
+        BatchResult explicitResult = Assert.Single(Collect(policies.All(), request, options: [BatchOption.WithIgnorePermit()]));
 
         Assert.Equal(Decision.Allow, defaultResult.Decision);
         Assert.Equal(defaultResult.Decision, explicitResult.Decision);
@@ -297,7 +297,7 @@ public sealed class BatchAuthorizationTests
 
         BatchRequest request = new(Alice, Read, Doc1, BatchVariable.Ignore());
 
-        BatchResult result = Assert.Single(Collect(policies, request, options: [BatchOption.WithIgnoreForbid()]));
+        BatchResult result = Assert.Single(Collect(policies.All(), request, options: [BatchOption.WithIgnoreForbid()]));
 
         Assert.Equal(Decision.Deny, result.Decision);
         Assert.Single(result.Diagnostic.Reasons);
@@ -326,7 +326,7 @@ public sealed class BatchAuthorizationTests
                 ("resource", [Doc1, Doc2]))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(policies, request);
+        IReadOnlyList<BatchResult> results = Collect(policies.All(), request);
 
         Assert.Equal(4, results.Count);
         Assert.All(results, static result => Assert.Null(result.Request.Context));
@@ -354,7 +354,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1]))
         };
 
-        BatchResult batchResult = Assert.Single(Collect(policies, request));
+        BatchResult batchResult = Assert.Single(Collect(policies.All(), request));
         (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(
             policies,
             new EntityMap(),
@@ -379,7 +379,7 @@ public sealed class BatchAuthorizationTests
         List<BatchResult> results = [];
 
         BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             BatchOption.WithCallback(result => results.Add(result)));
@@ -405,7 +405,7 @@ public sealed class BatchAuthorizationTests
         List<BatchResult> results = [];
 
         BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             BatchOption.WithDiagnosticCallback(result => results.Add(result)));
@@ -444,7 +444,7 @@ public sealed class BatchAuthorizationTests
         BatchResult? result = null;
 
         BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             BatchOption.WithCallback(batchResult => result = batchResult),
@@ -472,7 +472,7 @@ public sealed class BatchAuthorizationTests
                 ("resource", [Doc1]))
         };
 
-        BatchResult result = Assert.Single(Collect(policies, request));
+        BatchResult result = Assert.Single(Collect(policies.All(), request));
 
         Assert.Equal(Decision.Deny, result.Decision);
         Assert.Empty(result.Diagnostic.Reasons);
@@ -487,7 +487,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(BatchVariable.Variable("principal"), Read, Doc1, new CedarRecord());
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => BatchAuthorization.Authorize(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), new EntityMap(), request, static _ => { }));
 
         Assert.Contains("unbound variable", exception.Message, StringComparison.Ordinal);
     }
@@ -500,7 +500,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", [Doc1]))
         };
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => BatchAuthorization.Authorize(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), new EntityMap(), request, static _ => { }));
 
         Assert.Contains("unused variable", exception.Message, StringComparison.Ordinal);
     }
@@ -510,7 +510,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(null, Read, Doc1, new CedarRecord());
 
-        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("principal", exception.PartName);
     }
@@ -520,7 +520,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(Alice, null, Doc1, new CedarRecord());
 
-        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("action", exception.PartName);
     }
@@ -530,7 +530,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(Alice, Read, null, new CedarRecord());
 
-        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("resource", exception.PartName);
     }
@@ -540,7 +540,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(Alice, Read, Doc1, null);
 
-        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("context", exception.PartName);
     }
@@ -553,7 +553,7 @@ public sealed class BatchAuthorizationTests
             Variables = Values(("resource", Array.Empty<ICedarData>()))
         };
 
-        IReadOnlyList<BatchResult> results = Collect(Set(("permit_all", "permit(principal, action, resource);")), request);
+        IReadOnlyList<BatchResult> results = Collect(Set(("permit_all", "permit(principal, action, resource);")).All(), request);
 
         Assert.Empty(results);
     }
@@ -563,7 +563,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(new CedarString("not-an-entity"), Read, Doc1, new CedarRecord());
 
-        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")).All(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("principal", exception.PartName);
     }
@@ -573,7 +573,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(Alice, new CedarString("not-an-entity"), Doc1, new CedarRecord());
 
-        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")).All(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("action", exception.PartName);
     }
@@ -583,7 +583,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(Alice, Read, new CedarString("not-an-entity"), new CedarRecord());
 
-        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")).All(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("resource", exception.PartName);
     }
@@ -593,7 +593,7 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(Alice, Read, Doc1, new CedarString("not-a-record"));
 
-        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")).All(), new EntityMap(), request, static _ => { }));
 
         Assert.Equal("context", exception.PartName);
     }
@@ -606,7 +606,7 @@ public sealed class BatchAuthorizationTests
         cancellationTokenSource.Cancel();
 
         Assert.Throws<OperationCanceledException>(() => BatchAuthorization.Authorize(
-            new PolicySet(),
+            Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(),
             new EntityMap(),
             request,
             static _ => { },
@@ -619,7 +619,7 @@ public sealed class BatchAuthorizationTests
         BatchRequest request = new(Alice, Read, Doc1, new CedarRecord());
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => BatchAuthorization.Authorize(
-            new PolicySet(),
+            Enumerable.Empty<KeyValuePair<PolicyId, Policy>>(),
             new EntityMap(),
             request,
             static _ => throw new InvalidOperationException("callback error")));
@@ -639,7 +639,7 @@ public sealed class BatchAuthorizationTests
         int count = 0;
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             _ =>
@@ -668,7 +668,7 @@ public sealed class BatchAuthorizationTests
         InvalidOperationException callbackError = new("callback error");
 
         Exception exception = Assert.ThrowsAny<Exception>(() => BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             _ =>
@@ -694,7 +694,7 @@ public sealed class BatchAuthorizationTests
         int count = 0;
 
         Assert.Throws<OperationCanceledException>(() => BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             _ =>
@@ -720,7 +720,7 @@ public sealed class BatchAuthorizationTests
         int count = 0;
 
         Assert.Throws<OperationCanceledException>(() => BatchAuthorization.Authorize(
-            policies,
+            policies.All(),
             new EntityMap(),
             request,
             _ =>
@@ -737,7 +737,7 @@ public sealed class BatchAuthorizationTests
     }
 
     private static IReadOnlyList<BatchResult> Collect(
-        PolicySet policies,
+        IEnumerable<KeyValuePair<PolicyId, Policy>> policies,
         BatchRequest request,
         IEntityGetter? entities = null,
         IReadOnlyList<BatchOption>? options = null,
