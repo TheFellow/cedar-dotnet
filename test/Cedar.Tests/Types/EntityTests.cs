@@ -128,7 +128,11 @@ public sealed class EntityTests
             new CedarRecord(),
             new CedarRecord());
 
-        Entity actual = CedarJson.DeserializeEntity(CedarJson.SerializeEntity(expected));
+        string json = CedarJson.SerializeEntity(expected);
+
+        Assert.Contains("\"tags\":{}", json);
+
+        Entity actual = CedarJson.DeserializeEntity(json);
 
         Assert.Equal(expected, actual);
         Assert.Equal(new CedarRecord(), actual.Tags);
