@@ -1,15 +1,11 @@
-a4e576e	2024-09-18T16:18:37-07:00
+# Semport: Next New Commit to Process
 
-Address PR Feedback
+## Commit: d1f59f4
+**Date:** 2024-09-19T12:29:46-07:00
 
-- Lesser becomes ComparableValue
-- Move ComparableValue to evalers only
-- Move all magic values to constants
-- TypeError when incompatible comparable types
-- Support more deserialization for duration/datetime
-- Make the datetime parser easier to follow
-- Drop UnsafeDatetime in favor of FromStdTime(time.UnixMilli(..))
-- Document methods
-- Test Coverage to 100%
+**Full Commit Message:**
+```
+Merge pull request #35 from strongdm/apg/po-515-add-datetime
 
-Signed-off-by: Andrew Gwozdziewycz <andrew.gwozdziewycz@strongdm.com>
+Add the extension types, datetime and duration
+```

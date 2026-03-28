@@ -1,80 +1,157 @@
 PORT
 
-## Commit: a4e576e — "Address PR Feedback"
-Date: 2024-09-18T16:18:37-07:00
+## Commit: d1f59f4
+**Date:** 2024-09-19T12:29:46-07:00
+**Subject:** Add the extension types, datetime and duration (RFC 80)
+
+---
 
 ## Semantic Analysis
 
-This commit makes several meaningful behavioral and API changes that affect the C# implementation:
+This commit introduces two new Cedar extension types per [RFC 80](https://github.com/cedar-policy/rfcs/blob/main/text/0080-datetime-extension.md). These are **first-class Cedar values** with parsing, comparison, arithmetic, JSON serialization, and Cedar policy expression support. Full porting is required.
 
-### 1. New `ErrNotComparable` sentinel error
-- **Go**: `var ErrNotComparable = fmt.Errorf("incompatible types in comparison")` in `types/value.go`
-- **C# target**: Add a corresponding `CedarTypeError` or exception/error value for incompatible comparison types. Check if `Cedar.Types` or `Cedar.Ast` already has a TypeError mechanism.
-- **Impact**: Comparison operations must return an error (not just bool) when types are incompatible.
+### New Types
 
-### 2. `Lesser` interface replaced by `ComparableValue` (moved to evalers only)
-- **Go**: `types/virtual.go` deleted (had `Lesser` with `Less(Value) bool` and `LessEqual(Value) bool`). New `ComparableValue` interface in `internal/eval/` returns `(bool, error)`.
-- **C# target**: If `Cedar.Types` or `Cedar.Core` has a `ILesser` or comparable interface, it should be removed/moved to `Cedar.Ast` internal evaluation. The evaluation layer (Cedar.Ast evalers) should define a comparable abstraction.
-- **Impact**: Comparison failures return typed errors instead of panicking/returning false.
+#### `Datetime` (Go: `types/datetime.go`)
+- Internally stores milliseconds since Unix epoch as `int64`
+- Constructed via:
+  - `datetime("ISO-8601 string")` — parses ISO-8601 date/datetime strings
+  - `FromStdTime(time.Time)` — wraps a Go `time.Time`
+- Methods:
+  - `toDate()` → strips time component (truncates to midnight UTC)
+  - `toTime()` → returns `Duration` representing time-of-day offset from midnight
+  - `offset(Duration)` → returns new `Datetime` shifted by a `Duration`
+  - `durationSince(Datetime)` → returns `Duration` between two `Datetime` values
+- Comparisons: `<`, `<=`, `>`, `>=`, `==` (implements `ComparableValue` interface)
+- JSON: serializes as `{ "__extn": { "fn": "datetime", "arg": "ISO-8601" } }`
+- Cedar text: `datetime("ISO-8601")`
 
-### 3. `LessThan`/`LessThanOrEqual` methods on `Long`, `Datetime`, `Duration`
-- **Go**: Each type now has `LessThan(Value) (bool, error)` and `LessThanOrEqual(Value) (bool, error)` that return `ErrNotComparable` when the RHS is wrong type.
-- **C# target**: 
-  - `src/Cedar.Types/CedarLong.cs` (or equivalent) — add `LessThan(CedarValue)` / `LessThanOrEqual(CedarValue)` returning `(bool, CedarTypeError?)` or throwing on type mismatch
-  - `src/Cedar.Types/CedarDatetime.cs` — same
-  - `src/Cedar.Types/CedarDuration.cs` — same
-- **Impact**: Evaluation of `<`, `<=`, `>`, `>=` operators must propagate type errors.
+#### `Duration` (Go: `types/duration.go`)
+- Internally stores total milliseconds as `int64`
+- Valid units (in order, largest to smallest): `d` (days), `h` (hours), `m` (minutes), `s` (seconds), `ms` (milliseconds)
+- Constructed via:
+  - `duration("NdNhNmNsNms")` — parses Cedar duration string
+  - `DurationFromMillis(int64)`
+  - `FromStdDuration(time.Duration)`
+- Parsing rules:
+  - Units must appear in decreasing order (d > h > m > s > ms)
+  - Each unit may appear at most once
+  - No duplicate or out-of-order units
+  - Supports negative prefix (e.g., `-1h`)
+  - Overflow of int64 milliseconds is an error
+- Methods:
+  - `toMilliseconds()` → `Long` (total ms)
+  - `toSeconds()` → `Long` (total seconds, truncated)
+  - `toMinutes()` → `Long` (total minutes, truncated)
+  - `toHours()` → `Long` (total hours, truncated)
+  - `toDays()` → `Long` (total days, truncated)
+- Comparisons: `<`, `<=`, `>`, `>=`, `==`
+- JSON: serializes as `"NdNhNmNsNms"` string (Cedar extension JSON format)
+- Cedar text: `duration("NdNhNmNsNms")`
 
-### 4. `FromStdTime` replaces `UnsafeDatetime`
-- **Go**: `UnsafeDatetime(millis int64)` is removed; `FromStdTime(time.Time) Datetime` is added (wraps `time.UnixMilli`)
-- **C# target**: If `Cedar.Types` has a `CedarDatetime.FromMilliseconds(long)` or unsafe constructor, ensure there's also a `FromDateTimeOffset(DateTimeOffset)` factory and the unsafe/raw constructor is not public API.
-- **Impact**: Construction semantics are cleaner; raw milliseconds constructor may remain internal.
+### New Extension Functions (Go: `internal/eval/evalers.go`)
+Registered in `newExtensionEval`:
+- `datetime(str)` → `Datetime` literal constructor
+- `duration(str)` → `Duration` literal constructor
+- `toDate(datetime)` → `Datetime`
+- `toTime(datetime)` → `Duration`
+- `offset(datetime, duration)` → `Datetime`
+- `durationSince(datetime, datetime)` → `Duration`
+- `toMilliseconds(duration)` → `Long`
+- `toSeconds(duration)` → `Long`
+- `toMinutes(duration)` → `Long`
+- `toHours(duration)` → `Long`
+- `toDays(duration)` → `Long`
 
-### 5. `FromStdDuration` constructor for Duration
-- **Go**: `FromStdDuration(time.Duration) Duration` added
-- **C# target**: `src/Cedar.Types/CedarDuration.cs` — add `FromTimeSpan(TimeSpan)` factory if not present.
+### New Comparison Infrastructure (Go: `internal/eval/comparable.go`)
+- `ComparableValue` interface with `LessThan(Value) (bool, error)` and `LessThanOrEqual(Value) (bool, error)`
+- Generic evaluators: `comparableValueLessThanEval`, `comparableValueGreaterThanEval`, `comparableValueLessThanOrEqualEval`, `comparableValueGreaterThanOrEqualEval`
+- `ErrNotComparable` error sentinel (Go: `types/value.go`)
 
-### 6. Datetime error message renames
-- "timezone indicator" → "time zone designator"
-- "expected time offset" → "invalid time zone offset"  
-- "unexpected trailer" → "unexpected trailer after time zone designator"
-- **C# target**: Update error messages in datetime parser (likely in `src/Cedar.Types/CedarDatetime.cs` or parser file).
+### New Constants (Go: `internal/consts/consts.go`)
+- `MillisPerSecond = 1000`
+- `MillisPerMinute = 60000`
+- `MillisPerHour = 3600000`
+- `MillisPerDay = 86400000`
 
-### 7. Magic constants extracted in evalers
-- **Go**: Comparison evalers use named constants instead of inline literals
-- **C# target**: Review evalers in `src/Cedar.Ast/` for inline magic values and extract to `const` fields.
+### Extension Registration (Go: `internal/extensions/extensions.go`)
+- `datetime` and `duration` extension functions registered with arity 1
+- `toDate`, `toTime`, `offset`, `durationSince`, `toMilliseconds`, `toSeconds`, `toMinutes`, `toHours`, `toDays` registered with arities 1 or 2
 
-## Concrete Port Tasks
+---
 
-### Task 1: Add ErrNotComparable equivalent
-- File: `src/Cedar.Types/` — find where Cedar errors/exceptions are defined
-- Add: `public static readonly CedarError NotComparable = ...` or appropriate .NET idiom (could be a specific exception type)
+## Port Tasks
 
-### Task 2: Move/remove comparable interface from Types layer
-- Search for any `ILesser`, `IComparable`-like Cedar interface in `src/Cedar.Types/`
-- If found, move it to `src/Cedar.Ast/Internal/Eval/` as an internal interface
+### Task 1: Add `CedarDatetime` value type
+**Target:** `src/Cedar.Types/CedarDatetime.cs` (new file)
+- Sealed record wrapping `long` (milliseconds since Unix epoch)
+- Implements `ICedarValue`, `IComparableCedarValue` (or equivalent pattern)
+- Static `Parse(string iso8601)` — accept ISO-8601 date (`YYYY-MM-DD`) and datetime strings
+- `FromDateTimeOffset(DateTimeOffset)` factory
+- Instance methods: `ToDate()`, `ToTime()`, `Offset(CedarDuration)`, `DurationSince(CedarDatetime)`
+- JSON: `{ "__extn": { "fn": "datetime", "arg": "..." } }` via `System.Text.Json`
+- Cedar text rendering: `datetime("...")`
+- `==`, comparison operators
 
-### Task 3: Add `LessThan`/`LessThanOrEqual` with type-safety to value types
-- `src/Cedar.Types/CedarLong.cs` — add methods returning `(bool success, bool result)` or `Result<bool>` pattern
-- `src/Cedar.Types/CedarDatetime.cs` — same
-- `src/Cedar.Types/CedarDuration.cs` — same
-- Methods must return error/false when RHS is wrong Cedar type
+### Task 2: Add `CedarDuration` value type
+**Target:** `src/Cedar.Types/CedarDuration.cs` (new file)
+- Sealed record wrapping `long` (total milliseconds)
+- Implements `ICedarValue`, `IComparableCedarValue`
+- Static `Parse(string durationStr)` — parse Cedar duration format (`NdNhNmNsNms`)
+  - Enforce unit order: d → h → m → s → ms
+  - Each unit at most once, no out-of-order, overflow detection
+  - Support negative prefix
+- `FromMilliseconds(long)` factory
+- `FromTimeSpan(TimeSpan)` factory
+- Instance methods: `ToMilliseconds()`, `ToSeconds()`, `ToMinutes()`, `ToHours()`, `ToDays()`
+- JSON: `"NdNhNmNsNms"` string
+- Cedar text: `duration("NdNhNmNsNms")`
 
-### Task 4: `FromDateTimeOffset` factory on `CedarDatetime`
-- `src/Cedar.Types/CedarDatetime.cs` — add `public static CedarDatetime FromDateTimeOffset(DateTimeOffset dt)`
-- Ensure `UnsafeDatetime`-equivalent (raw millis) constructor is internal only if it exists
+### Task 3: Add parsing error types / sentinels
+**Target:** `src/Cedar.Types/CedarErrors.cs` or existing error file
+- `CedarDatetimeParseException` or error sentinel
+- `CedarDurationParseException` or error sentinel
+- `ErrNotComparable` equivalent (type mismatch in comparison)
 
-### Task 5: `FromTimeSpan` factory on `CedarDuration`
-- `src/Cedar.Types/CedarDuration.cs` — add `public static CedarDuration FromTimeSpan(TimeSpan ts)`
+### Task 4: Register extension functions in evaluator
+**Target:** `src/Cedar.Ast/` — wherever extension functions are dispatched (likely `ExtensionEval` or similar)
+- Register `datetime(str)` → `CedarDatetime`
+- Register `duration(str)` → `CedarDuration`
+- Register `toDate`, `toTime`, `offset`, `durationSince` (datetime methods)
+- Register `toMilliseconds`, `toSeconds`, `toMinutes`, `toHours`, `toDays` (duration methods)
+- Arity checking (1 or 2 args depending on function)
 
-### Task 6: Update datetime error messages
-- Search for "timezone indicator", "time offset", "expected time offset", "unexpected trailer" in datetime parsing code
-- Replace with "time zone designator", "time zone offset", "invalid time zone offset", "unexpected trailer after time zone designator"
+### Task 5: Add comparison evaluator support
+**Target:** `src/Cedar.Ast/` — comparison eval logic
+- `<`, `<=`, `>`, `>=` operators must work for `CedarDatetime` and `CedarDuration`
+- These types are comparable with themselves but not with other types (return type error)
 
-### Task 7: Update evalers to use named constants
-- `src/Cedar.Ast/Internal/Eval/` — extract any inline magic numeric/string literals to `const` fields
+### Task 6: JSON serialization
+**Target:** `src/Cedar.Types/` — JSON converters
+- `CedarDatetime` → `{ "__extn": { "fn": "datetime", "arg": "ISO-8601" } }`
+- `CedarDuration` → `{ "__extn": { "fn": "duration", "arg": "Nms" } }` (or canonical form)
+- Deserialization support for both formats
+
+### Task 7: Add constants
+**Target:** `src/Cedar.Types/CedarDuration.cs` or a constants file
+- `MillisPerSecond = 1000L`
+- `MillisPerMinute = 60_000L`
+- `MillisPerHour = 3_600_000L`
+- `MillisPerDay = 86_400_000L`
 
 ### Task 8: Tests
-- `test/Cedar.Tests/` — add `LessThan`/`LessThanOrEqual` tests for Long, Datetime, Duration with type mismatch case returning ErrNotComparable equivalent
-- Add `FromDateTimeOffset`/`FromTimeSpan` construction tests
-- Add updated datetime parser error message tests
+**Target:** `test/Cedar.Tests/` — new test files
+- `CedarDatetimeTests.cs`: parse valid/invalid ISO-8601, comparison, `toDate`, `toTime`, `offset`, `durationSince`, JSON round-trip
+- `CedarDurationTests.cs`: parse valid/invalid duration strings, unit order enforcement, overflow, `toMilliseconds`–`toDays`, comparison, JSON round-trip
+- `ExtensionEvalTests.cs` (or existing): policy eval tests exercising `datetime()` and `duration()` extension calls, arity errors
+
+---
+
+## Key Invariants to Preserve
+- `Datetime` comparison only valid between two `Datetime` values (type error otherwise)
+- `Duration` comparison only valid between two `Duration` values (type error otherwise)
+- Duration parsing: units must be in strict order d→h→m→s→ms, each at most once
+- Duration arithmetic is truncating (integer division), not rounding
+- `toDate()` truncates to midnight UTC (strips time component)
+- `toTime()` returns milliseconds elapsed since midnight UTC as a `Duration`
+- Millisecond precision throughout (no sub-millisecond support)
