@@ -344,6 +344,30 @@ public sealed class AuthorizeTests
         Assert.Throws<FormatException>(() => CedarIpAddress.Parse("1.2.3.04"));
     }
 
+    [Fact]
+    public void IsEmpty_InPolicy_AllowsWhenContextSetIsEmpty()
+    {
+        const string cedarText = "permit(principal, action, resource) when { context.foo.isEmpty() && !context.bar.isEmpty() };";
+
+        PolicySet policies = PolicySet.ParseCedar(cedarText);
+        CedarRecord context = new(new RecordMap
+        {
+            [new CedarString("foo")] = new CedarSet(),
+            [new CedarString("bar")] = new CedarSet(new CedarLong(1))
+        });
+        Request request = new(
+            new EntityUid(new EntityType("Principal"), new CedarString("1")),
+            new EntityUid(new EntityType("Action"), new CedarString("action")),
+            new EntityUid(new EntityType("Resource"), new CedarString("resource")),
+            context);
+
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), request);
+
+        Assert.Equal(Decision.Allow, decision);
+        Assert.Empty(diagnostic.Errors);
+        Assert.Equal("policy0", Assert.Single(diagnostic.Reasons).PolicyId.Value);
+    }
+
     private sealed class SimplePolicyIterator : IPolicyIterator
     {
         private readonly Policy[] _policies;

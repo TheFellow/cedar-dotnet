@@ -383,6 +383,14 @@ public sealed class EvaluatorTests
     }
 
     [Fact]
+    public void IsEmptyEvaluator_NonSetOperand_ThrowsTypeError()
+    {
+        IEvaluator evaluator = new IsEmptyEvaluator(Lit(CedarBool.True));
+        EvalException exception = Assert.Throws<EvalException>(() => evaluator.Eval(MakeEnv()));
+        Assert.Equal("expected set, got bool", exception.Message);
+    }
+
+    [Fact]
     public void SetLiteralEvaluator_CreatesSet()
     {
         IEvaluator evaluator = new SetLiteralEvaluator(new[] { Lit(new CedarLong(1)), Lit(new CedarLong(2)) });
