@@ -1,74 +1,65 @@
 PORT
 
 ## Commit Summary
-**SHA:** 0408738  
-**Date:** 2025-10-22  
-**PR:** #115 — `internal/schema/parser: support Path type in context decl`
+**SHA:** 378f896 (merge of 4952185 + b26eaae)
+**Date:** 2025-11-03
+**Title:** Support trailing comma after a resource statement
 
-The Cedar schema now allows an action's `context` in an `appliesTo` block to reference a named type via a `Path` (e.g. `context: commonContext`) in addition to an inline record literal (`context: { ... }`). This is a semantic extension to the schema grammar and AST.
+The Cedar parser now tolerates a trailing comma after the `resource` clause in a policy scope, i.e.:
+
+```cedar
+permit (
+    principal,
+    action == Action::"editPhoto",
+    resource,   // <-- trailing comma now accepted
+)
+when { resource.owner == principal };
+```
+
+The trailing comma is silently consumed on parse but NOT emitted on marshal/pretty-print. This partially fixes cedar-go issue #103.
 
 ## Semantic Analysis
 
-### Go-side changes (inspiration/cedar-go)
-1. **`internal/schema/ast/ast.go`** — `AppliesTo` struct: `Context *RecordType` split into:
-   - `ContextPath   *Path`       — set when context is a named type reference
-   - `ContextRecord *RecordType` — set when context is an inline record
+**Go change (cedar-unmarshal.go):**
+- After parsing the `resource` scope clause, a new `skipAtMostOnce(",")` call optionally consumes a single trailing comma before requiring the closing `)`.
+- A helper `skipAtMostOnce(tok string)` was added: peek at next token; if it matches, advance without error.
 
-2. **`internal/schema/parser/parser.go`** — Parser peeks at next token:
-   - `{` → parse as `RecordType` (existing behaviour)
-   - otherwise → parse as `Path` (new behaviour)
+**Semantic impact:** This is a **parser tolerance/leniency** change. Previously, `permit (principal, action, resource,)` was a parse error. Now it is valid and parses identically to `permit (principal, action, resource)`. No AST change, no evaluation change — purely parser input acceptance.
 
-3. **`internal/schema/ast/convert_human.go`** — Human→JSON conversion: emits `EntityOrCommon` type when context is a `Path`.
+**C# relevance:** Our C# parser in `Cedar.Ast` must similarly accept (and silently discard) a trailing comma after the resource scope clause. Without this fix, valid Cedar policies that contain a trailing comma will fail to parse in our implementation, creating a conformance gap.
 
-4. **`internal/schema/ast/convert_json.go`** — JSON→AST conversion: type-switches on result of `convertJSONType`, routing to `ContextPath` or `ContextRecord`.
+## Port Tasks
 
-5. **`internal/schema/ast/format.go`** — Formatter: prints `ContextRecord` or `ContextPath` as appropriate.
+### 1. Locate the C# policy scope parser
+**Target file:** `src/Cedar.Ast/` — find the file that parses the policy scope `(principal, action, resource)` clause. Likely a `Parser.cs`, `CedarParser.cs`, or `PolicyParser.cs`. Look for where `resource` is parsed and the closing `)` is expected.
 
-6. **`internal/schema/ast/walk_test.go`** — Walker updated for split fields.
+**What to find:** The sequence that parses:
+1. `principal` clause
+2. `,`
+3. `action` clause
+4. `,`
+5. `resource` clause
+6. `)`  ← insert optional trailing comma consumption here
 
-### Semantic impact on Cedar.Schema (C#)
-The C# schema model needs the same split: an action's context can be either an inline record **or** a named-type reference (like `EntityOrCommon`). Any place that models `AppliesTo.Context` as only a record type is now incomplete.
+### 2. Add trailing-comma tolerance after the resource clause
+After the `resource` scope clause is parsed and before consuming the mandatory `)`, add logic equivalent to:
 
-## Concrete Port Tasks
-
-### 1. Locate C# AppliesTo / ActionType schema model
-- Target project: `src/Cedar.Schema`
-- Look for a type like `ActionType`, `AppliesTo`, or `ActionDeclaration` that holds a `Context` property typed as a record.
-- Expected file(s): `src/Cedar.Schema/Model/*.cs` or similar.
-
-### 2. Split the context field
-Change any `Context` property typed as an inline-record-only type to a discriminated union or two nullable properties:
-```csharp
-// Before (likely):
-public RecordType? Context { get; init; }
-
-// After:
-public RecordType? ContextRecord { get; init; }
-public string?     ContextPath   { get; init; }  // or a Path/TypeRef type
+```go
+parser.skipAtMostOnce(",")
 ```
-Or model as a `SchemaType?` union that can be either `RecordType` or `EntityOrCommonType`.
 
-### 3. Update the schema parser / deserializer
-- If parsing human-readable `.cedarschema`: update the parser to peek at the next token after `context:` and branch to `Path` vs `RecordType`.
-- If deserializing JSON schema: the JSON `"type": "EntityOrCommon"` case must be routed to `ContextPath` (already supported generically if `SchemaType` is a union).
+In C#, this means: peek at the current token; if it is a `,`, advance the position (consume it) without emitting an error. If it is not `,`, do nothing (do not error).
 
-### 4. Update any schema-to-JSON conversion
-Where C# converts the in-memory schema model back to JSON (or to Cedar policy JSON), emit `"type": "EntityOrCommon", "name": "<path>"` when `ContextPath` is set, and `"type": "Record", "attributes": {...}` when `ContextRecord` is set.
+### 3. Add a conformance test
+**Target file:** `test/Cedar.Tests/` — in the policy parsing tests, add a test that:
+- Parses `permit (principal, action, resource,) when { true };`
+- Asserts it succeeds (no parse error)
+- Asserts the resulting policy is equivalent to the same policy without the trailing comma
+- Optionally assert that marshal/pretty-print does NOT emit the trailing comma
 
-### 5. Update formatter / pretty-printer (if any)
-If `Cedar.Schema` has a human-readable formatter, print `context: SomeType,` when path-based and `context: { ... },` when record-based.
+### 4. Check all three scope positions (optional / future)
+The Go issue #103 notes this only *partially* fixes trailing commas — it only handles the `resource` position. The Go implementation does not yet handle trailing commas after `principal` or `action`. Our C# port should match the Go behavior exactly (only after `resource`), not over-implement.
 
-### 6. Add tests (Cedar.Schema.Tests)
-- Test parsing `context: commonContext` in a `.cedarschema` string → `ContextPath = "commonContext"`, `ContextRecord = null`.
-- Test parsing `context: { ... }` → `ContextRecord` set, `ContextPath = null`.
-- Test round-trip: parse → serialize back to JSON schema → deserialize → same model.
-- Test with namespaced path: `context: __cedar::datetime` (if applicable).
-
-### Reference files in Go source
-| Go file | Line(s) | Change |
-|---|---|---|
-| `internal/schema/ast/ast.go` | ~339-348 | Split `Context` field |
-| `internal/schema/parser/parser.go` | ~346-359 | Peek & branch on `{` vs path |
-| `internal/schema/ast/convert_human.go` | ~66-75 | Emit `EntityOrCommon` for path |
-| `internal/schema/ast/convert_json.go` | ~187-197 | Type-switch to route path vs record |
-| `internal/schema/ast/format.go` | ~302-315 | Print path or record |
+## Files to Examine in C#
+1. `src/Cedar.Ast/` — parser source (grep for "resource" or the closing paren of scope)
+2. `test/Cedar.Tests/` — existing parser/policy tests to find where to add the new test
