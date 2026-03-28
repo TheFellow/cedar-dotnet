@@ -614,6 +614,20 @@ public sealed class BatchAuthorizationTests
     }
 
     [Fact]
+    public void CallbackException_PropagatesOutOfAuthorize()
+    {
+        BatchRequest request = new(Alice, Read, Doc1, new CedarRecord());
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => BatchAuthorization.Authorize(
+            new PolicySet(),
+            new EntityMap(),
+            request,
+            static _ => throw new InvalidOperationException("callback error")));
+
+        Assert.Equal("callback error", exception.Message);
+    }
+
+    [Fact]
     public void CancellationAfterFirstResult_ReturnsPartialResults()
     {
         PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));

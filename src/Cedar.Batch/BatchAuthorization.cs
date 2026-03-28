@@ -38,6 +38,7 @@ public static class BatchAuthorization
         AuthorizeCore(policies, entities, request, authorizationOptions, cancellationToken);
     }
 
+    /// <exception cref="Exception">Any exception thrown by <paramref name="callback"/> propagates directly to the caller.</exception>
     public static void Authorize(
         PolicySet policies,
         IEntityGetter? entities,
@@ -48,6 +49,7 @@ public static class BatchAuthorization
         Authorize(policies, entities, request, callback, options: null, cancellationToken);
     }
 
+    /// <exception cref="Exception">Any exception thrown by <paramref name="callback"/> propagates directly to the caller.</exception>
     public static void Authorize(
         PolicySet policies,
         IEntityGetter? entities,
