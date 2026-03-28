@@ -90,7 +90,7 @@ public sealed class AuthorizeBenchmarks
     public int AuthorizeBatch()
     {
         int count = 0;
-        BatchAuthorization.Authorize(_complexPolicies, _entities, _batchRequest, _ => count++);
+        BatchAuthorization.Authorize(_complexPolicies.All(), _entities, _batchRequest, _ => count++);
         return count;
     }
 }
