@@ -351,6 +351,61 @@ public sealed class PartialEvaluationTests
     }
 
     [Fact]
+    public void IsPartialError_ReturnsTrueForPartialErrorNode()
+    {
+        Node node = PartialEvaluation.PartialError("boom");
+
+        bool actual = PartialEvaluation.IsPartialError(node);
+
+        Assert.True(actual);
+    }
+
+    [Fact]
+    public void IsPartialError_ReturnsFalseForOrdinaryNode()
+    {
+        Policy policy = Policy.UnmarshalCedar("permit(principal, action, resource);");
+
+        PartialNodeResult result = PartialEvaluation.EvaluateToNode(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.False(PartialEvaluation.IsPartialError(result.Node));
+    }
+
+    [Fact]
+    public void EvaluateToNode_MismatchedScopes_ReturnsFalseNodeAndKeepFalse()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(
+                principal == User::"alice",
+                action == Action::"read",
+                resource == Document::"doc1"
+            );
+            """);
+
+        PartialNodeResult result = PartialEvaluation.EvaluateToNode(policy, new EvalEnv(principal: Bob, action: Read, resource: Doc1));
+
+        Assert.False(result.Keep);
+        Assert.NotNull(result.Node);
+
+        ICedarData value = NodeEvaluation.Evaluate(result.Node, new EvalEnv(principal: Bob, action: Read, resource: Doc1));
+        Assert.Equal(CedarBool.False, value);
+    }
+
+    [Fact]
+    public void EvaluateToNode_ForbidPolicy_ReturnsResidualNodeAndKeepTrue()
+    {
+        Policy policy = Policy.UnmarshalCedar("forbid(principal, action, resource);");
+
+        PartialNodeResult result = PartialEvaluation.EvaluateToNode(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Node);
+
+        ICedarData value = NodeEvaluation.Evaluate(result.Node, new EvalEnv());
+        Assert.Equal(CedarBool.True, value);
+    }
+
+    [Fact]
     public void GetTagWithNonEntityLiteral_BecomesPartialError()
     {
         Policy policy = Policy.UnmarshalCedar("""

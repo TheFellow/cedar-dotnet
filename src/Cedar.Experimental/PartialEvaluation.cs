@@ -44,6 +44,12 @@ public static class PartialEvaluation
         return false;
     }
 
+    public static bool IsPartialError(Node node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        return PartialEvaluator.TryGetPartialError(node.Inner, out _);
+    }
+
     public static PartialPolicyResult Evaluate(Policy policy, EvalEnv env)
     {
         ArgumentNullException.ThrowIfNull(policy);
@@ -63,6 +69,22 @@ public static class PartialEvaluation
         ArgumentNullException.ThrowIfNull(policy);
         return new Node(PartialEvaluator.PolicyToNode(policy.Ast));
     }
+
+    public static PartialNodeResult EvaluateToNode(Policy policy, EvalEnv env)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(env);
+
+        PolicyAst? partialPolicy = PartialEvaluator.PartialPolicy(env.ToInternal(), policy.Ast, out bool keep);
+        if (!keep || partialPolicy is null)
+        {
+            return new PartialNodeResult(new Node(new NodeValue(CedarBool.False)), false);
+        }
+
+        return new PartialNodeResult(new Node(PartialEvaluator.PolicyToNode(partialPolicy)), keep);
+    }
 }
 
 public sealed record PartialPolicyResult(Policy? Policy, bool Keep);
+
+public sealed record PartialNodeResult(Node Node, bool Keep);
