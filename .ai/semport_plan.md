@@ -1,58 +1,37 @@
 PORT
 
-## Commit
-- **SHA:** d3f7472
-- **Date:** 2024-11-06T14:15:42-07:00
-- **Subject:** types: add EntityLoader interface for cases where a simple map isn't adequate for entity storage
+## Commit Summary
+**SHA:** 2a42834  
+**Date:** 2024-11-06T15:47:01-08:00  
+**Message:** cedar-go: change PolicySet.Delete() to return a bool indicating if a policy existed with the given ID
 
 ## Semantic Analysis
-The upstream cedar-go commit introduces an `EntityLoader` interface with a single method `Load(EntityUID) (Entity, bool)` and makes the concrete `Entities` map type implement it. All authorization and evaluation entry-points (`PolicySet.IsAuthorized`, `eval.Env`, `batch.Authorize`) are widened to accept `EntityLoader` instead of the concrete `Entities` map. This is a pure abstraction-widening change: callers who already pass `Entities` continue to work, but callers can now supply any custom entity store.
-
-This is directly relevant to C#: the same abstraction should exist so consumers can implement lazy/remote/database-backed entity storage without materializing a full dictionary.
+`PolicySet.Delete()` in cedar-go was changed from `void` to `bool`. The returned value indicates whether a policy with the given ID actually existed in the set prior to deletion. This is a meaningful API change — callers can now distinguish between "deleted an existing policy" and "tried to delete a non-existent policy." This is a semantic contract change, not a Go-specific idiom.
 
 ## Port Tasks
 
-### 1. Add `IEntityLoader` interface — `src/Cedar.Types`
-- **Target file:** `src/Cedar.Types/Entities.cs` (or a new `src/Cedar.Types/IEntityLoader.cs`)
-- Define:
+### 1. Find the C# `PolicySet` class
+- Look in `src/Cedar.Ast/` or `src/Cedar.Core/` for a `PolicySet` type (likely `PolicySet.cs`).
+- Locate the `Delete` (or `Remove`) method that accepts a policy ID.
+
+### 2. Change the return type from `void` to `bool`
+- Before deletion, check if the policy ID exists in the backing collection.
+- Return `true` if it existed (and was removed), `false` if it was not found.
+- Example pattern (using `ImmutableDictionary` or `Dictionary`):
   ```csharp
-  public interface IEntityLoader
+  public bool Delete(PolicyId policyId)
   {
-      bool TryLoad(EntityUid uid, out Entity entity);
+      bool existed = _policies.ContainsKey(policyId);
+      _policies.Remove(policyId); // or rebuild immutable dict
+      return existed;
   }
   ```
-- Go source: `types/entities.go` lines 10-13 (`EntityLoader` interface with `Load(EntityUID) (Entity, bool)`)
 
-### 2. Implement `IEntityLoader` on the `Entities` type — `src/Cedar.Types`
-- **Target file:** `src/Cedar.Types/Entities.cs`
-- The existing `Entities` type (dictionary wrapper or `ImmutableDictionary<EntityUid, Entity>`) should implement `IEntityLoader.TryLoad` by delegating to the dictionary lookup.
-- Handle `null`/empty case gracefully (return `false`), mirroring the Go nil-map guard.
-- Go source: `types/entities.go` lines 15-22 (`Entities.Load` method)
+### 3. Update any internal callers
+- Search for all call sites of `PolicySet.Delete(...)` / `.Remove(...)` in the C# codebase.
+- If callers previously ignored the return value, they remain valid (no breaking change to call sites that discard).
 
-### 3. Update `IsAuthorized` signature — `src/Cedar.Ast`
-- **Target file:** wherever `IsAuthorized(Entities entityMap, Request req)` is declared (search for `IsAuthorized` in `src/Cedar.Ast`).
-- Change parameter type from `Entities` (or `IReadOnlyDictionary<EntityUid, Entity>`) to `IEntityLoader`.
-- Go source: `authorize.go` line 21 (`func (p PolicySet) IsAuthorized(entities EntityLoader, req Request)`)
-
-### 4. Update the internal eval `Env` struct — `src/Cedar.Core` or `src/Cedar.Ast`
-- **Target file:** `src/Cedar.Core/Internal/Eval/Env.cs` (or equivalent linked file)
-- Change the `Entities` field/property type from `Entities` / `IReadOnlyDictionary<EntityUid, Entity>` to `IEntityLoader`.
-- Go source: `internal/eval/evalers.go` line 25 (`Entities types.EntityLoader`)
-
-### 5. Update all eval call-sites that do `env.Entities[uid]` — `src/Cedar.Core/Internal/Eval` (linked into `Cedar.Ast`)
-- Replace direct dictionary index access with `env.Entities.TryLoad(uid, out var entity)`.
-- Go source sites:
-  - `evalers.go` line 857 (attribute access)
-  - `evalers.go` line 895 (`has` eval)
-  - `evalers.go` lines 964, 968 (`entityInOne`)
-  - `evalers.go` lines 993, 997 (`entityInSet`)
-  - `partial.go` line 507 (partial `has` eval)
-
-### 6. Update `Cedar.Batch` — `src/Cedar.Batch`
-- **Target file:** wherever `Authorize(…, Entities entityMap, …)` is declared in `src/Cedar.Batch`.
-- Change parameter type to `IEntityLoader`.
-- Go source: `x/exp/batch/batch.go` line 105
-
-### 7. Add tests — `test/Cedar.Tests` (and/or `test/Cedar.Batch.Tests`)
-- Add a test that implements `IEntityLoader` with a custom backing store (e.g., a `Dictionary` behind a class) and passes it to `IsAuthorized`, verifying the result is identical to passing the equivalent `Entities` value.
-- This validates the abstraction boundary works end-to-end.
+### 4. Add/update xUnit tests in `test/Cedar.Tests/`
+- Test that `Delete` on a non-existent ID returns `false`.
+- Test that `Delete` on an existing ID returns `true` and the policy is gone (`.Get(id)` returns null/not-found).
+- Mirror the two test cases from `policy_set_test.go`.

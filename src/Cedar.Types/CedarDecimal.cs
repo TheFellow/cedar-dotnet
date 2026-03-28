@@ -3,12 +3,19 @@ using System.Globalization;
 
 namespace Cedar.Types;
 
-public sealed record CedarDecimal(long Value) : CedarValue
+public sealed record CedarDecimal : CedarValue, IComparable<CedarDecimal>
 {
     private const long Precision = 10_000;
     private const long MaxIntegerPart = 922_337_203_685_477;
     private const short MaxFractionalPart = 5_807;
     private const short MinFractionalPart = -5_808;
+
+    private CedarDecimal(long value)
+    {
+        Value = value;
+    }
+
+    private long Value { get; }
 
     public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);
     public static CedarDecimal DecimalMin { get; } = new(long.MinValue);
@@ -107,9 +114,24 @@ public sealed record CedarDecimal(long Value) : CedarValue
         return Value / (double)Precision;
     }
 
+    public int CompareTo(CedarDecimal? other)
+    {
+        return other is null ? 1 : Value.CompareTo(other.Value);
+    }
+
     public override string MarshalCedar()
     {
         return "decimal(\"" + FormatValue() + "\")";
+    }
+
+    public bool Equals(CedarDecimal? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return other is not null && Value == other.Value;
     }
 
     public override int GetHashCode()

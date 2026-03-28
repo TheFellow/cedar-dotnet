@@ -59,7 +59,7 @@ internal static class ComparableValues
         {
             (CedarLong leftLong, CedarLong rightLong) => leftLong.Value.CompareTo(rightLong.Value),
             (CedarString leftString, CedarString rightString) => StringComparer.Ordinal.Compare(leftString.Value, rightString.Value),
-            (CedarDecimal leftDecimal, CedarDecimal rightDecimal) => leftDecimal.Value.CompareTo(rightDecimal.Value),
+            (CedarDecimal leftDecimal, CedarDecimal rightDecimal) => leftDecimal.CompareTo(rightDecimal),
             (CedarDatetime leftDatetime, CedarDatetime rightDatetime) => leftDatetime.Value.CompareTo(rightDatetime.Value),
             (CedarDuration leftDuration, CedarDuration rightDuration) => leftDuration.Value.CompareTo(rightDuration.Value),
             _ => CompareFailure(left, right)

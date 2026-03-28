@@ -1,82 +1,46 @@
-# Finalized Port Plan: d3f7472
+# Semport Plan Finalized
 
-## Verdict: ACKNOWLEDGE — Already Implemented
+## Commit
+**SHA:** 2a42834  
+**Date:** 2024-11-06T15:47:01-08:00  
+**Message:** cedar-go: change PolicySet.Delete() to return a bool indicating if a policy existed with the given ID
 
-The C# codebase already fully implements the semantic equivalent of this upstream commit. No code changes are required.
+## Status: ALREADY IMPLEMENTED — ACKNOWLEDGE
 
----
+### Finding
+The C# codebase already fully satisfies this semantic change. The Go commit changed `PolicySet.Delete() void` → `PolicySet.Delete() bool`. The C# equivalent is `PolicySet.Remove(PolicyId) bool`, which:
 
-## Go → C# Mapping
+- **Location:** `src/Cedar.Core/PolicySet.cs` line 54–57
+  ```csharp
+  public bool Remove(PolicyId id)
+  {
+      return _policies.TryRemove(id, out _);
+  }
+  ```
+- Uses `ConcurrentDictionary<PolicyId, Policy>.TryRemove()` which returns `bool` — already correct.
 
-| Go (upstream d3f7472) | C# (cedar-dotnet) | Status |
-|---|---|---|
-| `types.EntityLoader` interface with `Load(EntityUID) (Entity, bool)` | `IEntityGetter` interface with `TryGet(EntityUid uid, out Entity entity)` | ✅ Exists — `src/Cedar.Types/IEntityGetter.cs:3` |
-| `Entities.Load(k)` map method | `EntityMap.TryGet(uid, out entity)` | ✅ Exists — `src/Cedar.Types/EntityMap.cs:37` |
-| `eval.Env.Entities types.EntityLoader` | `EvalEnv.Entities IEntityGetter` | ✅ Exists — `src/Cedar.Core/Internal/Eval/EvalEnv.cs:5` |
-| `PolicySet.IsAuthorized(entities EntityLoader, req Request)` | `Authorization.Authorize(IPolicyIterator, IEntityGetter, Request)` | ✅ Exists — `src/Cedar.Core/Authorization.cs:11` |
-| `batch.Authorize(…, entityMap types.EntityLoader, …)` | `BatchAuthorization.Authorize(…, IEntityGetter? entities, …)` | ✅ Exists — `src/Cedar.Batch/BatchAuthorization.cs:19-69` |
-| `env.Entities[uid]` → `env.Entities.Load(uid)` in evalers | `env.Entities.TryGet(uid, out …)` in all evaluators | ✅ Exists — `AccessEvaluators.cs:20,60`, `MembershipEvaluators.cs:52-90`, `PartialEvaluator.cs:232,239,698` |
-| Custom `EntityLoader` test | `CountingEntityGetter : IEntityGetter` test double | ✅ Exists — `test/Cedar.Tests/Eval/EvaluatorTests.cs:40` |
+### Tests Already Present
+**File:** `test/Cedar.Tests/Policy/PolicySetTests.cs`
+- Line 38–43: `Remove_ReturnsFalseWhenMissing` — asserts `false` when ID not in set ✅
+- Line 46–51: `Remove_RemovesExistingPolicy` — asserts `true` when ID existed ✅
+- Line 87: `set.Remove(new PolicyId("p0"))` — additional usage ✅
 
----
+### No Call Sites Need Updating
+The only internal `.Remove()` call sites found are unrelated types:
+- `src/Cedar.Schema/SchemaGuidedEntityParser.cs:313` — different collection
+- `src/Cedar.Core/Internal/Parser/ExpressionParser.cs:247` — `RemoveAt` on a list
+- `src/Cedar.Batch/BatchAuthorization.cs:152` — different collection
 
-## Evidence
+### Action Required
+**Mark as `acknowledged`** — the C# implementation already has the correct semantics (return bool from Remove/Delete), predating this upstream commit. No code changes needed.
 
-### `IEntityGetter` — already the abstraction interface
-**File:** `src/Cedar.Types/IEntityGetter.cs`
-```
-namespace Cedar.Types;
+## Go → C# Mapping Note
+- Go `PolicySet.Delete(PolicyID)` → C# `PolicySet.Remove(PolicyId)` (naming follows .NET `IDictionary` conventions)
+- Go `bool` return → C# `bool` return (identical semantics)
+- Go `map` delete + exists check → C# `ConcurrentDictionary.TryRemove()` (idiomatic .NET equivalent)
 
-public interface IEntityGetter
-{
-    bool TryGet(EntityUid uid, out Entity entity);
-}
-```
-
-### `EntityMap` — already implements `IEntityGetter`
-**File:** `src/Cedar.Types/EntityMap.cs:8`
-```csharp
-public sealed class EntityMap : IEntityGetter, IReadOnlyCollection<Entity>
-```
-`TryGet` at line 37 delegates to `Dictionary.TryGetValue` — exact semantic match to Go's nil-guard + map lookup.
-
-### `EvalEnv` — already uses `IEntityGetter`
-**File:** `src/Cedar.Core/Internal/Eval/EvalEnv.cs:5`
-```csharp
-internal sealed record EvalEnv(IEntityGetter Entities, ...)
-```
-
-### `Authorization.Authorize` — already accepts `IEntityGetter`
-**File:** `src/Cedar.Core/Authorization.cs:11`
-```csharp
-public static (Decision Decision, Diagnostic Diagnostic) Authorize(
-    IPolicyIterator policies, IEntityGetter entities, Request request)
-```
-
-### `BatchAuthorization.Authorize` — already accepts `IEntityGetter?`
-**File:** `src/Cedar.Batch/BatchAuthorization.cs:21,30,43,53,69`
-All overloads use `IEntityGetter?` with `?? new EntityMap()` fallback (line 85).
-
-### All eval call-sites — already use `TryGet`
-- `AccessEvaluators.cs:20` — `env.Entities.TryGet(entityUid, ...)`
-- `AccessEvaluators.cs:60` — `env.Entities.TryGet(attribute, ...)`
-- `MembershipEvaluators.cs:90` — `entities.TryGet(current, out Entity found)`
-- `PartialEvaluator.cs:700` — `entities.TryGet(entityUid, out Entity entity)`
-
-### Custom `IEntityGetter` test double already exists
-**File:** `test/Cedar.Tests/Eval/EvaluatorTests.cs:40`
-```csharp
-private sealed class CountingEntityGetter : IEntityGetter
-```
-Used in tests at lines 445, 469, 486, 487 — validates the abstraction boundary end-to-end.
-
----
-
-## Action Required
-
-**None.** Run:
-```
-python3 semport/ledger.py update d3f7472 acknowledged && python3 semport/ledger.py sort
-git add semport/ledger.tsv && git commit -m "semport: acknowledge d3f7472 - IEntityGetter already implements EntityLoader abstraction"
-rm -f .ai/semport_new_commits.md
-```
+## Acceptance Criteria (already satisfied)
+- [x] `PolicySet.Remove(id)` returns `false` when `id` is not in the set
+- [x] `PolicySet.Remove(id)` returns `true` when `id` existed and is now removed
+- [x] Removed policy is no longer retrievable via `Get(id)`
+- [x] Tests exist for both cases in `test/Cedar.Tests/Policy/PolicySetTests.cs`
