@@ -234,7 +234,7 @@ public sealed class EvaluatorTests
 
         EvalException exception = Assert.Throws<EvalException>(() => evaluator.Eval(MakeEnv()));
 
-        Assert.Equal(EvalErrors.IncompatibleComparison, exception.Message);
+        Assert.Equal("type error: expected comparable value, got bool", exception.Message);
     }
 
     [Fact]
