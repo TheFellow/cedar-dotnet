@@ -1,116 +1,106 @@
 PORT
 
 ## Commit Summary
-**efe5690** — Merge PR #34: "General performance improvements and experimental batch mode"
-**Date:** 2024-09-13
-**Scope:** 26 files changed across `types/`, `internal/eval/`, `authorize.go`, `x/exp/batch/`
+**SHA:** e8728bb  
+**Date:** 2024-09-18  
+**Title:** Add a duration type, as per RFC 80
+
+Introduces a new first-class Cedar extension type `duration` (stored as milliseconds in an `int64`/`long`), alongside a parser (`ParseDuration`), a canonical `String()` representation, JSON (de)serialization, evaluation of the `duration(...)` constructor, and eight new extension methods:
+
+- `datetime.toTime()` → `Duration` (time-of-day component)
+- `datetime.offset(Duration)` → `Datetime`
+- `datetime.durationSince(Datetime)` → `Duration`
+- `duration.toMilliseconds()` → `Long`
+- `duration.toSeconds()` → `Long`
+- `duration.toMinutes()` → `Long`
+- `duration.toHours()` → `Long`
+- `duration.toDays()` → `Long`
 
 ---
 
 ## Semantic Analysis
 
-This large merge PR introduces several distinct, semantically meaningful changes:
+### New type: `Duration`
+- Struct wrapping a single `int64` of milliseconds (signed — allows negative durations).
+- Parser accepts: optional leading `-`, then one or more `<quantity><unit>` pairs where units are `d`, `h`, `m`, `s`, `ms` in strictly descending order. Returns `ErrDuration`-wrapped errors on invalid input.
+- Canonical string form: omits zero-valued units, e.g. `"1d12h"`, always ends with at least one unit.
+- `Equal(Value)` — type-checked equality by millisecond value.
+- `MarshalCedar()` — emits `duration("<canonical-string>")`.
+- JSON: deserialized from `{"__extn":{"fn":"duration","arg":"<string>"}}`.
+- Error sentinel: `ErrDuration = errors.New("error parsing duration value")`.
 
-### 1. Type Restructuring: `Reason`/`Error` → `DiagnosticReason`/`DiagnosticError`
-Go renamed `cedar.Reason` → `types.DiagnosticReason` and `cedar.Error` → `types.DiagnosticError`. These are part of our public API surface (`Diagnostic.Reasons`, `Diagnostic.Errors`).
-- **Go source:** `types/authorize.go` (new), `authorize.go` (type aliases)
-- **C# target:** `src/Cedar.Core/` or `src/Cedar.Ast/` — check existing `Diagnostic`, `DiagnosticReason`, `DiagnosticError` types
-
-### 2. `eval.Context` → `eval.Env` Rename
-Internal eval context struct renamed for clarity. Constructors changed: `PrepContext` → `InitEnv`, new `NewEnv()` added. Cache extracted into struct field.
-- **Go source:** `internal/eval/evalers.go`
-- **C# target:** `src/Cedar.Core/Internal/Eval/` — our equivalent eval context type
-
-### 3. `BoolEvaler` Wrapper + Compile Integration
-`Compile(p)` now returns a `BoolEvaler` (typed bool eval wrapper) instead of raw `Evaler`. This simplifies call sites — no more `ValueToBool` calls at the authorization layer.
-- **Go source:** `internal/eval/compile.go`
-- **C# target:** Wherever `Compile()` is called in our eval pipeline
-
-### 4. Compile-time Scope Optimization (Skip `all` scopes)
-`Compile()` now skips generating scope-check nodes for principal/action/resource when the scope is `ScopeTypeAll` — avoids evaluating always-true conditions.
-- **Go source:** `internal/eval/compile.go`
-- **C# target:** Our equivalent policy compilation/scope-eval
-
-### 5. `inCache` Memoization in `Env`
-An `inKey { a, b EntityUID }` → bool cache is added to `Env` to memoize entity-in-set/in-hierarchy lookups during a single authorization call.
-- **Go source:** `internal/eval/evalers.go` (inKey, inCache field)
-- **C# target:** Our `in` evaluator — add a `Dictionary<(EntityUid, EntityUid), bool>` cache per-evaluation
-
-### 6. Constant Folding (`fold.go`) — NEW FILE
-`foldPolicy()` pre-processes an AST before evaluation to constant-fold pure sub-expressions (arithmetic, set membership, extension calls like `Decimal("42")`). Called by `Compile()`.
-- **Go source:** `internal/eval/fold.go` (253 lines, new)
-- **C# target:** `src/Cedar.Ast/` — new `PolicyFolder` or `AstFolder` class; called from `PolicyCompiler`
-
-### 7. Partial Evaluation (`partial.go`) — NEW FILE
-`PartialPolicy(env, policy)` partially evaluates a policy against an environment that may contain `Variable` or `Ignore` sentinel values. Core mechanism for batch mode.
-- `Variable(name)` — sentinel EntityUID of type `__cedar::variable`
-- `Ignore()` — sentinel EntityUID of type `__cedar::ignore`
-- Permit policies drop conditions that reference ignored values; Forbid policies are dropped entirely when they reference ignored values
-- **Go source:** `internal/eval/partial.go` (541 lines, new)
-- **C# target:** `src/Cedar.Experimental/` — new `PartialEvaluator` class
-
-### 8. Experimental Batch Authorization (`x/exp/batch/batch.go`) — NEW FILE
-`Authorize(ctx, policySet, entities, batchRequest, callback)` — iterates over variable substitutions, partially evaluates policies per substitution, and invokes a callback per result.
-- **Go source:** `x/exp/batch/batch.go` (373 lines, new)
-- **C# target:** `src/Cedar.Batch/` — implement `BatchAuthorizer.Authorize()`
-
-### 9. `authorize.go` Decision Logic Simplification
-Old: accumulated `gotForbid`/`gotPermit` booleans, single return at end with complex `Decision(gotPermit && !gotForbid)`.
-New: accumulates `forbids`/`permits` slices, early-returns `Deny` if any forbids, then `Allow` if any permits, else `Deny`.
-- **Go source:** `authorize.go`
-- **C# target:** Our `PolicySet.IsAuthorized()` — verify our logic matches the new early-return pattern
+### Evaluation additions
+- `durationLiteralEval` — evaluates `duration(string-literal)` extension call → `Duration`.
+- `toTimeEval` — `datetime.toTime()`: returns `Duration{ Value = datetime.Value % millisPerDay }`.
+- `toMillisecondsEval` — `duration.toMilliseconds()`: returns `Long(duration.Value)`.
+- `toSecondsEval` — `duration.toSeconds()`: returns `Long(duration.Value / 1000)`.
+- `toMinutesEval` — `duration.toMinutes()`: returns `Long(duration.Value / 60_000)`.
+- `toHoursEval` — `duration.toHours()`: returns `Long(duration.Value / 3_600_000)`.
+- `toDaysEval` — `duration.toDays()`: returns `Long(duration.Value / 86_400_000)`.
+- `offsetEval` — `datetime.offset(duration)`: returns `Datetime{ Value = datetime.Value + duration.Value }`.
+- `durationSinceEval` — `datetime.durationSince(datetime2)`: returns `Duration{ Value = datetime.Value - datetime2.Value }`.
 
 ---
 
-## Concrete Port Tasks
+## Port Tasks
 
-### Task A — Verify/Fix `DiagnosticReason` and `DiagnosticError` naming
-- Read `src/Cedar.Core/` for existing diagnostic types
-- Confirm our types are named `DiagnosticReason` and `DiagnosticError` (not `Reason`/`Error`)
-- If misnamed, rename in all usages
+### 1. New value type `CedarDuration` in `src/Cedar.Types`
+**Go source:** `types/duration.go` (new file in commit)  
+**C# target:** `src/Cedar.Types/CedarDuration.cs` (new file)
 
-### Task B — Verify `authorize` decision logic
-- Read our `PolicySet.IsAuthorized()` in `src/Cedar.Ast/`
-- Confirm it uses early-return forbid-wins logic rather than boolean accumulation
-- Fix if it still uses old boolean accumulation
+- `public sealed record CedarDuration(long Milliseconds) : CedarValue`
+- Implement `ParseDuration(string) : CedarDuration` (static) — parse optional `-`, then greedy `<qty><unit>` pairs with strict descending-unit ordering; throw/return `ErrDuration`-compatible error.
+- Implement `ToString()` → canonical form (d/h/m/s/ms, skip zero units).
+- Implement `Equal(CedarValue)` type-checked equality.
+- Add `ErrDuration` / `CedarDurationParseException` error type or sentinel string.
 
-### Task C — Add `inCache` to eval environment
-- Read `src/Cedar.Core/Internal/Eval/` for our eval env type
-- Add a `Dictionary<(EntityUid a, EntityUid b), bool>` cache field to the eval env
-- Read our `in` evaluator and thread the cache through it (check before recursing, store result)
+### 2. JSON deserialization in `src/Cedar.Types` (or `src/Cedar.Core`)
+**Go source:** `types/json.go` lines ~75-87 (new `"duration"` case in `UnmarshalJSON`)  
+**C# target:** wherever Cedar extension-value JSON dispatch lives (look for `"datetime"` or `"decimal"` JSON case)
 
-### Task D — Implement constant folding (`fold.go` port)
-- Create `src/Cedar.Ast/Evaluation/AstFolder.cs` (or equivalent)
-- Implement `FoldPolicy(Policy p)` that traverses the AST and constant-folds pure sub-expressions
-- Call `FoldPolicy` inside policy compilation before generating evalers
-- Add xUnit tests in `test/Cedar.Tests/` covering: arithmetic folding, set folding, extension call folding, non-foldable expressions left intact
+- Add `"duration"` case to the `__extn.fn` switch that calls `CedarDuration.ParseDuration(arg)`.
 
-### Task E — Implement partial evaluation (`partial.go` port)
-- Create `src/Cedar.Experimental/PartialEvaluator.cs`
-- Implement `Variable(string name)` and `Ignore()` sentinel constructors
-- Implement `PartialPolicy(EvalEnv env, Policy p)` returning `(Policy? reduced, bool keep)`
-- Implement partial scope evaluation (principal/action/resource scope reduction)
-- Add xUnit tests in `test/Cedar.Experimental.Tests/`
+### 3. `MarshalCedar()` / JSON serialization for `CedarDuration`
+**Go source:** `types/duration.go` — `MarshalCedar()` returns `duration("<canonical>")`.  
+**C# target:** `CedarDuration.cs` — implement serialization to match `duration("1d12h")` format.
 
-### Task F — Implement batch authorization (`x/exp/batch/batch.go` port)
-- Read `src/Cedar.Batch/` for existing batch structure
-- Implement `BatchRequest` with `Variables` (Dictionary<string, IReadOnlyList<Value>>) support
-- Implement `BatchAuthorizer.Authorize(CancellationToken, PolicySet, Entities, BatchRequest, Action<BatchResult>)`
-- Validate bound/unbound variables before iterating
-- Add xUnit tests in `test/Cedar.Batch.Tests/`
+### 4. Evaluation — `durationLiteralEval` and new extension-method evals
+**Go source:** `x/exp/eval/eval.go` — `newDurationLiteralEval`, `newToTimeEval`, `newToMillisecondsEval`, `newToSecondsEval`, `newToMinutesEval`, `newToHoursEval`, `newToDaysEval`, `newOffsetEval`, `newDurationSinceEval`  
+**C# target:** wherever Cedar extension function dispatch and eval nodes live (look for `DatetimeLiteralEval`, `ToDateEval` in `src/Cedar.Ast` or `src/Cedar.Core/Internal/Eval`)
 
-### Task G — Scope optimization in compilation
-- Read our policy compiler
-- Skip generating scope-check eval nodes when scope is `ScopeAll`
-- Add test: policy with `permit (principal, action, resource)` (all scopes) should evaluate without scope nodes
+- Register `"duration"` constructor in extension eval dispatch (alongside `"datetime"`, `"decimal"`, `"ip"`).
+- Add eval nodes for all 8 new methods; register them in the extension name→eval-node switch.
+- Helper: `evalDuration(node, env)` — evaluate a node, assert result is `CedarDuration`, else type error.
+
+### 5. `evalDatetime` helper may need extension
+**Go source:** `x/exp/eval/eval.go` — `evalDatetime` helper used by `toTimeEval`, `offsetEval`, `durationSinceEval`.  
+**C# target:** same eval file — ensure `EvalDatetime` helper exists (likely already added with datetime PR).
+
+### 6. Tests in `test/Cedar.Tests`
+**Go source:** `types/duration_test.go`, `x/exp/eval/eval_test.go` (duration section), `types/json_test.go`
+
+- `CedarDurationParseTests` — round-trip normalization cases (e.g. `"60m"` → `"1h"`, `"36h"` → `"1d12h"`).
+- Parse-error cases matching Go's error messages (string too short, unexpected unit order, overflow, etc.).
+- `Equal()` tests.
+- `MarshalCedar()` test (`duration("42ms")`).
+- JSON deserialization test (`{"__extn":{"fn":"duration","arg":"1d12h30m30s500ms"}}`).
+- Eval tests for all 8 new methods (toTime, offset, durationSince, toMilliseconds, toSeconds, toMinutes, toHours, toDays).
 
 ---
 
-## Priority Order
-1. **Task A** (naming correctness — public API)
-2. **Task B** (decision logic correctness)
-3. **Task C** (inCache performance — straightforward)
-4. **Task D** (constant folding — prerequisite for E/F)
-5. **Task G** (scope optimization — small)
-6. **Task E** (partial eval — foundation for batch)
-7. **Task F** (batch — builds on E)
+## Key Constants (from Go source)
+```
+millisPerDay    = 86_400_000
+millisPerHour   =  3_600_000
+millisPerMinute =     60_000
+millisPerSecond =      1_000
+```
+
+## Parser Rules (from Go `ParseDuration`)
+- Minimum valid input: at least one `<digit(s)><unit>` pair (or negative prefix + pair).
+- Units in order (largest to smallest): `d`, `h`, `m`, `s`, `ms`.
+- Each unit may appear at most once; must appear in strictly descending order.
+- Overflow: if accumulated ms overflows `int64`, return overflow error.
+- No whitespace permitted anywhere.
+- After parsing all pairs, the string must be fully consumed.
+- Special error: if a quantity is present but its unit is a repeat or out-of-order unit, emit "invalid duration".
