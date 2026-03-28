@@ -13,6 +13,11 @@ public sealed record CedarPattern : CedarValue
         _components = NormalizeComponents(components);
     }
 
+    private CedarPattern(PatternComponent[] components, bool alreadyNormalized)
+    {
+        _components = components;
+    }
+
     public static CedarPattern Parse(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -62,6 +67,22 @@ public sealed record CedarPattern : CedarValue
         }
 
         return new CedarPattern([.. components]);
+    }
+
+    public CedarPattern AddWildcard()
+    {
+        List<PatternComponent> components = CreateBuilderComponents();
+        AppendWildcard(components);
+        return new CedarPattern([.. components], alreadyNormalized: true);
+    }
+
+    public CedarPattern AddLiteral(string literal)
+    {
+        ArgumentNullException.ThrowIfNull(literal);
+
+        List<PatternComponent> components = CreateBuilderComponents();
+        AppendLiteral(components, literal);
+        return new CedarPattern([.. components], alreadyNormalized: true);
     }
 
     public bool Match(CedarString value)
@@ -191,6 +212,18 @@ public sealed record CedarPattern : CedarValue
         }
 
         return builder.ToString();
+    }
+
+    private List<PatternComponent> CreateBuilderComponents()
+    {
+        List<PatternComponent> components = [.. _components];
+
+        if (components.Count == 1 && !components[0].Wildcard && components[0].Literal.Length == 0)
+        {
+            components.Clear();
+        }
+
+        return components;
     }
 
     private static bool MatchChunk(string chunk, string value, int offset, out int nextOffset)

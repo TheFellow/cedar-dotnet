@@ -73,6 +73,56 @@ public sealed class CedarPatternTests
     }
 
     [Fact]
+    public void AddWildcard_IsIdempotent()
+    {
+        CedarPattern pattern = new CedarPattern().AddWildcard().AddWildcard();
+
+        CedarAssert.Equal(new CedarPattern(Wildcard.Instance), pattern);
+    }
+
+    [Fact]
+    public void AddLiteral_MergesConsecutiveLiterals()
+    {
+        CedarPattern pattern = new CedarPattern().AddLiteral("foo").AddLiteral("bar");
+
+        CedarAssert.Equal(new CedarPattern("foobar"), pattern);
+    }
+
+    [Fact]
+    public void AddWildcardThenLiteral_MergesIntoSingleWildcardComponent()
+    {
+        CedarPattern pattern = new CedarPattern().AddWildcard().AddLiteral("foo");
+
+        CedarAssert.Equal(new CedarPattern(Wildcard.Instance, "foo"), pattern);
+    }
+
+    [Fact]
+    public void AddLiteralThenWildcard_ProducesTwoComponents()
+    {
+        CedarPattern pattern = new CedarPattern().AddLiteral("foo").AddWildcard();
+
+        CedarAssert.Equal(new CedarPattern("foo", Wildcard.Instance), pattern);
+    }
+
+    [Fact]
+    public void AddWildcardThenLiteralThenWildcard_ProducesWildcardSandwich()
+    {
+        CedarPattern pattern = new CedarPattern().AddWildcard().AddLiteral("foo").AddWildcard();
+
+        CedarAssert.Equal(new CedarPattern(Wildcard.Instance, "foo", Wildcard.Instance), pattern);
+    }
+
+    [Fact]
+    public void AddMethods_DoNotMutateOriginalPattern()
+    {
+        CedarPattern original = new("foo");
+        CedarPattern updated = original.AddWildcard();
+
+        CedarAssert.Equal(new CedarPattern("foo"), original);
+        CedarAssert.Equal(new CedarPattern("foo", Wildcard.Instance), updated);
+    }
+
+    [Fact]
     public void ConstructorRejectsUnsupportedComponentType()
     {
         Assert.Throws<ArgumentException>(() => new CedarPattern(42));

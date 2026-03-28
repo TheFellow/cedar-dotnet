@@ -354,6 +354,83 @@ public sealed class PolicyJsonTests
         Assert.Equal(new CedarLong(2), Assert.IsType<NodeValue>(node.Else).Value);
     }
 
+    [Fact]
+    public void MarshalJson_LikeSingleWildcard_EmitsCorrectPatternArray()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern(Wildcard.Instance)))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"like\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"pattern\":[\"Wildcard\"]", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"pattern\":\"*\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MarshalJson_LikeSingleLiteral_EmitsLiteralObject()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern("foo")))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"like\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"pattern\":[{\"Literal\":\"foo\"}]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MarshalJson_LikeWildcardThenLiteral_EmitsArrayWithBothComponents()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern(Wildcard.Instance, "foo")))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"pattern\":[\"Wildcard\",{\"Literal\":\"foo\"}]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikeSingleWildcard_RoundTripsStructuredPattern()
+    {
+        Policy policy = UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": ["Wildcard"]
+              }
+            }
+            """);
+
+        NodeLike like = Assert.IsType<NodeLike>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(new CedarPattern(Wildcard.Instance), like.Pattern);
+
+        string json = policy.MarshalJson();
+        Assert.Contains("\"pattern\":[\"Wildcard\"]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikeSingleLiteral_RoundTripsStructuredPattern()
+    {
+        Policy policy = UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": [{ "Literal": "foo" }]
+              }
+            }
+            """);
+
+        NodeLike like = Assert.IsType<NodeLike>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(new CedarPattern("foo"), like.Pattern);
+
+        string json = policy.MarshalJson();
+        Assert.Contains("\"pattern\":[{\"Literal\":\"foo\"}]", json, StringComparison.Ordinal);
+    }
+
     private static NodeValue UnmarshalConditionValueNode(string valueJson)
     {
         Policy policy = UnmarshalPolicyWithConditionBody($$"""
