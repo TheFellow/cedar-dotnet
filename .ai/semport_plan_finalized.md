@@ -1,107 +1,72 @@
-# Finalized Port Plan: a12ba1d — add feather: trailing commas
+# Semport Plan Finalized: 4eb9960 — add feature: extended has
 
-## Status Assessment
+## Status: ALREADY IMPLEMENTED — Acknowledge Only
 
-After inspecting the C# codebase, the three Go methods have the following C# equivalents:
+The "extended has" feature from upstream cedar-go commit `4eb9960` is **fully implemented** in the C# codebase. No code changes are needed.
 
-| Go method | C# equivalent | File | Lines | Already supports trailing commas? |
-|---|---|---|---|---|
-| `entlist()` — scope `in [...]` | `ScopeParser.ParseScopeConstraint` entity-set loop | `src/Cedar.Core/Internal/Parser/ScopeParser.cs` | 27–46 | ✅ YES |
-| `entlist()` — expression `in [...]` | `ExpressionParser.ParseSetLiteral` (via `ParseAdd → ParsePrimary`) | `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` | 415–441 | ✅ YES |
-| `expressions()` | `ExpressionParser.ParseExpressionList` | `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` | 495–520 | ✅ YES |
-| `record()` | `ExpressionParser.ParseRecordLiteral` | `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` | 445–490 | ✅ YES |
+---
 
-All four methods already use the same pattern the Go commit introduced:
-```
-// after appending item:
-if (Match(Comma))
-{
-    if (Match(endToken)) break;   // trailing comma → stop
-    continue;
-}
-Expect(endToken, message);       // no comma → must be end
-break;
-```
+## Evidence
 
-This means the C# parser **already supports trailing commas** in all three constructs targeted by Go commit `a12ba1d`. The semantic change is already present.
+### Parser Implementation
 
-## What IS needed: Tests
+**File:** `src/Cedar.Core/Internal/Parser/ExpressionParser.cs`  
+**Method:** `ParseHas(INode lhs)` — lines 131–159
 
-The C# codebase has one trailing-comma test (`ParseTrailingCommaInScopeTuple` at `test/Cedar.Tests/Parser/ParserTests.cs:513`) covering only the scope tuple case. The three new cases from the Go commit are **not tested**.
+The method already implements the full chained `has` desugaring:
 
-### Missing test coverage
-
-File: `test/Cedar.Tests/Parser/ParserTests.cs`  
-Class: `ParserTests` (line ~1, find the class boundary)  
-Insert after the existing `ParseTrailingCommaInScopeTuple` test (currently ends around line ~527):
-
-#### Test 1: Expression list (set literal) with trailing comma
 ```csharp
-[Fact]
-public void ParseTrailingCommaInSetLiteral()
-{
-    PolicyAst policy = ParseSingle("permit (principal, action, resource) when {[1,2,].isEmpty() };");
+// Line 145-156 (exact current state):
+CedarString firstAttribute = new(token.Text);
+INode result = new NodeHas(lhs, firstAttribute);
+INode currentLhs = new NodeAccess(lhs, new NodeValue(firstAttribute));
 
-    NodeIsEmpty node = Assert.IsType<NodeIsEmpty>(Assert.Single(policy.Conditions));
-    NodeSet set = Assert.IsType<NodeSet>(node.Operand);
-    Assert.Equal(2, set.Elements.Length);
+while (_state.Match(TokenType.Dot))
+{
+    Token attributeToken = _state.ExpectIdentifier("Expected identifier after '.'.");
+    CedarString attribute = new(attributeToken.Text);
+    INode hasNode = new NodeHas(currentLhs, attribute);
+    result = new NodeAnd(result, hasNode);
+    currentLhs = new NodeAccess(currentLhs, new NodeValue(attribute));
 }
+
+return result;
 ```
 
-#### Test 2: Record literal with trailing comma
-```csharp
-[Fact]
-public void ParseTrailingCommaInRecordLiteral()
-{
-    PolicyAst policy = ParseSingle("""permit (principal, action, resource) when {{"key":1,} has key };""");
+Maps exactly to the Go logic: `result.And(currentLhs.Has(attr))` + `currentLhs = currentLhs.Access(attr)`.
 
-    NodeHas node = Assert.IsType<NodeHas>(Assert.Single(policy.Conditions));
-    NodeRecord record = Assert.IsType<NodeRecord>(node.Operand);
-    Assert.Single(record.Elements);
-}
+Error path (line 151): `_state.ExpectIdentifier("Expected identifier after '.'.")` — throws on trailing dot.
+
+---
+
+### Tests
+
+**Happy path tests** — `test/Cedar.Tests/Parser/ParserTests.cs`:
+- Line 493: `ParseExtendedHasChain()` — tests `context has user.name` (2-level)
+- Line 503: `ParseExtendedHasThreeLevelChain()` — tests `principal has a.b.c` (3-level), verifies the full AND-chain of `NodeHas`/`NodeAccess` nodes
+
+**Error path test** — `test/Cedar.Tests/Parser/ParserErrorTests.cs`:
+- Line 173: `ChainedHasTrailingDotProducesParseError()` — tests `principal has a.b.` produces a `ParseException`
+
+---
+
+## Go → C# Mapping (for reference)
+
+| Go | C# |
+|----|----|
+| `ast.Node.Has(attr)` | `new NodeHas(lhs, attribute)` |
+| `ast.Node.Access(attr)` | `new NodeAccess(lhs, new NodeValue(attribute))` |
+| `result.And(expr)` | `new NodeAnd(result, expr)` |
+| `p.errorf("expected ident after dot")` | `_state.ExpectIdentifier("Expected identifier after '.'.")` |
+| Go `types.String(t.Text)` | `new CedarString(token.Text)` |
+
+---
+
+## Action Required
+
+**Acknowledge this commit** — run:
 ```
-
-#### Test 3: Entity list in `in [...]` expression with trailing comma
-```csharp
-[Fact]
-public void ParseTrailingCommaInEntityListExpression()
-{
-    PolicyAst policy = ParseSingle("""permit (principal, action, resource) when {User::"alice" in [User::"bob",] };""");
-
-    NodeIn node = Assert.IsType<NodeIn>(Assert.Single(policy.Conditions));
-    NodeSet set = Assert.IsType<NodeSet>(node.Entity);
-    Assert.Single(set.Elements);
-}
+python3 semport/ledger.py update 4eb9960 acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv && git commit -m "semport: acknowledge 4eb9960 - extended has already implemented in C#"
+rm -f .ai/semport_new_commits.md
 ```
-
-## Acceptance Criteria
-
-1. All three new `[Fact]` tests compile without warnings (TreatWarningsAsErrors).
-2. All three tests pass: `dotnet test cedar-dotnet.sln --filter "ParseTrailingComma"`.
-3. No existing tests regress: `dotnet test cedar-dotnet.sln`.
-4. Ledger updated: `python3 semport/ledger.py update a12ba1d implemented && python3 semport/ledger.py sort`.
-5. Committed: `git add -A && git commit -m "semport: implement a12ba1d - trailing comma test coverage"`.
-
-## C# Type Reference (for implementer)
-
-To write the tests, the implementer needs to know these AST node types (all in `src/Cedar.Ast/` or linked from `src/Cedar.Core/Internal/`):
-
-| Type | Used for |
-|---|---|
-| `NodeIsEmpty` | `.isEmpty()` call node — check property `Operand` |
-| `NodeSet` | Set literal `[...]` — check property `Elements` (ImmutableArray) |
-| `NodeHas` | `has` operator — check property `Operand` |
-| `NodeRecord` | Record literal `{...}` — check property `Elements` (ImmutableArray) |
-| `NodeIn` | `in` operator — check property `Entity` |
-| `PolicyAst` | Top-level policy — check `Conditions` (ImmutableArray) |
-
-Locate node type names: `grep -rn "NodeIsEmpty\|NodeSet\|NodeHas\|NodeRecord\|NodeIn\b" src/Cedar.Core/Internal/ --include="*.cs" -l`
-
-## Implementation Order
-
-1. Run `grep -n "ParseTrailingCommaInScopeTuple" test/Cedar.Tests/Parser/ParserTests.cs` to find exact line.
-2. Confirm node type names exist: `grep -rn "class NodeIsEmpty\|record NodeIsEmpty" src/`.
-3. Add three `[Fact]` tests after `ParseTrailingCommaInScopeTuple`.
-4. Run `dotnet test cedar-dotnet.sln --filter "ParseTrailingComma"` — all 4 should pass.
-5. Run `dotnet test cedar-dotnet.sln` — no regressions.
-6. Update ledger and commit.

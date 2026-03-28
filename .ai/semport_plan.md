@@ -1,62 +1,59 @@
 PORT
 
 ## Commit Summary
-- **SHA**: a12ba1d
-- **Message**: add feather: trailing commas
-- **Author**: jaredzhou
-- **Date**: 2025-11-23T15:50:11+08:00
+**SHA:** 4eb9960
+**Message:** add feature: extended has
+
+Adds support for chained `has` expressions in Cedar policy syntax. Instead of only `principal has attr`, users can now write `principal has a.b.c`, which the parser expands into:
+`principal has a && principal.a has b && principal.a.b has c`
 
 ## Semantic Analysis
-This commit adds **trailing comma support** to the Cedar policy language parser in three list-like constructs:
 
-1. **Entity lists** (e.g., `[User::"alice", User::"bob",]`) — parsed by `entlist()`
-2. **Expression lists** (e.g., `[1, 2,]` or function args with trailing comma) — parsed by `expressions()`
-3. **Record literals** (e.g., `{"key": 1,}`) — parsed by `record()`
+This is a parser-level feature. When parsing a `has` expression:
+- **Before:** `lhs has ident` → `lhs.Has(ident)`
+- **After:** `lhs has ident.ident.ident...` → chained `.And()` combining `.Has()` on each successive `.Access()` level
 
-The Go change refactors the comma-handling from a "require comma before each item after the first" pattern to a "consume item, then switch on what follows: comma → advance; end-marker → stop; else → error" pattern. This allows a trailing comma before the closing delimiter.
+The desugaring is:
+```
+x has a.b.c
+=>
+x.Has("a") && x.Access("a").Has("b") && x.Access("a").Access("b").Has("c")
+```
 
-This is a **language-level semantic change** — Cedar policies with trailing commas in these positions should now be accepted as valid. It must be reflected in the C# parser to maintain conformance.
+This is purely syntactic sugar in the parser — no AST node changes, no evaluator changes, no type system changes. The AST already supports `Has` and `Access` nodes; only the parser needs updating.
 
-## Port Tasks
+An error path is also added: if a dot is followed by a non-identifier token (e.g. `principal has a.b.`), the parser must return a descriptive error: `"expected ident after dot"`.
 
-### 1. Locate the C# parser's list-parsing methods
-Target project: `src/Cedar.Ast` (or `src/Cedar.Core` linked files)
-Look for the equivalent of:
-- `entlist()` — parses `[EntityUID, EntityUID, ...]`
-- `expressions()` — parses comma-separated expression lists
-- `record()` — parses `{ key: value, ... }` record literals
+## Go Source Reference
+**File:** `inspiration/cedar-go/internal/parser/cedar_unmarshal.go`
+**Function:** `func (p *parser) has(lhs ast.Node) (ast.Node, error)` — lines ~590–614
 
-Likely files (search for these):
-- `src/Cedar.Ast/Parser/` — look for a Cedar policy parser class
-- Search for methods handling `[` / `]` delimited entity lists
-- Search for `ParseRecord`, `ParseExpressionList`, `ParseEntityList` or similar
+Key logic:
+1. Parse first attribute into `firstAttr`, build `result = lhs.Has(firstAttr)`, `currentLhs = lhs.Access(firstAttr)`
+2. Loop: while next token is `.`, consume dot, consume ident, build `hasExpr = currentLhs.Has(attr)`, `result = result.And(hasExpr)`, `currentLhs = currentLhs.Access(attr)`
+3. Return `result`
 
-### 2. Update `entlist` equivalent
-**Go before**: check `len(res) > 0` then require exact(",")
-**Go after**: after appending each entity, switch on next token:
-  - `,` → advance (consume comma, allow trailing)
-  - `]` → break out of loop
-  - else → error "got X want ,"
+## Concrete Port Tasks
 
-Port the same logic to C# for the entity list parser.
+### 1. Find the C# parser's `has` parsing logic
+**Target:** `src/Cedar.Ast/` — locate the Cedar text parser, specifically the method that handles `has` relational expressions.
+Look for a method named something like `ParseHas`, `RelationHas`, or a `relation`/`relop` parsing method that calls `Has(...)`.
 
-### 3. Update `expressions` equivalent
-Same pattern as entlist but for general expression lists, using `endOfListMarker` as the closing token.
-- `,` → advance
-- endOfListMarker → break
-- else → error
+### 2. Update the `has` parsing method
+After parsing the first identifier (the initial attribute), add a loop:
+- While the next token is `.` (dot), consume it
+- Consume the next token; if not an identifier, throw a parse error: `"expected ident after dot"`
+- Accumulate: `result = result.And(currentLhs.Has(attr))` and `currentLhs = currentLhs.Access(attr)`
+- Return the accumulated `result`
 
-### 4. Update `record` equivalent
-Same pattern for record literal parsing:
-- After each key-value pair, switch on next token:
-  - `,` → advance
-  - `}` → break
-  - else → error
+### 3. Add error test
+Add a test case verifying that `principal has a.b.` (trailing dot) produces a parse error containing `"expected ident after dot"`.
 
-### 5. Add tests
-In `test/Cedar.Tests` (or wherever parser tests live), add xUnit test cases mirroring the Go test additions:
-- `"expr list with trailing comma"`: `permit (principal, action, resource) when {[1,2,].isEmpty() };`
-- `"record with trailing comma"`: `permit (principal, action, resource) when {{"key":1,} has key };`
-- `"entity list with trailing comma"`: `permit (principal, action, resource) when {User::"alice" in [User::"bob",] };`
+### 4. Add feature test
+Add a test case verifying that `principal has a.b.c` in a policy parses to the equivalent of:
+`principal has a && principal.a has b && principal.a.b has c`
+(i.e., the AND-chain of Has/Access nodes as shown in the Go test).
 
-These should parse successfully and produce the same AST as without the trailing comma.
+### C# Target Files (to discover via read):
+- `src/Cedar.Ast/` — parser source file(s), likely `CedarParser.cs` or similar
+- `test/Cedar.Tests/` — parser/policy tests, likely `PolicyParsingTests.cs` or similar

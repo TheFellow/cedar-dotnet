@@ -500,6 +500,42 @@ public sealed class ParserTests
     }
 
     [Fact]
+    public void ParseExtendedHasThreeLevelChain()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal has a.b.c };");
+
+        NodeAnd outer = Assert.IsType<NodeAnd>(Assert.Single(policy.Conditions));
+        NodeAnd inner = Assert.IsType<NodeAnd>(outer.Left);
+
+        NodeHas hasA = Assert.IsType<NodeHas>(inner.Left);
+        NodeVariable principal = Assert.IsType<NodeVariable>(hasA.Arg);
+        Assert.Equal("principal", principal.Name.Value);
+        Assert.Equal("a", hasA.Attribute.Value);
+
+        NodeHas hasB = Assert.IsType<NodeHas>(inner.Right);
+        NodeAccess accessA = Assert.IsType<NodeAccess>(hasB.Arg);
+        NodeVariable accessAPrincipal = Assert.IsType<NodeVariable>(accessA.Arg);
+        NodeValue accessAAttribute = Assert.IsType<NodeValue>(accessA.Attribute);
+        CedarString accessAAttributeValue = Assert.IsType<CedarString>(accessAAttribute.Value);
+        Assert.Equal("principal", accessAPrincipal.Name.Value);
+        Assert.Equal("a", accessAAttributeValue.Value);
+        Assert.Equal("b", hasB.Attribute.Value);
+
+        NodeHas hasC = Assert.IsType<NodeHas>(outer.Right);
+        NodeAccess accessAB = Assert.IsType<NodeAccess>(hasC.Arg);
+        NodeAccess accessABPrefix = Assert.IsType<NodeAccess>(accessAB.Arg);
+        NodeVariable accessABPrincipal = Assert.IsType<NodeVariable>(accessABPrefix.Arg);
+        NodeValue accessABPrefixAttribute = Assert.IsType<NodeValue>(accessABPrefix.Attribute);
+        CedarString accessABPrefixAttributeValue = Assert.IsType<CedarString>(accessABPrefixAttribute.Value);
+        NodeValue accessABAttribute = Assert.IsType<NodeValue>(accessAB.Attribute);
+        CedarString accessABAttributeValue = Assert.IsType<CedarString>(accessABAttribute.Value);
+        Assert.Equal("principal", accessABPrincipal.Name.Value);
+        Assert.Equal("a", accessABPrefixAttributeValue.Value);
+        Assert.Equal("b", accessABAttributeValue.Value);
+        Assert.Equal("c", hasC.Attribute.Value);
+    }
+
+    [Fact]
     public void ParseIsInExpression()
     {
         PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal is User in Team::\"eng\" };");

@@ -169,6 +169,15 @@ public sealed class ParserErrorTests
         Assert.True(parse.Position.Column >= 1);
     }
 
+    [Fact]
+    public void ChainedHasTrailingDotProducesParseError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { principal has a.b. };"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("identifier after '.'", parse.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("permit(principal, action, resource) when { {false: 43} };", "identifier or string")]
     [InlineData("permit(principal, action, resource) when { {} has false };", "identifier or string")]
