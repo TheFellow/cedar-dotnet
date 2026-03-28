@@ -1,61 +1,74 @@
 PORT
 
-## Commit: 5fdb1c7
-**Date:** 2025-10-21T14:50:09-07:00
-**Subject:** internal/schema/parser: support Path type in context decl
+## Commit Summary
+**SHA:** 0408738  
+**Date:** 2025-10-22  
+**PR:** #115 — `internal/schema/parser: support Path type in context decl`
 
----
+The Cedar schema now allows an action's `context` in an `appliesTo` block to reference a named type via a `Path` (e.g. `context: commonContext`) in addition to an inline record literal (`context: { ... }`). This is a semantic extension to the schema grammar and AST.
 
 ## Semantic Analysis
 
-The upstream change allows an action's `appliesTo` context to be specified as either:
-1. An **inline record type**: `context: { field: Type, ... }` (already supported)
-2. A **named type path reference**: `context: commonContext` or `context: Foo::Bar` (NEW)
+### Go-side changes (inspiration/cedar-go)
+1. **`internal/schema/ast/ast.go`** — `AppliesTo` struct: `Context *RecordType` split into:
+   - `ContextPath   *Path`       — set when context is a named type reference
+   - `ContextRecord *RecordType` — set when context is an inline record
 
-### Go changes summary:
-- **`internal/schema/ast/ast.go`**: `AppliesTo.Context *RecordType` split into `AppliesTo.ContextPath *Path` and `AppliesTo.ContextRecord *RecordType`
-- **`internal/schema/parser/parser.go`**: Parser now peeks at the next token — if `{` parse as RecordType, else parse as Path
-- **`internal/schema/ast/convert_human.go`**: When converting to JSON schema, checks `ContextRecord` first then falls back to `ContextPath` (converted via `convertType`)
-- **`internal/schema/ast/convert_json.go`**: When loading from JSON, dispatches on type: `*RecordType` → `ContextRecord`, `*Path` → `ContextPath`
-- **`internal/schema/ast/format.go`**: Formatter prints either `ContextRecord` or `ContextPath` depending on which is set
-- **`internal/schema/ast/walk_test.go`**: Walk visits both fields independently
+2. **`internal/schema/parser/parser.go`** — Parser peeks at next token:
+   - `{` → parse as `RecordType` (existing behaviour)
+   - otherwise → parse as `Path` (new behaviour)
 
----
+3. **`internal/schema/ast/convert_human.go`** — Human→JSON conversion: emits `EntityOrCommon` type when context is a `Path`.
+
+4. **`internal/schema/ast/convert_json.go`** — JSON→AST conversion: type-switches on result of `convertJSONType`, routing to `ContextPath` or `ContextRecord`.
+
+5. **`internal/schema/ast/format.go`** — Formatter: prints `ContextRecord` or `ContextPath` as appropriate.
+
+6. **`internal/schema/ast/walk_test.go`** — Walker updated for split fields.
+
+### Semantic impact on Cedar.Schema (C#)
+The C# schema model needs the same split: an action's context can be either an inline record **or** a named-type reference (like `EntityOrCommon`). Any place that models `AppliesTo.Context` as only a record type is now incomplete.
 
 ## Concrete Port Tasks
 
-### 1. Locate the C# AppliesTo model in `src/Cedar.Schema`
-- Find the schema AST/model type representing `AppliesTo` (likely in `src/Cedar.Schema/`)
-- Currently the `Context` property is likely typed as a record/inline type only
-- **Change**: Split into two nullable properties: `ContextRecord` (inline record shape) and `ContextPath` (named type reference string or Path type)
-  - If C# uses a discriminated union / sealed hierarchy for schema types, add a new `NamedTypeRef` or reuse existing `EntityOrCommonType` variant
-  - If C# uses a flat model, add a nullable `string? ContextTypeName` alongside existing context record
+### 1. Locate C# AppliesTo / ActionType schema model
+- Target project: `src/Cedar.Schema`
+- Look for a type like `ActionType`, `AppliesTo`, or `ActionDeclaration` that holds a `Context` property typed as a record.
+- Expected file(s): `src/Cedar.Schema/Model/*.cs` or similar.
 
-### 2. Update the Cedar schema text parser (`.cedarschema` human-readable format)
-- **File**: Wherever the human-readable schema is parsed (search for `appliesTo`, `context:` token handling in `src/Cedar.Schema/`)
-- **Change**: After consuming `context :`, peek at the next character/token:
-  - If `{` → parse as inline record (existing behavior)
-  - Otherwise → parse as a path identifier (e.g. `commonContext` or `Foo::Bar`) and store as `ContextPath`/`ContextTypeName`
+### 2. Split the context field
+Change any `Context` property typed as an inline-record-only type to a discriminated union or two nullable properties:
+```csharp
+// Before (likely):
+public RecordType? Context { get; init; }
 
-### 3. Update JSON schema serialization/deserialization
-- **File**: JSON converter for the schema (search for `"context"` handling in `src/Cedar.Schema/`)
-- **Change**: When deserializing `context`, handle both `{"type":"Record","attributes":{...}}` and `{"type":"EntityOrCommon","name":"..."}` shapes
-- When serializing a path-based context, emit `{"type":"EntityOrCommon","name":"<path>"}` (matching cedar-go's JSON output)
+// After:
+public RecordType? ContextRecord { get; init; }
+public string?     ContextPath   { get; init; }  // or a Path/TypeRef type
+```
+Or model as a `SchemaType?` union that can be either `RecordType` or `EntityOrCommonType`.
 
-### 4. Update the formatter / pretty-printer (if one exists in Cedar.Schema)
-- **File**: Any `Format`/`Print` method for schema actions
-- **Change**: Print `context: <TypeName>` when path-based, `context: { ... }` when record-based
+### 3. Update the schema parser / deserializer
+- If parsing human-readable `.cedarschema`: update the parser to peek at the next token after `context:` and branch to `Path` vs `RecordType`.
+- If deserializing JSON schema: the JSON `"type": "EntityOrCommon"` case must be routed to `ContextPath` (already supported generically if `SchemaType` is a union).
 
-### 5. Add tests in `test/Cedar.Schema.Tests`
-- Test parsing `context: commonContext` (named type reference) in a `.cedarschema` string
-- Test round-trip: parse → serialize to JSON → deserialize
-- Test that the JSON representation uses `{"type":"EntityOrCommon","name":"commonContext"}`
-- Mirror the upstream test data in `internal/schema/parser/testdata/cases/example.cedarschema`
+### 4. Update any schema-to-JSON conversion
+Where C# converts the in-memory schema model back to JSON (or to Cedar policy JSON), emit `"type": "EntityOrCommon", "name": "<path>"` when `ContextPath` is set, and `"type": "Record", "attributes": {...}` when `ContextRecord` is set.
 
----
+### 5. Update formatter / pretty-printer (if any)
+If `Cedar.Schema` has a human-readable formatter, print `context: SomeType,` when path-based and `context: { ... },` when record-based.
 
-## Key Files to Investigate First
-- `src/Cedar.Schema/` — find the AppliesTo / action schema model
-- `src/Cedar.Schema/` — find the human-readable parser (search for `context` keyword handling)
-- `src/Cedar.Schema/` — find JSON schema serialization
-- `test/Cedar.Schema.Tests/` — existing schema parser tests to understand test patterns
+### 6. Add tests (Cedar.Schema.Tests)
+- Test parsing `context: commonContext` in a `.cedarschema` string → `ContextPath = "commonContext"`, `ContextRecord = null`.
+- Test parsing `context: { ... }` → `ContextRecord` set, `ContextPath = null`.
+- Test round-trip: parse → serialize back to JSON schema → deserialize → same model.
+- Test with namespaced path: `context: __cedar::datetime` (if applicable).
+
+### Reference files in Go source
+| Go file | Line(s) | Change |
+|---|---|---|
+| `internal/schema/ast/ast.go` | ~339-348 | Split `Context` field |
+| `internal/schema/parser/parser.go` | ~346-359 | Peek & branch on `{` vs path |
+| `internal/schema/ast/convert_human.go` | ~66-75 | Emit `EntityOrCommon` for path |
+| `internal/schema/ast/convert_json.go` | ~187-197 | Type-switch to route path vs record |
+| `internal/schema/ast/format.go` | ~302-315 | Print path or record |

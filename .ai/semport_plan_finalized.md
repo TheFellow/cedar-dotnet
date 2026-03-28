@@ -1,66 +1,67 @@
-# Semport Plan Finalized: 5fdb1c7
+# Semport Finalized Plan — 0408738
 
-## Status: ALREADY IMPLEMENTED — ACKNOWLEDGE
+## Status: ALREADY IMPLEMENTED ✅
 
-**Commit:** `5fdb1c7` — `internal/schema/parser: support Path type in context decl`
-
----
-
-## Finding
-
-After searching the C# codebase, **all changes described in this commit are already present in the cedar-dotnet implementation**. Every Go change maps 1:1 to existing C# code, including tests.
+Commit `0408738` (`internal/schema/parser: support Path type in context decl`) has been **fully ported** in the C# codebase. No implementation work is required.
 
 ---
 
-## Go → C# Mapping (all already implemented)
+## Evidence
 
-### 1. AST Model: `AppliesTo.Context` split into `ContextRecord` + `ContextPath`
+### C# model — `src/Cedar.Schema/Internal/SchemaAst.cs` lines 56–64
+`AppliesToDecl` already uses the split fields:
+```csharp
+public sealed record AppliesToDecl
+{
+    ...
+    public RecordType? ContextRecord { get; init; }  // inline { ... }
+    public TypeRef?    ContextPath   { get; init; }  // named reference e.g. CommonCtx
+    ...
+}
+```
 
-| Go (`internal/schema/ast/ast.go`) | C# (`src/Cedar.Schema/Internal/SchemaAst.cs`) | Status |
-|---|---|---|
-| `ContextPath   *Path` | `TypeRef? ContextPath { get; init; }` (line 64) | ✅ Done |
-| `ContextRecord *RecordType` | `RecordType? ContextRecord { get; init; }` (line 62) | ✅ Done |
+### Parser — `src/Cedar.Schema/Internal/SchemaParser.cs` lines 495–582
+`ParseAppliesTo()` already branches on the next token:
+- `{` → `ParseRecordType()` → `contextRecord`
+- otherwise → `ParsePath()` → `new TypeRef(...)` → `contextPath`
 
-**Go `*Path`** maps to **C# `TypeRef(string Name)`** (a sealed record wrapping a name string).
+### JSON serializer — `src/Cedar.Schema/Internal/SchemaJsonConverter.cs`
+- **Serialize (AST → JSON)** lines 185–193: emits `"type": "EntityOrCommon"` for `ContextPath`, `"type": "Record"` for `ContextRecord`.
+- **Deserialize (JSON → AST)** lines 278–287: `FromJsonType` returns `TypeRef` for `EntityOrCommon`; cast assigns to `ContextPath` vs `ContextRecord`.
 
-### 2. Parser: peek-ahead to dispatch `{` vs path
+### Writer — `src/Cedar.Schema/Internal/SchemaWriter.cs` lines 193–208
+Already handles both: prints named path or inline record.
 
-| Go (`internal/schema/parser/parser.go`) | C# (`src/Cedar.Schema/Internal/SchemaParser.cs`) | Status |
-|---|---|---|
-| `if p.peek().Type == token.LEFTBRACE` → `parseRecType()` else `parsePath()` | `case "context":` checks `_state.Check('{')` → `ParseRecordType()` else `ParsePath()` (lines 542–554) | ✅ Done |
-
-### 3. JSON serialization: `TypeRef` → `{"type":"EntityOrCommon","name":"..."}`
-
-| Go (`internal/schema/ast/convert_human.go` / `convert_json.go`) | C# (`src/Cedar.Schema/Internal/SchemaJsonConverter.cs`) | Status |
-|---|---|---|
-| `convertType(ContextPath)` emits `{"type":"EntityOrCommon","name":...}` | `ToJsonType(TypeRef)` → `new JsonTypeModel { Type = "EntityOrCommon", Name = typeRef.Name }` (line 326) | ✅ Done |
-| JSON load dispatches on `*RecordType` vs `*Path` | `FromJsonType` → `"EntityOrCommon" => new TypeRef(model.Name)` (line 382); `ContextRecord = contextType as RecordType`, `ContextPath = contextType as TypeRef` (lines 286–287) | ✅ Done |
-| Serialization checks `ContextRecord` then `ContextPath` | `if (action.AppliesTo.ContextRecord is not null)` … `else if (action.AppliesTo.ContextPath is not null)` (lines 185–191) | ✅ Done |
-
-### 4. Formatter/Writer: prints either form
-
-| Go (`internal/schema/ast/format.go`) | C# (`src/Cedar.Schema/Internal/SchemaWriter.cs`) | Status |
-|---|---|---|
-| `if n.ContextRecord != nil \|\| n.ContextPath != nil` → print appropriate branch | `if (appliesTo.ContextRecord is not null \|\| appliesTo.ContextPath is not null)` → branch on which is set (lines 193–208) | ✅ Done |
-
-### 5. Tests
-
-| Go test | C# test | Status |
-|---|---|---|
-| `internal/schema/parser/testdata/cases/example.cedarschema` adds `context: commonContext` | `test/Cedar.Schema.Tests/SchemaParserTests.cs` line 191–192: asserts `ContextPath` is set and is a `TypeRef` | ✅ Done |
-| JSON round-trip test | `test/Cedar.Schema.Tests/SchemaRoundTripTests.cs` lines 110–112: asserts `ContextPath.Name == "CommonCtx"` | ✅ Done |
-| JSON deserialization test | `test/Cedar.Schema.Tests/SchemaJsonTests.cs` lines 189–218: `UnmarshalJson_DeserializesNamedContextTypeAsContextPath` | ✅ Done |
-
-**All 128 Cedar.Schema.Tests pass** (`dotnet test test/Cedar.Schema.Tests/ -q` → `Passed! 128/128`).
+### Tests — all passing (128/128)
+| Test file | Relevant test(s) |
+|---|---|
+| `test/Cedar.Schema.Tests/SchemaParserTests.cs:172` | `UnmarshalCedar_ParsesActionWithNamedContextType` — parses `context: CommonContext`, asserts `ContextPath.Name == "CommonContext"` and `ContextRecord == null` |
+| `test/Cedar.Schema.Tests/SchemaParserTests.cs:140` | `UnmarshalCedar_ParsesActionWithParentsAndAppliesTo` — parses inline record, asserts `ContextPath == null` |
+| `test/Cedar.Schema.Tests/SchemaRoundTripTests.cs:89` | `CrossFormat_ConvertersPreserveNamedContextType` — round-trip through JSON preserves `ContextPath` |
+| `test/Cedar.Schema.Tests/SchemaJsonTests.cs:166` | `MarshalJson_SerializesNamedContextTypeAsEntityOrCommon` — emits `"EntityOrCommon"` in JSON |
+| `test/Cedar.Schema.Tests/SchemaJsonTests.cs:189` | `UnmarshalJson_DeserializesNamedContextTypeAsContextPath` — deserializes `"EntityOrCommon"` to `ContextPath` |
 
 ---
 
 ## Action Required
 
-This commit should be **acknowledged**, not implemented. Run:
+**Acknowledge** this commit in the ledger — no C# changes needed.
 
-```
-python3 semport/ledger.py update 5fdb1c7 acknowledged && python3 semport/ledger.py sort
-git add semport/ledger.tsv && git commit -m "semport: acknowledge 5fdb1c7 - already implemented in C#"
+```bash
+python3 semport/ledger.py update 0408738 acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv
+git commit -m "semport: acknowledge 0408738 - already fully implemented (context Path in appliesTo)"
 rm -f .ai/semport_new_commits.md
 ```
+
+---
+
+## Go → C# Pattern Mapping (for reference)
+
+| Go pattern | C# equivalent used here |
+|---|---|
+| Two nullable pointer fields on struct (`*Path`, `*RecordType`) | Two nullable properties on sealed record (`TypeRef?`, `RecordType?`) |
+| Go interface type-switch (`switch t := x.(type)`) | `as` cast + null check (`contextType as RecordType`, `contextType as TypeRef`) |
+| Go `parsePath()` returning `*Path` | `ParsePath()` returning `string`, wrapped in `new TypeRef(name)` |
+| Go `token.LEFTBRACE` peek | C# `_state.Peek().Type == SchemaTokenType.OpenBrace` |
+| `"EntityOrCommon"` JSON string tag | Same string literal in `JsonTypeModel.Type` |
