@@ -270,13 +270,13 @@ internal static class PartialEvaluator
                 env,
                 getTag.Left,
                 getTag.Right,
-                static (left, right) => new GetTagEvaluator(left, right),
+                static (left, right) => throw new EvalException("fold.GetTag"),
                 static (left, right) => new NodeGetTag(left, right)),
             NodeHasTag hasTag => TryPartialBinary(
                 env,
                 hasTag.Left,
                 hasTag.Right,
-                static (left, right) => new HasTagEvaluator(left, right),
+                static (left, right) => throw new EvalException("fold.HasTag"),
                 static (left, right) => new NodeHasTag(left, right)),
             NodeLike like => TryPartial(
                 env,

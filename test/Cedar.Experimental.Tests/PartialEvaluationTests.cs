@@ -351,6 +351,78 @@ public sealed class PartialEvaluationTests
     }
 
     [Fact]
+    public void GetTagWithNonEntityLiteral_BecomesPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { 42.getTag("key") == "value" };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("fold.GetTag", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HasTagWithNonEntityLiteral_BecomesPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { 42.hasTag("key") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("fold.HasTag", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GetTagWithEntityLiteral_BecomesPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { User::"alice".getTag("key") == "value" };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("fold.GetTag", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HasTagWithEntityLiteral_BecomesPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { User::"alice".hasTag("key") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("fold.HasTag", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndWithFalseLeft_ShortCircuitsErrorRight_DropsPolicy()
     {
         Policy policy = Policy.UnmarshalCedar("""
