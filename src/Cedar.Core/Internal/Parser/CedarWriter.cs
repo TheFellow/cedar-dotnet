@@ -4,6 +4,7 @@ using System.Text;
 using Cedar.Ast;
 using Cedar.Ast.Internal;
 using Cedar.Core;
+using Cedar.Core.Internal.Extensions;
 using Cedar.Types;
 
 namespace Cedar.Core.Internal.Parser;
@@ -309,19 +310,41 @@ public static class CedarWriter
                 builder.Append(".isEmpty()");
                 break;
             case NodeExtensionCall call:
-                builder.Append(call.Name);
-                builder.Append('(');
-                for (int i = 0; i < call.Args.Length; i++)
+                if (ExtensionRegistry.TryGet(call.Name, out ExtensionDefinition definition) && definition.IsMethod && call.Args.Length > 0)
                 {
-                    if (i > 0)
+                    WriteNode(builder, call.Args[0], PrecAccess);
+                    builder.Append('.');
+                    builder.Append(call.Name);
+                    builder.Append('(');
+                    for (int i = 1; i < call.Args.Length; i++)
                     {
-                        builder.Append(", ");
+                        if (i > 1)
+                        {
+                            builder.Append(", ");
+                        }
+
+                        WriteNode(builder, call.Args[i]);
                     }
 
-                    WriteNode(builder, call.Args[i]);
+                    builder.Append(')');
+                }
+                else
+                {
+                    builder.Append(call.Name);
+                    builder.Append('(');
+                    for (int i = 0; i < call.Args.Length; i++)
+                    {
+                        if (i > 0)
+                        {
+                            builder.Append(", ");
+                        }
+
+                        WriteNode(builder, call.Args[i]);
+                    }
+
+                    builder.Append(')');
                 }
 
-                builder.Append(')');
                 break;
             case NodeValue value:
                 builder.Append(value.Value.MarshalCedar());

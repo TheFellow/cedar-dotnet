@@ -172,6 +172,60 @@ public sealed class ParserTests
     }
 
     [Fact]
+    public void ParseNegateOfVariable()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { -context };");
+
+        NodeNegate negate = Assert.IsType<NodeNegate>(Assert.Single(policy.Conditions));
+        NodeVariable variable = Assert.IsType<NodeVariable>(negate.Arg);
+        Assert.Equal("context", variable.Name.Value);
+    }
+
+    [Fact]
+    public void ParseDoubleNegateWithLiteralFolding()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { !--1 };");
+
+        NodeNot not = Assert.IsType<NodeNot>(Assert.Single(policy.Conditions));
+        NodeNegate negate = Assert.IsType<NodeNegate>(not.Arg);
+        NodeValue value = Assert.IsType<NodeValue>(negate.Arg);
+        Assert.Equal(new CedarLong(-1), value.Value);
+    }
+
+    [Fact]
+    public void ParseNegativeLiteralInMultiplication()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { -2 * 3 == -6 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeMult mult = Assert.IsType<NodeMult>(equals.Left);
+        NodeValue left = Assert.IsType<NodeValue>(mult.Left);
+        NodeValue right = Assert.IsType<NodeValue>(mult.Right);
+        NodeValue equalsRight = Assert.IsType<NodeValue>(equals.Right);
+
+        Assert.Equal(new CedarLong(-2), left.Value);
+        Assert.Equal(new CedarLong(3), right.Value);
+        Assert.Equal(new CedarLong(-6), equalsRight.Value);
+    }
+
+    [Fact]
+    public void ParseNegateOfGroupedExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { -(2 + 3) == -5 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeNegate negate = Assert.IsType<NodeNegate>(equals.Left);
+        NodeAdd add = Assert.IsType<NodeAdd>(negate.Arg);
+        NodeValue addLeft = Assert.IsType<NodeValue>(add.Left);
+        NodeValue addRight = Assert.IsType<NodeValue>(add.Right);
+        NodeValue equalsRight = Assert.IsType<NodeValue>(equals.Right);
+
+        Assert.Equal(new CedarLong(2), addLeft.Value);
+        Assert.Equal(new CedarLong(3), addRight.Value);
+        Assert.Equal(new CedarLong(-5), equalsRight.Value);
+    }
+
+    [Fact]
     public void ParseEntityReferencePrimary()
     {
         PolicyAst policy = ParseSingle("permit(principal, action, resource) when { User::\"alice\" };");
@@ -244,6 +298,37 @@ public sealed class ParserTests
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
         Assert.Equal("myFunc", call.Name);
         Assert.Equal(2, call.Args.Length);
+    }
+
+    [Fact]
+    public void WriteExtensionMethodCall_UsesMethodSyntax()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { context.ip.isIpv4() };");
+
+        string cedar = CedarWriter.Write(policy);
+
+        Assert.Contains("context.ip.isIpv4()", cedar, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WriteExtensionFunctionCall_UsesFunctionSyntax()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { ip(\"1.2.3.4\") };");
+
+        string cedar = CedarWriter.Write(policy);
+
+        Assert.Contains("ip(\"1.2.3.4\")", cedar, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WriteRecordLiteral_RoundTrips()
+    {
+        const string source = "permit(principal, action, resource) when { {a: 1, \"b\": 2} };";
+
+        PolicyAst policy = ParseSingle(source);
+        string cedar = CedarWriter.Write(policy);
+
+        Assert.Contains("when { {a: 1, \"b\": 2} }", cedar, StringComparison.Ordinal);
     }
 
     [Fact]

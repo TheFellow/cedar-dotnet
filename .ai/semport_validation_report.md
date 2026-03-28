@@ -1,13 +1,25 @@
-PASS
+FAIL
 
-## Validation Results for semport 3418691
+## Build
+- `dotnet build cedar-dotnet.sln`: **SUCCESS** (0 warnings, 0 errors)
 
-| Step | Command | Result |
-|---|---|---|
-| 1 | `dotnet build cedar-dotnet.sln` | ✅ Build succeeded — 0 warnings, 0 errors |
-| 2 | `dotnet test test/Cedar.Tests/` | ✅ Passed: 894, Failed: 0, Skipped: 0 |
-| 3 | `dotnet test test/Cedar.Schema.Tests/` | ✅ Passed: 103, Failed: 0, Skipped: 0 |
-| 4 | `dotnet test test/Cedar.Batch.Tests/` | ✅ Passed: 16, Failed: 0, Skipped: 0 |
-| 5 | `dotnet test test/Cedar.Experimental.Tests/` | ✅ Passed: 28, Failed: 0, Skipped: 0 |
+## Test Results
 
-**Total tests: 1041 passed, 0 failed, 0 skipped**
+| Project | Passed | Failed | Skipped | Total |
+|---|---|---|---|---|
+| Cedar.Tests | 900 | **1** | 0 | 901 |
+| Cedar.Schema.Tests | 103 | 0 | 0 | 103 |
+| Cedar.Batch.Tests | 16 | 0 | 0 | 16 |
+| Cedar.Experimental.Tests | 28 | 0 | 0 | 28 |
+| **TOTAL** | **1047** | **1** | **0** | **1048** |
+
+## Failing Test
+
+**Project:** Cedar.Tests  
+**Test:** `Cedar.Tests.Parser.ParserTests.WriteRecordLiteral_RoundTrips`  
+**File:** `test/Cedar.Tests/Parser/ParserTests.cs:331`  
+**Error:** `Assert.Contains()` — sub-string not found  
+- Expected to find: `"when { {a: 1, "b": 2} }"`  
+- Actual string started with: `"permit(principal, action, resource)\n  whe"...`  
+
+**Note:** This failure is pre-existing and unrelated to the `f01cd27` semport acknowledgment (which made no code changes).
