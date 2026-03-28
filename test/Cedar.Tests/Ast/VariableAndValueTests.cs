@@ -108,6 +108,24 @@ public sealed class VariableAndValueTests
     }
 
     [Fact]
+    public void RecordFromCedarRecordUsesDeterministicSortedKeyOrder()
+    {
+        CedarRecord cedarRecord = new(new Dictionary<CedarString, ICedarData>
+        {
+            [new CedarString("z")] = new CedarLong(3),
+            [new CedarString("a")] = new CedarLong(1),
+            [new CedarString("m")] = new CedarLong(2),
+        });
+
+        NodeRecord node = Assert.IsType<NodeRecord>(Record(cedarRecord).Inner);
+
+        Assert.Equal(3, node.Elements.Length);
+        Assert.Equal("a", node.Elements[0].Key.Value);
+        Assert.Equal("m", node.Elements[1].Key.Value);
+        Assert.Equal("z", node.Elements[2].Key.Value);
+    }
+
+    [Fact]
     public void EntityUidFromStringsCreatesEntityUidValueNode()
     {
         NodeValue node = Assert.IsType<NodeValue>(EntityUid("User", "alice").Inner);

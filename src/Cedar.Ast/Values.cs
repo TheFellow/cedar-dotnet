@@ -83,7 +83,7 @@ public static class Values
 
         ImmutableArray<NodeRecordElement>.Builder builder = ImmutableArray.CreateBuilder<NodeRecordElement>(entries.Count);
 
-        foreach (KeyValuePair<string, Node> entry in entries)
+        foreach (KeyValuePair<string, Node> entry in entries.OrderBy(static entry => entry.Key, StringComparer.Ordinal))
         {
             ArgumentNullException.ThrowIfNull(entry.Key);
             ArgumentNullException.ThrowIfNull(entry.Value);
@@ -98,7 +98,14 @@ public static class Values
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        return RecordNodes(entries.ToDictionary(static entry => entry.Key.Value, static entry => ValueToNode(entry.Value), StringComparer.Ordinal));
+        ImmutableArray<NodeRecordElement>.Builder builder = ImmutableArray.CreateBuilder<NodeRecordElement>(entries.Count);
+
+        foreach (KeyValuePair<CedarString, ICedarData> entry in entries)
+        {
+            builder.Add(new NodeRecordElement(entry.Key, ValueToNode(entry.Value).Inner));
+        }
+
+        return new Node(new NodeRecord(builder.ToImmutable()));
     }
 
     public static Node EntityUid(string entityType, string id)
