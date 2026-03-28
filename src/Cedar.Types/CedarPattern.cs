@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cedar.Types;
 
+[JsonConverter(typeof(CedarPatternJsonConverter))]
 public sealed record CedarPattern : CedarValue
 {
     private readonly PatternComponent[] _components;
@@ -87,10 +90,10 @@ public sealed record CedarPattern : CedarValue
 
     public bool Match(CedarString value)
     {
-        return Match(value.Value);
+        return MatchCore(value.Value);
     }
 
-    public bool Match(string value)
+    private bool MatchCore(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -212,6 +215,83 @@ public sealed record CedarPattern : CedarValue
         }
 
         return builder.ToString();
+    }
+
+    internal void WriteJson(Utf8JsonWriter writer)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+
+        writer.WriteStartArray();
+
+        foreach (PatternComponent component in _components)
+        {
+            if (component.Wildcard)
+            {
+                writer.WriteStringValue("Wildcard");
+            }
+
+            if (!component.Wildcard || component.Literal.Length > 0)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("Literal", component.Literal);
+                writer.WriteEndObject();
+            }
+        }
+
+        writer.WriteEndArray();
+    }
+
+    internal static CedarPattern ReadJson(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            throw new JsonException("Pattern arrays must be JSON arrays.");
+        }
+
+        List<object> values = [];
+        foreach (JsonElement component in element.EnumerateArray())
+        {
+            switch (component.ValueKind)
+            {
+                case JsonValueKind.String:
+                    string stringValue = component.GetString()!;
+                    if (!string.Equals(stringValue, "Wildcard", StringComparison.Ordinal))
+                    {
+                        throw new JsonException($"Invalid pattern component string '{stringValue}'.");
+                    }
+
+                    values.Add(Wildcard.Instance);
+                    break;
+                case JsonValueKind.Object:
+                    string? propertyName = null;
+                    JsonElement propertyValue = default;
+                    int propertyCount = 0;
+
+                    foreach (JsonProperty property in component.EnumerateObject())
+                    {
+                        propertyCount++;
+                        propertyName = property.Name;
+                        propertyValue = property.Value;
+                    }
+
+                    if (propertyCount != 1 || !string.Equals(propertyName, "Literal", StringComparison.Ordinal) || propertyValue.ValueKind != JsonValueKind.String)
+                    {
+                        throw new JsonException("Pattern literal components must be objects with only a 'Literal' string property.");
+                    }
+
+                    values.Add(propertyValue.GetString()!);
+                    break;
+                default:
+                    throw new JsonException("Pattern components must be either the string 'Wildcard' or an object with a 'Literal' string property.");
+            }
+        }
+
+        if (values.Count == 0)
+        {
+            throw new JsonException("Pattern arrays must include at least one component.");
+        }
+
+        return new CedarPattern([.. values]);
     }
 
     private List<PatternComponent> CreateBuilderComponents()

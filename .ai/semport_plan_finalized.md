@@ -1,68 +1,123 @@
-# Finalized Port Plan — 432ab3e
-## cedar-go/types: Change type of EntityUID.Type to EntityType
+# Semport Plan Finalized — commit 595915b
+## "types: tweak shape of pattern"
 
 ---
 
-## Verdict: ALREADY IMPLEMENTED — ACKNOWLEDGE
+## Findings vs. Plan
 
-All semantic changes in commit 432ab3e are already present in the C# codebase.
-No code changes are required. The ledger entry should be updated to `acknowledged`.
+### Task A — Encapsulate `WildcardPatternComponent` → **PARTIALLY DONE, needs one fix**
 
----
+**Current C# state:**
+- `src/Cedar.Types/Wildcard.cs:3` — `public sealed class Wildcard` with a private constructor and `public static Wildcard Instance { get; }` — already opaque/singleton (callers can't `new` it).
+- `src/Cedar.Types/CedarPattern.cs:380` — internal `private readonly record struct PatternComponent(bool Wildcard, string Literal)` — already private.
+- The `Wildcard` class IS public but IS already encapsulated (singleton, private ctor). This matches the Go intent.
 
-## Evidence
+**Gap found:** `CedarPattern.Match` has TWO overloads:
+- `src/Cedar.Types/CedarPattern.cs:91` — `public bool Match(CedarString value)` ✓ already takes Cedar type
+- `src/Cedar.Types/CedarPattern.cs:96` — `public bool Match(string value)` — raw `string` overload still public
 
-### Task 1 — `EntityType` strongly-typed wrapper
-**Status: Done**
-- `src/Cedar.Types/EntityType.cs` — `public readonly record struct EntityType` with `string Value`, `ArgumentNullException.ThrowIfNull`, and `ToString()` override.
-- No implicit conversion from `string` exists (nor is one needed; call sites use `new EntityType("...")` explicitly — idiomatic C#, no implicit operators needed).
+The Go commit removes the raw-string overload (Go `string` → Go `String` which is Cedar's typed string). The C# equivalent is: **remove the `public bool Match(string value)` overload** or make it `internal`/`private`.
 
-### Task 2 — `EntityUid.Type` is `EntityType`, not `string`
-**Status: Done**
-- `src/Cedar.Types/EntityUid.cs:12` — `public EntityType Type { get; }`
-- Constructor: `public EntityUid(EntityType type, CedarString id)` — already requires `EntityType`, not `string`.
-- `MarshalCedar()` uses `Type.Value + "::" + ...` — matches Go's `v.Type.String() + "::" + ...`.
-
-### Task 3 — JSON serialization uses `EntityType`
-**Status: Done**
-- `src/Cedar.Core/Internal/Json/EntityUidJsonConverter.cs:58` — reads as `new EntityType(typeElement.GetString()!)`.
-- `WritePayload` (line ~77) — writes `value.Type.Value` via `WriteString`.
-
-### Task 4 — No `EntityValueFromSlice` equivalent
-**Status: Done (never existed)**
-- `grep` found no `EntityValueFromSlice`, `FromSlice`, or segment-join helper in the codebase. Nothing to remove.
-
-### Task 5 — All call sites use `EntityType`
-**Status: Done**
-- Every call site in `test/Cedar.Tests/Types/EntityUidTests.cs` uses `new EntityType("...")`.
-- Parser (`src/Cedar.Core/Internal/Parser/`) constructs `EntityUid` via `EntityType`-accepting constructor.
-
-### Task 6 — Tests cover the type
-**Status: Done**
-- `test/Cedar.Tests/Types/EntityUidTests.cs` — full suite: construction, marshalling, JSON round-trip, `TryParseCedar`, `ParseCedar`, equality, hash stability.
-- `test/Cedar.Tests/Json/ValueJsonTests.cs:64` — asserts `uid.Type` equals `new EntityType("User")`.
+**Callers of `Match(string)`:**
+- `src/Cedar.Core/Internal/Eval/Evaluators/PatternEvaluators.cs:9` — calls `pattern.Match(new CedarString(...))` ✓ already uses `CedarString` overload
+- Test files: grep shows tests call `Match("hello")`, `Match("prefix")`, `Match("axbyc")` with raw strings.
 
 ---
 
-## Acceptance Criteria (all already satisfied)
+## Concrete Port Tasks
 
-- [x] `EntityType` exists as a value type in `src/Cedar.Types/EntityType.cs`
-- [x] `EntityUid.Type` property is `EntityType` (not `string`)
-- [x] `EntityUid` constructor requires `EntityType` (not `string`)
-- [x] `EntityUidJsonConverter` reads/writes `Type` through `EntityType`
-- [x] No `EntityValueFromSlice`-style helper exists to be removed
-- [x] Tests cover `EntityType` construction and `EntityUid` JSON round-trip
+### Task 1 — Remove/internalize `public bool Match(string value)` overload
+**File:** `src/Cedar.Types/CedarPattern.cs`
+**Lines:** 96–100 (the `public bool Match(string value)` overload)
 
----
+**Action:** Change the `string` overload from `public` to `private` (keep it as a private helper called by the `CedarString` overload). This matches Go's change: callers must pass a Cedar-typed string, not a raw string.
 
-## Action Required
+**Before (line 91–100, approximate):**
+```csharp
+public bool Match(CedarString value)
+{
+    return Match(value.Value);
+}
 
-Run the following to close out this ledger entry:
-
+public bool Match(string value)
+{
+    // ... implementation ...
+}
 ```
-python3 semport/ledger.py update 432ab3e acknowledged
-python3 semport/ledger.py sort
-git add semport/ledger.tsv
-git commit -m "semport: acknowledge 432ab3e - EntityUID.Type as EntityType already implemented in C#"
-rm -f .ai/semport_new_commits.md
+
+**After:**
+```csharp
+public bool Match(CedarString value)
+{
+    return MatchCore(value.Value);
+}
+
+private bool MatchCore(string value)
+{
+    // ... same implementation ...
+}
 ```
+*(Or simply make `Match(string)` private — rename to avoid confusion.)*
+
+**Acceptance criteria:**
+- `CedarPattern.Match(string)` is no longer public API.
+- `CedarPattern.Match(CedarString)` remains the only public `Match` entry point.
+- Build succeeds with no warnings (warnings-as-errors).
+
+---
+
+### Task 2 — Update tests that call `Match(string)` directly
+**Files:**
+- `test/Cedar.Tests/Types/CedarPatternTests.cs:37` — `Match("hello")`
+- `test/Cedar.Tests/Types/CedarPatternTests.cs:43` — `Match("prefix")`
+- `test/Cedar.Tests/Types/CedarPatternTests.cs:49` — `Match("axbyc")`
+
+**Action:** Wrap raw string literals in `new CedarString(...)` at each call site.
+
+**Example change:**
+```csharp
+// Before:
+Assert.True(new CedarPattern("he", Wildcard.Instance, "o").Match("hello"));
+// After:
+Assert.True(new CedarPattern("he", Wildcard.Instance, "o").Match(new CedarString("hello")));
+```
+
+**Acceptance criteria:**
+- All three `Match` test call sites use `new CedarString(...)`.
+- `dotnet test` passes with no failures.
+
+---
+
+### Task 3 — Verify `Wildcard` encapsulation (NO CHANGE NEEDED)
+**File:** `src/Cedar.Types/Wildcard.cs`
+
+The C# `Wildcard` class is already correctly encapsulated:
+- Private constructor (callers can't `new Wildcard()`)
+- `public static Wildcard Instance` singleton (the factory equivalent of Go's `Wildcard()` function)
+
+This already matches the intent of the Go change. No code change required here.
+
+**Acceptance criteria:** Confirm `Wildcard` has `private Wildcard()` ctor — already verified at line 7.
+
+---
+
+## File Reference Summary
+
+| File | Line(s) | Action |
+|---|---|---|
+| `src/Cedar.Types/CedarPattern.cs` | 96–~105 | Change `public bool Match(string value)` → `private bool MatchCore(string value)`, update `Match(CedarString)` to call `MatchCore` |
+| `test/Cedar.Tests/Types/CedarPatternTests.cs` | 37, 43, 49 | Wrap string literals in `new CedarString(...)` at `Match(...)` call sites |
+
+## Go → C# Pattern Mapping
+
+| Go | C# |
+|---|---|
+| `func (p Pattern) Match(arg String)` | `public bool Match(CedarString value)` |
+| Go unexported `wildcardComponent` | C# `private sealed class Wildcard` with private ctor (already done) |
+| Go `Wildcard()` factory func | C# `Wildcard.Instance` singleton (already done) |
+| Remove `string` overload | Make `Match(string)` private/internal |
+
+## Validation Steps
+1. `dotnet build cedar-dotnet.sln` — must succeed (0 warnings, 0 errors)
+2. `dotnet test cedar-dotnet.sln` — all tests must pass
+3. Confirm `grep -n "public.*Match.*string" src/Cedar.Types/CedarPattern.cs` returns no results

@@ -32,6 +32,20 @@ public sealed class PolicySet : IPolicyIterator
     /// </summary>
     public void UpsertPolicy(PolicyId id, Policy policy) => Add(id, policy);
 
+    /// <summary>
+    /// Inserts or replaces all policies from <paramref name="source" /> into this <see cref="PolicySet" />.
+    /// Policies already present in this set with matching IDs are overwritten by the source policies.
+    /// </summary>
+    public void UpsertPolicySet(PolicySet source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        foreach (KeyValuePair<PolicyId, Policy> entry in source.All())
+        {
+            UpsertPolicy(entry.Key, entry.Value);
+        }
+    }
+
     public Policy? Get(PolicyId id)
     {
         return _policies.TryGetValue(id, out Policy? policy) ? policy : null;

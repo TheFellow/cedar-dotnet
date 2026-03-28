@@ -1,47 +1,52 @@
 PORT
 
-## Commit
-432ab3e — 2024-08-23T13:41:25-06:00
-cedar-go/types: Change type of EntityUID.Type to EntityType
+## Commit: 595915b — "types: tweak shape of pattern"
+**Date:** 2024-08-23T13:41:26-06:00
 
 ## Semantic Analysis
-In Go, `EntityUID.Type` was `string`; it is now `EntityType` (a distinct named type `type EntityType string`).
-This strengthens type safety: code that accepted a raw string for an entity type namespace now requires an explicit `EntityType(...)` cast in Go.
 
-In our C# codebase the parallel concept is `EntityUid` (or `EntityUid.Type`). We likely represent the type portion as a plain `string`. We should introduce (or confirm the existence of) an `EntityType` value type — a strongly-typed wrapper around `string` — and ensure `EntityUid.Type` uses it, mirroring the upstream intent.
+This commit makes three related semantic changes to the Cedar pattern type:
 
-Also removed upstream: the helper `EntityValueFromSlice([]string)` — check whether we have an equivalent and remove/deprecate it.
+### 1. `WildcardPatternComponent` → unexported `wildcardComponent`
+- **Go before:** `WildcardPatternComponent` was an exported struct; `Wildcard` was a public var of that type.
+- **Go after:** The type is renamed to unexported `wildcardComponent`; `Wildcard` becomes a function `Wildcard() PatternComponent` returning the private type.
+- **Semantic impact:** The wildcard sentinel is now opaque — callers can't construct or type-assert `WildcardPatternComponent` directly; they must use the `Wildcard()` factory. This is an encapsulation improvement that prevents misuse.
 
-## Port Tasks
+### 2. `errJSONInvalidPatternComponent` moved to `pattern.go`
+- Pure code-organization change: the error sentinel was moved from `json.go` to `pattern.go` where it is used.
+- **Semantic impact:** None — same error value, same behavior.
 
-### 1. Introduce `EntityType` as a strongly-typed wrapper in `Cedar.Types`
-- **Go source:** `types/value.go` line ~393 — `type EntityType string`
-- **C# target:** `src/Cedar.Types/` — add a new file `EntityType.cs`
-  - `public sealed record EntityType(string Value)` with implicit conversion from `string` and `ToString()` override returning `Value`.
-  - Alternatively, if it already exists as a `record struct`, confirm it matches this shape.
+### 3. `Pattern.Match(arg string)` → `Pattern.Match(arg String)`
+- The `Match` method now takes a Cedar `String` value rather than a raw Go `string`.
+- **Semantic impact:** Callers must pass a typed `String`, not a raw string. This ties the match signature to Cedar's value system.
 
-### 2. Change `EntityUid.Type` from `string` to `EntityType`
-- **Go source:** `types/value.go` — `EntityUID.Type EntityType`
-- **C# target:** `src/Cedar.Types/EntityUid.cs` (or wherever `EntityUid` is defined)
-  - Change the `Type` property from `string` to `EntityType`.
-  - Update `NewEntityUID` / constructors to wrap the raw string in `EntityType(...)`.
-  - Update `Cedar()` / `ToString()` to call `.Value` (or use implicit conversion) when building the Cedar string representation.
+## C# Port Tasks
 
-### 3. Update JSON serialization
-- **Go source:** `types/json.go` — `extEntity.Type EntityType` and `entityValueJSON.Type *EntityType`
-- **C# target:** wherever `EntityUid` JSON (de)serialization lives (likely `src/Cedar.Types/` or a converter in `Cedar.Ast`)
-  - Ensure the `JsonConverter` for `EntityUid` reads/writes the `Type` field through `EntityType`, not raw `string`.
+### Task A — Encapsulate `WildcardPatternComponent`
+**Go source:** `inspiration/cedar-go/types/pattern.go` lines 32–35 (before) → 32–34 (after)
 
-### 4. Remove or deprecate `EntityValueFromSlice` equivalent
-- **Go source:** removed `EntityValueFromSlice([]string)` from `types/value.go`
-- **C# target:** search for any helper that builds an `EntityUid` from a `string[]` path segments and remove or mark obsolete.
+Find how `WildcardPatternComponent` is currently represented in the C# codebase.
 
-### 5. Update all call sites
-- Parser, evaluator, test helpers that construct `EntityUID{Type: someString}` must now pass `EntityType(someString)`.
-- **C# targets:** `src/Cedar.Ast/`, `src/Cedar.Core/`, `test/Cedar.Tests/` — any `new EntityUid(type: "Foo", ...)` or similar.
+- Search `src/Cedar.Types` for `WildcardPatternComponent`, `PatternComponent`, and `Pattern`.
+- If `WildcardPatternComponent` is a public `sealed record` or similar, make the concrete type internal and expose only a static factory method (e.g., `PatternComponent.Wildcard()` or `WildcardPatternComponent.Instance` behind an interface).
+- Ensure the `PatternComponent` interface/discriminated-union is what callers reference, not the concrete wildcard type.
 
-### 6. Add/update tests
-- **C# target:** `test/Cedar.Tests/`
-  - Add a test asserting `EntityType` implicit conversion from `string` works.
-  - Add a test asserting `EntityUid.Type` is of type `EntityType`, not `string`.
-  - Ensure existing `EntityUid` round-trip JSON tests still pass.
+**Target files:** likely `src/Cedar.Types/Pattern.cs` (or similar).
+
+### Task B — `Pattern.Match` signature
+**Go source:** `inspiration/cedar-go/types/pattern.go` line 90 (after)
+
+If `Pattern.Match` currently accepts `string`, change it to accept `CedarString` (or whatever the C# Cedar string value type is) to match the Go change. If it already uses the Cedar string type, this is a no-op.
+
+**Target files:** likely `src/Cedar.Types/Pattern.cs`.
+
+### Task C — Update tests
+**Go source:** `inspiration/cedar-go/types/patttern_test.go`
+
+Update any C# tests that construct patterns using the old `WildcardPatternComponent` directly to use the new factory method, and update `Match` call sites to pass a `CedarString`.
+
+**Target files:** likely `test/Cedar.Tests/PatternTests.cs` or similar.
+
+## Notes
+- The error sentinel move (task for `errJSONInvalidPatternComponent`) has no C# equivalent to port.
+- Verify whether C# already uses an opaque/internal wildcard type; if so Tasks A may reduce to acknowledged.

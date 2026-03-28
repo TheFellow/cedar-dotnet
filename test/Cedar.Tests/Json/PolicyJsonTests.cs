@@ -441,6 +441,196 @@ public sealed class PolicyJsonTests
         Assert.Contains("\"pattern\":[{\"Literal\":\"foo\"}]", json, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MarshalJson_LikeLiteralThenWildcard_EmitsCorrectPatternArray()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern("foo", Wildcard.Instance)))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"pattern\":[{\"Literal\":\"foo\"},\"Wildcard\"]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MarshalJson_LikeLiteralWithAsteriskThenWildcard_EmitsCorrectPatternArray()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern("f*oo", Wildcard.Instance)))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"pattern\":[{\"Literal\":\"f*oo\"},\"Wildcard\"]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MarshalJson_LikeLiteralSandwich_EmitsCorrectPatternArray()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern("foo", Wildcard.Instance, "bar")))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"pattern\":[{\"Literal\":\"foo\"},\"Wildcard\",{\"Literal\":\"bar\"}]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MarshalJson_LikeWildcardSandwich_EmitsCorrectPatternArray()
+    {
+        Policy policy = new(CedarAst.Permit()
+            .When(String("text").Like(new CedarPattern(Wildcard.Instance, "foo", Wildcard.Instance)))
+            .Ast);
+
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"pattern\":[\"Wildcard\",{\"Literal\":\"foo\"},\"Wildcard\"]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikeDoubleWildcard_MergesToSingleWildcardComponent()
+    {
+        Policy policy = UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": ["Wildcard", "Wildcard", { "Literal": "foo" }]
+              }
+            }
+            """);
+
+        NodeLike like = Assert.IsType<NodeLike>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(new CedarPattern(Wildcard.Instance, "foo"), like.Pattern);
+
+        string json = policy.MarshalJson();
+        Assert.Contains("\"pattern\":[\"Wildcard\",{\"Literal\":\"foo\"}]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikeDoubleLiteral_MergesAdjacentLiteralComponents()
+    {
+        Policy policy = UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": ["Wildcard", { "Literal": "foo" }, { "Literal": "bar" }]
+              }
+            }
+            """);
+
+        NodeLike like = Assert.IsType<NodeLike>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(new CedarPattern(Wildcard.Instance, "foobar"), like.Pattern);
+
+        string json = policy.MarshalJson();
+        Assert.Contains("\"pattern\":[\"Wildcard\",{\"Literal\":\"foobar\"}]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternMustBeArray_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": "Wildcard"
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternMustNotBeEmpty_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": []
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternWildcardIsCaseSensitive_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": ["wildcard"]
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternRejectsUnexpectedStringComponent_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": ["cardwild"]
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternLiteralKeyIsCaseSensitive_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": [{ "literal": "foo" }]
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternLiteralObjectMustContainLiteralKey_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": [{ "figurative": "haha" }]
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternLiteralObjectMustContainOnlyLiteralKey_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": [{ "Literal": "foo", "Figurative": "haha" }]
+              }
+            }
+            """));
+    }
+
+    [Fact]
+    public void UnmarshalJson_LikePatternLiteralValueMustBeString_ThrowsJsonException()
+    {
+        Assert.Throws<JsonException>(() => UnmarshalPolicyWithConditionBody("""
+            {
+              "like": {
+                "left": { "Value": "text" },
+                "pattern": [{ "Literal": 2 }]
+              }
+            }
+            """));
+    }
+
     private static NodeValue UnmarshalConditionValueNode(string valueJson)
     {
         Policy policy = UnmarshalPolicyWithConditionBody($$"""

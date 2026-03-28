@@ -194,6 +194,52 @@ public sealed class PolicySetTests
     }
 
     [Fact]
+    public void UpsertPolicySet_IntoEmptySet_ContainsAllSourcePolicies()
+    {
+        Policy policy0 = Policy.FromAst(CedarAst.Forbid());
+        Policy policy1 = Policy.UnmarshalJson(
+            """
+            {"effect":"permit","principal":{"op":"All"},"action":{"op":"All"},"resource":{"op":"All"}}
+            """);
+
+        PolicySet source = new();
+        source.UpsertPolicy(new PolicyId("policy0"), policy0);
+        source.UpsertPolicy(new PolicyId("policy1"), policy1);
+
+        PolicySet destination = new();
+        destination.UpsertPolicySet(source);
+
+        Assert.Same(policy0, destination.Get(new PolicyId("policy0")));
+        Assert.Same(policy1, destination.Get(new PolicyId("policy1")));
+        Assert.Null(destination.Get(new PolicyId("policy2")));
+    }
+
+    [Fact]
+    public void UpsertPolicySet_ClobbersExistingOnIdCollision()
+    {
+        Policy policyA = Policy.FromAst(CedarAst.Forbid());
+        Policy policyB = Policy.UnmarshalJson(
+            """
+            {"effect":"permit","principal":{"op":"All"},"action":{"op":"All"},"resource":{"op":"All"}}
+            """);
+        Policy policyC = Policy.FromAst(CedarAst.Permit());
+
+        PolicySet source = new();
+        source.UpsertPolicy(new PolicyId("policy0"), policyA);
+        source.UpsertPolicy(new PolicyId("policy1"), policyB);
+
+        PolicySet destination = new();
+        destination.UpsertPolicy(new PolicyId("policy0"), policyB);
+        destination.UpsertPolicy(new PolicyId("policy2"), policyC);
+
+        destination.UpsertPolicySet(source);
+
+        Assert.Same(policyA, destination.Get(new PolicyId("policy0")));
+        Assert.Same(policyB, destination.Get(new PolicyId("policy1")));
+        Assert.Same(policyC, destination.Get(new PolicyId("policy2")));
+    }
+
+    [Fact]
     public void FromPolicies_EmptyCollection_ReturnsEmptySet()
     {
         PolicySet set = PolicySet.FromPolicies([]);

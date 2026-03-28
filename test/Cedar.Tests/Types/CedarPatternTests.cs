@@ -28,31 +28,31 @@ public sealed class CedarPatternTests
     [Fact]
     public void MatchSupportsExactLiteral()
     {
-        Assert.True(new CedarPattern("hello").Match("hello"));
+        Assert.True(new CedarPattern("hello").Match(new CedarString("hello")));
     }
 
     [Fact]
     public void MatchSupportsWildcardInMiddle()
     {
-        Assert.True(new CedarPattern("he", Wildcard.Instance, "o").Match("hello"));
+        Assert.True(new CedarPattern("he", Wildcard.Instance, "o").Match(new CedarString("hello")));
     }
 
     [Fact]
     public void MatchSupportsTrailingWildcard()
     {
-        Assert.True(new CedarPattern("pre", Wildcard.Instance).Match("prefix"));
+        Assert.True(new CedarPattern("pre", Wildcard.Instance).Match(new CedarString("prefix")));
     }
 
     [Fact]
     public void MatchSupportsMultipleWildcards()
     {
-        Assert.True(new CedarPattern("a", Wildcard.Instance, "b", Wildcard.Instance, "c").Match("axbyc"));
+        Assert.True(new CedarPattern("a", Wildcard.Instance, "b", Wildcard.Instance, "c").Match(new CedarString("axbyc")));
     }
 
     [Fact]
     public void MatchReturnsFalseWhenLiteralDoesNotFit()
     {
-        Assert.False(new CedarPattern("hello").Match("goodbye"));
+        Assert.False(new CedarPattern("hello").Match(new CedarString("goodbye")));
     }
 
     [Fact]
@@ -60,8 +60,8 @@ public sealed class CedarPatternTests
     {
         CedarPattern pattern = CedarPattern.Parse(@"a\*b");
 
-        Assert.True(pattern.Match("a*b"));
-        Assert.False(pattern.Match("axxb"));
+        Assert.True(pattern.Match(new CedarString("a*b")));
+        Assert.False(pattern.Match(new CedarString("axxb")));
     }
 
     [Fact]
@@ -163,8 +163,8 @@ public sealed class CedarPatternTests
     {
         CedarPattern pattern = CedarPattern.Parse(string.Empty);
 
-        Assert.True(pattern.Match(string.Empty));
-        Assert.False(pattern.Match("a"));
+        Assert.True(pattern.Match(new CedarString(string.Empty)));
+        Assert.False(pattern.Match(new CedarString("a")));
         Assert.Equal(string.Empty, pattern.ToPatternText());
     }
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cedar.Ast.Internal;
@@ -390,106 +389,16 @@ internal static class NodeJsonModel
             : throw new JsonException($"Unsupported Cedar variable '{variable}'.");
     }
 
-    private static JsonArray PatternToJson(CedarPattern pattern)
+    private static JsonNode PatternToJson(CedarPattern pattern)
     {
-        JsonArray components = [];
-        foreach (object component in ParsePatternComponents(pattern.ToPatternText()))
-        {
-            switch (component)
-            {
-                case Wildcard:
-                    components.Add("Wildcard");
-                    break;
-                case string literal:
-                    components.Add(new JsonObject { ["Literal"] = literal });
-                    break;
-            }
-        }
-
-        return components;
+        return JsonSerializer.SerializeToNode(pattern, PolicyJsonSerializerOptions.Instance)
+            ?? throw new JsonException("Pattern cannot serialize to null.");
     }
 
     private static CedarPattern ReadPattern(JsonNode node)
     {
-        JsonArray components = AsArray(node, "like.pattern");
-        if (components.Count == 0)
-        {
-            throw new JsonException("Pattern arrays must include at least one component.");
-        }
-
-        List<object> values = [];
-        foreach (JsonNode? component in components)
-        {
-            if (component is JsonValue value && value.TryGetValue<string>(out string? stringValue) && stringValue is not null)
-            {
-                if (!string.Equals(stringValue, "Wildcard", StringComparison.Ordinal))
-                {
-                    throw new JsonException($"Invalid pattern component string '{stringValue}'.");
-                }
-
-                values.Add(Wildcard.Instance);
-                continue;
-            }
-
-            JsonObject literalObject = AsObject(component ?? throw new JsonException("Pattern components cannot be null."), "pattern component");
-            if (literalObject.Count != 1 || !literalObject.TryGetPropertyValue("Literal", out JsonNode? literalNode) || literalNode is null)
-            {
-                throw new JsonException("Pattern literal components must be objects with only a 'Literal' string property.");
-            }
-
-            values.Add(AsString(literalNode, "Literal"));
-        }
-
-        return new CedarPattern(values.ToArray());
-    }
-
-    private static IReadOnlyList<object> ParsePatternComponents(string patternText)
-    {
-        List<object> components = [];
-        StringBuilder literal = new();
-        bool escaped = false;
-
-        foreach (char character in patternText)
-        {
-            if (escaped)
-            {
-                literal.Append(character);
-                escaped = false;
-                continue;
-            }
-
-            if (character == '\\')
-            {
-                escaped = true;
-                continue;
-            }
-
-            if (character == '*')
-            {
-                if (literal.Length > 0)
-                {
-                    components.Add(literal.ToString());
-                    literal.Clear();
-                }
-
-                components.Add(Wildcard.Instance);
-                continue;
-            }
-
-            literal.Append(character);
-        }
-
-        if (escaped)
-        {
-            literal.Append('\\');
-        }
-
-        if (literal.Length > 0 || components.Count == 0)
-        {
-            components.Add(literal.ToString());
-        }
-
-        return components;
+        CedarPattern? pattern = node.Deserialize<CedarPattern>(PolicyJsonSerializerOptions.Instance);
+        return pattern ?? throw new JsonException("Pattern cannot deserialize to null.");
     }
 
     private static JsonObject AsObject(JsonNode node, string context)
