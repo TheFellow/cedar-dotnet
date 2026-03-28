@@ -1,3 +1,4 @@
+using System;
 using Cedar.Ast;
 using Cedar.Ast.Internal;
 using Cedar.Core;
@@ -236,5 +237,116 @@ public sealed class PolicyBuilderTests
         Assert.NotNull(policy);
         Assert.Equal(Effect.Permit, policy.Effect);
         Assert.Equal(builder.Ast, policy.Ast);
+    }
+
+    [Fact]
+    public void OffsetProducesExtensionCallWithDatetimeAndDurationArgs()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Datetime(DateTimeOffset.UnixEpoch).Offset(Duration(TimeSpan.FromMilliseconds(100))));
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "offset", 2);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDatetime>(((NodeValue)call.Args[0]).Value);
+        Assert.IsType<NodeValue>(call.Args[1]);
+        Assert.IsType<CedarDuration>(((NodeValue)call.Args[1]).Value);
+    }
+
+    [Fact]
+    public void DurationSinceProducesExtensionCallWithDatetimeArgs()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Datetime(DateTimeOffset.UnixEpoch).DurationSince(Datetime(DateTimeOffset.UnixEpoch)));
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "durationSince", 2);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDatetime>(((NodeValue)call.Args[0]).Value);
+        Assert.IsType<NodeValue>(call.Args[1]);
+        Assert.IsType<CedarDatetime>(((NodeValue)call.Args[1]).Value);
+    }
+
+    [Fact]
+    public void ToDateProducesExtensionCallWithDatetimeArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Datetime(DateTimeOffset.UnixEpoch).ToDate());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toDate", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDatetime>(((NodeValue)call.Args[0]).Value);
+    }
+
+    [Fact]
+    public void ToTimeProducesExtensionCallWithDatetimeArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Datetime(DateTimeOffset.UnixEpoch).ToTime());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toTime", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDatetime>(((NodeValue)call.Args[0]).Value);
+    }
+
+    [Fact]
+    public void ToDaysProducesExtensionCallWithDurationArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Duration(TimeSpan.FromMilliseconds(100)).ToDays());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toDays", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDuration>(((NodeValue)call.Args[0]).Value);
+    }
+
+    [Fact]
+    public void ToHoursProducesExtensionCallWithDurationArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Duration(TimeSpan.FromMilliseconds(100)).ToHours());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toHours", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDuration>(((NodeValue)call.Args[0]).Value);
+    }
+
+    [Fact]
+    public void ToMinutesProducesExtensionCallWithDurationArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Duration(TimeSpan.FromMilliseconds(100)).ToMinutes());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toMinutes", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDuration>(((NodeValue)call.Args[0]).Value);
+    }
+
+    [Fact]
+    public void ToSecondsProducesExtensionCallWithDurationArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Duration(TimeSpan.FromMilliseconds(100)).ToSeconds());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toSeconds", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDuration>(((NodeValue)call.Args[0]).Value);
+    }
+
+    [Fact]
+    public void ToMillisecondsProducesExtensionCallWithDurationArg()
+    {
+        PolicyBuilder policy = CedarAst.Permit()
+            .When(Duration(TimeSpan.FromMilliseconds(100)).ToMilliseconds());
+
+        NodeExtensionCall call = AssertSingleExtensionCondition(policy, "toMilliseconds", 1);
+        Assert.IsType<NodeValue>(call.Args[0]);
+        Assert.IsType<CedarDuration>(((NodeValue)call.Args[0]).Value);
+    }
+
+    private static NodeExtensionCall AssertSingleExtensionCondition(PolicyBuilder policy, string expectedName, int expectedArgCount)
+    {
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(expectedName, call.Name.Value);
+        Assert.Equal(expectedArgCount, call.Args.Length);
+        return call;
     }
 }

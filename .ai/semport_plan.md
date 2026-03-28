@@ -1,53 +1,65 @@
 PORT
 
-## Commit Summary
-**SHA:** 7dde92c  
-**Message:** `types: remove EntityLoader interface`
-
-The `EntityLoader` interface (with a single `Load(EntityUID) (Entity, bool)` method) is deleted from Go's `types` package. All call sites that previously accepted `EntityLoader` now accept the concrete `types.EntityMap` directly. This removes an abstraction layer and simplifies the API surface.
-
-Affected Go files:
-- `types/entities.go` — interface deleted
-- `authorize.go` — `IsAuthorized` signature changed from `EntityLoader` → `types.EntityMap`
-- `internal/eval/evalers.go` — `Env.Entities` field type changed
-- `types.go` — re-export alias `EntityLoader = types.EntityLoader` removed
-- `x/exp/batch/batch.go` — `Authorize` signature changed
+## Commit
+b4c937e — 2024-11-08 — ast: Add AST builder methods for datetime-related types and operators
 
 ## Semantic Analysis
-The removal of `EntityLoader` is a deliberate simplification: the interface had only one implementation (`EntityMap`) and no external implementors needed. Removing it closes extension points that were never intended to be public.
 
-In C#, if we have an `IEntityLoader` interface (or similar), the analogous change is:
-1. Delete the interface.
-2. Replace any parameter/field typed as `IEntityLoader` with `EntityMap` (our concrete dictionary type).
-3. Update `IsAuthorized` / `Authorize` signatures accordingly.
+This commit adds two categories of changes to cedar-go:
 
-## Concrete Port Tasks
+### 1. Value-node constructors for datetime types
+`internal/ast/value.go` and `ast/value.go` add:
+- `Datetime(t time.Time) Node` — wraps a `types.Datetime` value as an AST leaf node
+- `Duration(d time.Duration) Node` — wraps a `types.Duration` value as an AST leaf node
 
-### 1. Locate and identify the C# EntityLoader interface
-- Search `src/` for any interface named `IEntityLoader` or `EntityLoader`.
-- Expected locations: `src/Cedar.Types/` or `src/Cedar.Core/`.
+### 2. Method-call builder methods on Node
+`internal/ast/operator.go` and `ast/operator.go` add nine fluent builder methods on `Node`:
 
-### 2. Delete the interface
-- If `IEntityLoader` (or equivalent) exists as a file, delete the file.
-- If it is inline in another file, remove the interface declaration.
+**Datetime methods:**
+- `Offset(rhs Node) Node`        → `NewMethodCall(lhs, "offset", rhs)`
+- `DurationSince(rhs Node) Node` → `NewMethodCall(lhs, "durationSince", rhs)`
+- `ToDate() Node`                → `NewMethodCall(lhs, "toDate")`
+- `ToTime() Node`                → `NewMethodCall(lhs, "toTime")`
 
-### 3. Update `IsAuthorized` signature
-- File: likely `src/Cedar.Ast/Authorization.cs` or similar.
-- Change parameter type from `IEntityLoader` → `EntityMap` (or our concrete entity collection type).
+**Duration methods:**
+- `ToDays() Node`        → `NewMethodCall(lhs, "toDays")`
+- `ToHours() Node`       → `NewMethodCall(lhs, "toHours")`
+- `ToMinutes() Node`     → `NewMethodCall(lhs, "toMinutes")`
+- `ToSeconds() Node`     → `NewMethodCall(lhs, "toSeconds")`
+- `ToMilliseconds() Node`→ `NewMethodCall(lhs, "toMilliseconds")`
 
-### 4. Update internal `Env` / evaluator struct
-- File: likely `src/Cedar.Core/Internal/Eval/` (linked source).
-- Change `Entities` field/property type from `IEntityLoader` → concrete `EntityMap`.
+### 3. Extension registry ordering fix
+`internal/extensions/extensions.go` reorders entries so `offset` and `durationSince` are grouped with datetime, not duration. This is cosmetic/organizational only.
 
-### 5. Update `Batch.Authorize` signature
-- File: `src/Cedar.Batch/` — change parameter from interface to concrete type.
+All nine operations are Cedar-spec extension functions. They have semantic meaning that must be present in the C# AST builder layer.
 
-### 6. Update any re-export / type alias in public API surface
-- Remove any `EntityLoader` type alias or re-export.
+## Port Tasks
 
-### 7. Fix all call sites (callers, tests)
-- Search for `IEntityLoader` in test projects and update to pass `EntityMap` directly.
+### Task 1 — Verify datetime/duration value-node factory methods exist in C# AST
+**Go source:** `internal/ast/value.go:74-81`  
+**C# target:** `src/Cedar.Ast/` — find the equivalent of the value-node factory (likely a static `Node` or `Expr` factory class).  
+Check whether `Cedar.Ast` already has `Datetime(...)` and `Duration(...)` expression-builder factories. If missing, add them.
 
-### 8. Verify build and tests pass
-- `dotnet build cedar-dotnet.sln`
-- `dotnet test cedar-dotnet.sln`
+### Task 2 — Add datetime method-call builder methods to C# Node/Expr type
+**Go source:** `internal/ast/operator.go:165-194` and `ast/operator.go:165-197`  
+**C# target:** `src/Cedar.Ast/` — find the fluent `Node` or `Expression` builder type (likely `ExprBuilder`, `NodeBuilder`, or extension methods).  
+Add the following fluent methods (mirroring Go exactly):
+- `Offset(Node rhs)` — method call `"offset"`
+- `DurationSince(Node rhs)` — method call `"durationSince"`
+- `ToDate()` — method call `"toDate"`
+- `ToTime()` — method call `"toTime"`
+- `ToDays()` — method call `"toDays"`
+- `ToHours()` — method call `"toHours"`
+- `ToMinutes()` — method call `"toMinutes"`
+- `ToSeconds()` — method call `"toSeconds"`
+- `ToMilliseconds()` — method call `"toMilliseconds"`
+
+### Task 3 — Ensure extension registry recognizes the method arities
+**Go source:** `internal/extensions/extensions.go`  
+**C# target:** wherever Cedar extension function metadata is stored (arity/isMethod table).  
+Confirm `offset` (arity=2, isMethod=true) and `durationSince` (arity=2, isMethod=true) are registered alongside `toDate`, `toTime`, `toDays`, `toHours`, `toMinutes`, `toSeconds`, `toMilliseconds`.
+
+### Task 4 — Add xUnit tests mirroring the Go test cases
+**Go source:** `ast/ast_test.go:404-453` and the policy-shape test additions  
+**C# target:** `test/Cedar.Tests/` — find the AST builder test file.  
+Add round-trip tests for each of the nine new operators, verifying that the fluent builder produces the correct `ExtensionCall` AST node with the correct method name and argument structure.

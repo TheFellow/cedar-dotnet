@@ -54,6 +54,11 @@ public static class ExtensionOperators
         return Operators.ExtensionCall("offset", lhs, rhs);
     }
 
+    public static Node DurationSince(this Node lhs, Node rhs)
+    {
+        return Operators.ExtensionCall("durationSince", lhs, rhs);
+    }
+
     public static Node DaysInMonth(this Node lhs)
     {
         return Operators.ExtensionCall("daysInMonth", lhs);
