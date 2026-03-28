@@ -158,10 +158,10 @@ public sealed class CedarWriterTests
     [Fact]
     public void WriteExtensionCall()
     {
-        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { f(1, true) };");
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { decimal(\"1.0\") };");
 
         Assert.Equal(
-            "permit(principal, action, resource)\n  when { f(1, true) };",
+            "permit(principal, action, resource)\n  when { decimal(\"1.0\") };",
             CedarWriter.Write(policy));
     }
 

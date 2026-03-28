@@ -37,7 +37,7 @@ public sealed class RoundTripTests
         "permit(principal, action, resource) when { resource.hasTag(\"env\") && resource.getTag(\"env\") == \"prod\" };",
         "permit(principal, action, resource) when { context.name like \"ab*\\*cd\" };",
         "permit(principal, action, resource) when { if true then 1 else 2 };",
-        "permit(principal, action, resource) when { ext(1, true, \"x\") };",
+        "permit(principal, action, resource) when { decimal(\"1.0\") };",
         "@id(\"abc\") permit(principal, action, resource);",
         "permit(principal, action, resource) when { principal is User in Team::\"eng\" };",
         "permit(principal, action, resource) when { context has user.name };",

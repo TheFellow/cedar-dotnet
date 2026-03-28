@@ -422,11 +422,11 @@ public sealed class ParserTests
     [Fact]
     public void ParseExtensionFunctionCall()
     {
-        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { myFunc(1, true) };");
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { decimal(\"1.0\") };");
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
-        Assert.Equal("myFunc", call.Name.Value);
-        Assert.Equal(2, call.Args.Length);
+        Assert.Equal("decimal", call.Name.Value);
+        Assert.Single(call.Args);
     }
 
     [Fact]
