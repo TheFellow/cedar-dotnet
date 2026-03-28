@@ -10,6 +10,9 @@ public sealed record CedarDecimal(long Value) : CedarValue
     private const short MaxFractionalPart = 5_807;
     private const short MinFractionalPart = -5_808;
 
+    public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);
+    public static CedarDecimal DecimalMin { get; } = new(long.MinValue);
+
     public static CedarDecimal NewDecimal(long value, int exponent)
     {
         if (exponent is < -4 or > 14)
@@ -41,6 +44,27 @@ public sealed record CedarDecimal(long Value) : CedarValue
         }
 
         return FromParts(integerPart, checked((short)fractionalPart));
+    }
+
+    public static CedarDecimal NewDecimalFromInt(long value)
+    {
+        return NewDecimal(value, 0);
+    }
+
+    public static CedarDecimal NewDecimalFromFloat(double value)
+    {
+        double scaled = value * Precision;
+        if (scaled > long.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would overflow.");
+        }
+
+        if (scaled < long.MinValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would underflow.");
+        }
+
+        return NewDecimal((long)scaled, -4);
     }
 
     public static CedarDecimal Parse(string value)

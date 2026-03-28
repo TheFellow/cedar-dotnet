@@ -125,4 +125,82 @@ public sealed class CedarDecimalTests
         Assert.Equal("{\"__extn\":{\"fn\":\"decimal\",\"arg\":\"1234.5678\"}}", json);
         CedarAssert.Equal(expected, Assert.IsType<CedarDecimal>(actual));
     }
+
+    [Fact]
+    public void DecimalMaxStoresMaximumRawValue()
+    {
+        Assert.Equal(long.MaxValue, CedarDecimal.DecimalMax.Value);
+    }
+
+    [Fact]
+    public void DecimalMinStoresMinimumRawValue()
+    {
+        Assert.Equal(long.MinValue, CedarDecimal.DecimalMin.Value);
+    }
+
+    [Theory]
+    [InlineData(0L, "0.0")]
+    [InlineData(1L, "1.0")]
+    [InlineData(-1L, "-1.0")]
+    [InlineData(922337203685477L, "922337203685477.0")]
+    [InlineData(-922337203685477L, "-922337203685477.0")]
+    public void NewDecimalFromIntProducesExpectedString(long input, string expected)
+    {
+        CedarAssert.Equal(CedarDecimal.Parse(expected), CedarDecimal.NewDecimalFromInt(input));
+    }
+
+    [Fact]
+    public void NewDecimalFromIntRejectsOverflow()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromInt(922337203685478L));
+    }
+
+    [Theory]
+    [InlineData(0.0, "0.0")]
+    [InlineData(1.0, "1.0")]
+    [InlineData(-1.0, "-1.0")]
+    [InlineData(1.23451, "1.2345")]
+    [InlineData(1.23456, "1.2345")]
+    [InlineData(922337203685477.5807, "922337203685477.5807")]
+    [InlineData(-922337203685477.5808, "-922337203685477.5808")]
+    public void NewDecimalFromFloatProducesExpectedString(double input, string expected)
+    {
+        CedarAssert.Equal(CedarDecimal.Parse(expected), CedarDecimal.NewDecimalFromFloat(input));
+    }
+
+    [Theory]
+    [InlineData(922337203685477.6875)]
+    [InlineData(-922337203685477.6876)]
+    [InlineData(1000000000000000.0)]
+    [InlineData(-1000000000000000.0)]
+    public void NewDecimalFromFloatRejectsOutOfRange(double input)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromFloat(input));
+    }
+
+    [Theory]
+    [InlineData(922337203685477581L, -3)]
+    [InlineData(92233720368547759L, -2)]
+    [InlineData(9223372036854776L, -1)]
+    [InlineData(922337203685478L, 0)]
+    [InlineData(92233720368548L, 1)]
+    [InlineData(10L, 14)]
+    [InlineData(1L, 15)]
+    public void NewDecimalRejectsOverflowMatrix(long significand, int exponent)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimal(significand, exponent));
+    }
+
+    [Theory]
+    [InlineData(-922337203685477581L, -3)]
+    [InlineData(-92233720368547759L, -2)]
+    [InlineData(-9223372036854776L, -1)]
+    [InlineData(-922337203685478L, 0)]
+    [InlineData(-92233720368548L, 1)]
+    [InlineData(-10L, 14)]
+    [InlineData(-1L, 15)]
+    public void NewDecimalRejectsUnderflowMatrix(long significand, int exponent)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimal(significand, exponent));
+    }
 }

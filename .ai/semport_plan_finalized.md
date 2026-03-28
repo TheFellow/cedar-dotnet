@@ -1,174 +1,196 @@
-# Finalized Port Plan: 8a95a23 — Remove `InCache` from `EvalEnv`
-
-## Summary
-Remove the per-evaluation `InCache` dictionary from `EvalEnv` and collapse the now-trivial `EntityInOne` helper, exactly mirroring the upstream cedar-go commit 8a95a23.
-
----
-
-## File 1: `src/Cedar.Core/Internal/Eval/EvalEnv.cs`
-
-### Change: Remove `InCache` property and its `using`
-
-**Current file (14 lines):**
-```csharp
-using System.Collections.Generic;   // line 1 — remove (only used for Dictionary<>)
-using Cedar.Types;                  // line 2 — keep
-
-namespace Cedar.Core.Internal.Eval;
-
-internal sealed record EvalEnv(IEntityGetter Entities, ICedarData Principal, ICedarData Action, ICedarData Resource, ICedarData? Context)
-{
-    internal Dictionary<(EntityUid Lhs, EntityUid Rhs), bool> InCache { get; } = [];   // line 8 — remove entire line
-
-    public static EvalEnv FromRequest(IEntityGetter entities, Request request)
-    {
-        return new EvalEnv(entities, request.Principal, request.Action, request.Resource, request.Context);
-    }
-}
-```
-
-**Target file after edit:**
-```csharp
-using Cedar.Types;
-
-namespace Cedar.Core.Internal.Eval;
-
-internal sealed record EvalEnv(IEntityGetter Entities, ICedarData Principal, ICedarData Action, ICedarData Resource, ICedarData? Context)
-{
-    public static EvalEnv FromRequest(IEntityGetter entities, Request request)
-    {
-        return new EvalEnv(entities, request.Principal, request.Action, request.Resource, request.Context);
-    }
-}
-```
-
-**edit_file calls needed:**
-1. Replace `"using System.Collections.Generic;\nusing Cedar.Types;"` → `"using Cedar.Types;"`
-2. Replace the `InCache` property line + blank line → empty (remove them)
+# Finalized Port Plan — a752ce1
+**Subject:** types: Replace UnsafeDecimal with three new, safe constructors  
+**Date:** 2024-11-05T13:34:07-08:00
 
 ---
 
-## File 2: `src/Cedar.Core/Internal/Eval/Evaluators/MembershipEvaluators.cs`
+## Go → C# Pattern Map
 
-### Change A: `InOperator.Contains` — update call sites to pass `env.Entities`
-
-**Lines 42–50 (current):**
-```csharp
-public static bool Contains(EvalEnv env, EntityUid entity, ICedarData query)
-{
-    return query switch
-    {
-        EntityUid parent => EntityInOne(env, entity, parent),       // pass env.Entities instead
-        CedarSet set => EntityInSet(env, entity, set),              // pass env.Entities instead
-        _ => throw new EvalException($"expected set or entity, got {EvalErrors.TypeName(query)}")
-    };
-}
-```
-
-**Lines 42–50 (target):**
-```csharp
-public static bool Contains(EvalEnv env, EntityUid entity, ICedarData query)
-{
-    return query switch
-    {
-        EntityUid parent => EntityInOne(env.Entities, entity, parent),
-        CedarSet set => EntityInSet(env.Entities, entity, set),
-        _ => throw new EvalException($"expected set or entity, got {EvalErrors.TypeName(query)}")
-    };
-}
-```
-
-### Change B: Replace `EntityInOne` — drop cache, change signature to `IEntityGetter`
-
-**Lines 52–63 (current):**
-```csharp
-private static bool EntityInOne(EvalEnv env, EntityUid entity, EntityUid parent)
-{
-    (EntityUid Lhs, EntityUid Rhs) key = (entity, parent);
-    if (env.InCache.TryGetValue(key, out bool cached))
-    {
-        return cached;
-    }
-
-    bool result = EntityInEntity(env.Entities, entity, parent);
-    env.InCache[key] = result;
-    return result;
-}
-```
-
-**Lines 52–63 (target):**
-```csharp
-private static bool EntityInOne(IEntityGetter entities, EntityUid entity, EntityUid parent)
-{
-    return EntityInEntity(entities, entity, parent);
-}
-```
-
-### Change C: `EntityInSet` — update signature to `IEntityGetter`
-
-**Lines 65–77 (current):**
-```csharp
-private static bool EntityInSet(EvalEnv env, EntityUid entity, CedarSet set)
-{
-    foreach (ICedarData candidate in set)
-    {
-        EntityUid parent = TypeConversion.ValueToEntity(candidate);
-        if (EntityInOne(env, entity, parent))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-```
-
-**Lines 65–77 (target):**
-```csharp
-private static bool EntityInSet(IEntityGetter entities, EntityUid entity, CedarSet set)
-{
-    foreach (ICedarData candidate in set)
-    {
-        EntityUid parent = TypeConversion.ValueToEntity(candidate);
-        if (EntityInOne(entities, entity, parent))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-```
-
-**Note:** `using System.Collections.Generic;` at line 1 of this file must **stay** — `HashSet<EntityUid>` and `Stack<EntityUid>` in `EntityInEntity` (lines 86–87) still require it.
-
----
-
-## No Other Files Need Changes
-
-- `InEvaluator.Eval` (line 12): calls `InOperator.Contains(env, ...)` — signature unchanged, no edit needed.
-- `IsInEvaluator.Eval` (line 36): same — no edit needed.
-- `PartialEvaluator.cs`: uses `EvalEnv` but never touches `InCache` directly — no edit needed.
-- `ConstantFolder.cs`: constructs `EvalEnv` via positional constructor — no edit needed (property initializer was auto-init, no ctor arg).
-
----
-
-## Acceptance Criteria
-
-1. **`EvalEnv.cs`** has no `InCache` property and no `using System.Collections.Generic`.
-2. **`MembershipEvaluators.cs`** `EntityInOne` and `EntityInSet` accept `IEntityGetter` instead of `EvalEnv`; no `InCache` references remain anywhere in `src/`.
-3. `grep -r "InCache" src/` returns no results.
-4. `dotnet build cedar-dotnet.sln` succeeds with zero errors/warnings.
-5. `dotnet test cedar-dotnet.sln` passes — all `in` expression tests (conformance corpus + unit) remain green.
-6. No new tests required: this is a pure performance/allocation removal with identical observable behavior.
-
----
-
-## Go → C# Pattern Map (for reference)
-
-| Go | C# |
+| Go pattern | C# equivalent used in this codebase |
 |---|---|
-| `map[(EntityUID, EntityUID)]bool` | `Dictionary<(EntityUid, EntityUid), bool>` |
-| `Env` struct (value type) | `EvalEnv` sealed record (reference type, but immutable) |
-| Remove field from struct → zero alloc | Remove auto-property init `= []` → no `Dictionary` heap alloc per `EvalEnv` |
-| `entityInSet(env *Env, ...)` | `EntityInSet(EvalEnv env, ...)` → `EntityInSet(IEntityGetter entities, ...)` |
+| `func NewFoo(...) (T, error)` | `public static T NewFoo(...)` — throws `ArgumentOutOfRangeException` on bad input |
+| `constraints.Signed` generic | Not needed — use `long` directly (C# has no need for generic int wrappers here) |
+| `constraints.Float` generic | Not needed — use `double` directly |
+| `var DecimalMax = Decimal{value: math.MaxInt64}` | `public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);` |
+| `math.MaxInt64` / `math.MinInt64` | `long.MaxValue` / `long.MinValue` |
+| `testutil.ErrorIs(t, err, types.ErrDecimal)` | `Assert.Throws<ArgumentOutOfRangeException>(...)` |
+| `testutil.Equals(t, d.String(), tt.want)` | `Assert.Equal(tt.want, d.MarshalCedar())` ... actually `CedarDecimal.Parse(want)` round-trip via `CedarAssert.Equal` |
+
+---
+
+## File 1: `src/Cedar.Types/CedarDecimal.cs`
+
+**Current state (149 lines):**
+- Line 6: `public sealed record CedarDecimal(long Value) : CedarValue`
+- Lines 8–11: `private const long Precision`, `MaxIntegerPart`, `MaxFractionalPart`, `MinFractionalPart`
+- Lines 13–44: `public static CedarDecimal NewDecimal(long value, int exponent)` ← insert after closing `}`
+- Lines 46–79: `public static CedarDecimal Parse(string value)`
+- Lines 81–84: `public double ToDouble()`
+
+### Change 1a — Insert `DecimalMax`/`DecimalMin` after the private constants (after line 11, before line 13)
+
+**Insert point:** after `private const short MinFractionalPart = -5_808;` (line 11), before `public static CedarDecimal NewDecimal`
+
+```csharp
+    public static CedarDecimal DecimalMax { get; } = new(long.MaxValue);
+    public static CedarDecimal DecimalMin { get; } = new(long.MinValue);
+```
+
+**Acceptance criteria:** `CedarDecimal.DecimalMax.Value == long.MaxValue` and `CedarDecimal.DecimalMin.Value == long.MinValue`.
+
+### Change 1b — Insert `NewDecimalFromInt` after `NewDecimal` closing `}` (after line 44)
+
+```csharp
+    public static CedarDecimal NewDecimalFromInt(long value)
+    {
+        return NewDecimal(value, 0);
+    }
+```
+
+**Acceptance criteria:** `CedarDecimal.NewDecimalFromInt(42)` equals `CedarDecimal.Parse("42.0")`. `NewDecimalFromInt(922337203685478)` throws `ArgumentOutOfRangeException`.
+
+### Change 1c — Insert `NewDecimalFromFloat` after `NewDecimalFromInt` closing `}`
+
+```csharp
+    public static CedarDecimal NewDecimalFromFloat(double value)
+    {
+        double scaled = value * Precision;
+        if (scaled > long.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would overflow.");
+        if (scaled < long.MinValue)
+            throw new ArgumentOutOfRangeException(nameof(value), "Decimal value would underflow.");
+        return NewDecimal((long)scaled, -4);
+    }
+```
+
+**Logic notes:**
+- `Precision` = 10_000 (private const already present at line 8)
+- Multiply first, then range-check before casting to `long` — this matches the Go: `f = f * DecimalPrecision` then check vs `math.MaxInt64`/`math.MinInt64`
+- The cast `(long)scaled` truncates toward zero, same as Go's `int64(f)` conversion
+- Then delegates to existing `NewDecimal(long, int)` with exponent `-4`, which performs the final bounds check (covers the "surprising overflow/underflow" edge cases from the Go tests)
+
+**Acceptance criteria:**
+- `NewDecimalFromFloat(1.0)` equals `Parse("1.0")`
+- `NewDecimalFromFloat(1.23451)` equals `Parse("1.2345")` (truncation)
+- `NewDecimalFromFloat(1000000000000000.0)` throws `ArgumentOutOfRangeException`
+- `NewDecimalFromFloat(-1000000000000000.0)` throws `ArgumentOutOfRangeException`
+
+---
+
+## File 2: `test/Cedar.Tests/Types/CedarDecimalTests.cs`
+
+**Current state (128 lines):**
+- Usings at lines 1–4: `System`, `Cedar.Tests.TestSupport`, `Cedar.Types`, `Xunit`
+- Last test ends at line 127, closing `}` at line 128
+- No existing tests for `NewDecimalFromInt` or `NewDecimalFromFloat`
+- Existing `NewDecimalRejectsOverflow` at line 88 only covers `(922337203685478, 0)`
+
+**Insert all new tests before the final closing `}` at line 128.**
+
+### Change 2a — `NewDecimalFromInt` happy-path theory (insert before line 128)
+
+```csharp
+    [Theory]
+    [InlineData(0L, "0.0")]
+    [InlineData(1L, "1.0")]
+    [InlineData(-1L, "-1.0")]
+    [InlineData(922337203685477L, "922337203685477.0")]
+    [InlineData(-922337203685477L, "-922337203685477.0")]
+    public void NewDecimalFromIntProducesExpectedString(long input, string expected)
+    {
+        CedarAssert.Equal(CedarDecimal.Parse(expected), CedarDecimal.NewDecimalFromInt(input));
+    }
+
+    [Fact]
+    public void NewDecimalFromIntRejectsOverflow()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromInt(922337203685478L));
+    }
+```
+
+### Change 2b — `NewDecimalFromFloat` happy-path theory (insert after 2a)
+
+```csharp
+    [Theory]
+    [InlineData(0.0, "0.0")]
+    [InlineData(1.0, "1.0")]
+    [InlineData(-1.0, "-1.0")]
+    [InlineData(1.23451, "1.2345")]
+    [InlineData(1.23456, "1.2345")]
+    [InlineData(922337203685477.5807, "922337203685477.5807")]
+    [InlineData(-922337203685477.5808, "-922337203685477.5808")]
+    public void NewDecimalFromFloatProducesExpectedString(double input, string expected)
+    {
+        CedarAssert.Equal(CedarDecimal.Parse(expected), CedarDecimal.NewDecimalFromFloat(input));
+    }
+```
+
+### Change 2c — `NewDecimalFromFloat` overflow theory (insert after 2b)
+
+```csharp
+    [Theory]
+    [InlineData(922337203685477.6875)]
+    [InlineData(-922337203685477.6876)]
+    [InlineData(1000000000000000.0)]
+    [InlineData(-1000000000000000.0)]
+    public void NewDecimalFromFloatRejectsOutOfRange(double input)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromFloat(input));
+    }
+```
+
+### Change 2d — Full `NewDecimal` overflow matrix (insert after 2c)
+
+Replaces/expands on the single existing `NewDecimalRejectsOverflow` fact — keep the existing fact, add this theory:
+
+```csharp
+    [Theory]
+    [InlineData(922337203685477581L, -3)]
+    [InlineData(92233720368547759L, -2)]
+    [InlineData(9223372036854776L, -1)]
+    [InlineData(922337203685478L, 0)]
+    [InlineData(92233720368548L, 1)]
+    [InlineData(10L, 14)]
+    [InlineData(1L, 15)]
+    public void NewDecimalRejectsOverflowMatrix(long significand, int exponent)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimal(significand, exponent));
+    }
+
+    [Theory]
+    [InlineData(-922337203685477581L, -3)]
+    [InlineData(-92233720368547759L, -2)]
+    [InlineData(-9223372036854776L, -1)]
+    [InlineData(-922337203685478L, 0)]
+    [InlineData(-92233720368548L, 1)]
+    [InlineData(-10L, 14)]
+    [InlineData(-1L, 15)]
+    public void NewDecimalRejectsUnderflowMatrix(long significand, int exponent)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimal(significand, exponent));
+    }
+```
+
+---
+
+## Build & Test Validation
+
+After changes, run:
+```
+dotnet build cedar-dotnet.sln
+dotnet test test/Cedar.Tests/Cedar.Tests.csproj --filter "FullyQualifiedName~CedarDecimalTests"
+```
+
+Expected: all new tests pass, no new warnings (warnings-as-errors is enforced).
+
+---
+
+## Ledger Update (after implementation)
+
+```
+python3 semport/ledger.py update a752ce1 implemented
+python3 semport/ledger.py sort
+git add semport/ledger.tsv
+git commit -m "semport: implement a752ce1 - add NewDecimalFromInt, NewDecimalFromFloat, DecimalMax/Min"
+rm -f .ai/semport_new_commits.md .ai/semport_plan.md .ai/semport_plan_finalized.md
+```
