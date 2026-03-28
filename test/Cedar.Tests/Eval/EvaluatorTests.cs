@@ -37,6 +37,28 @@ public sealed class EvaluatorTests
         }
     }
 
+    private sealed class CountingEntityGetter : IEntityGetter
+    {
+        private readonly Dictionary<EntityUid, Entity> _entities;
+
+        public CountingEntityGetter(params Entity[] entities)
+        {
+            _entities = new Dictionary<EntityUid, Entity>();
+            foreach (Entity entity in entities)
+            {
+                _entities.Add(entity.Uid, entity);
+            }
+        }
+
+        public int TryGetCount { get; private set; }
+
+        public bool TryGet(EntityUid uid, out Entity entity)
+        {
+            TryGetCount++;
+            return _entities.TryGetValue(uid, out entity!);
+        }
+    }
+
     // --- LiteralEvaluator ---
 
     [Fact]
@@ -403,6 +425,31 @@ public sealed class EvaluatorTests
         Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
         IEvaluator evaluator = new InEvaluator(Lit(Alice), Lit(set));
         Assert.Equal(CedarBool.True, evaluator.Eval(MakeEnv(aliceEntity)));
+    }
+
+    [Fact]
+    public void InEvaluator_InSet_ReusesCacheAcrossEvaluations()
+    {
+        Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+        Entity groupEntity = new(Group, new EntityUidSet(), new CedarRecord(), new CedarRecord());
+        CountingEntityGetter entities = new(aliceEntity, groupEntity);
+        EvalEnv env = new(entities, Alice, Action, Resource, new CedarRecord());
+        CedarSet set = new(Bob, Group);
+        IEvaluator evaluator = new InEvaluator(Lit(Alice), Lit(set));
+
+        Assert.Equal(CedarBool.True, evaluator.Eval(env));
+        Assert.Equal(2, env.InCache.Count);
+        Assert.True(env.InCache.TryGetValue((Alice, Bob), out bool missingParentResult));
+        Assert.False(missingParentResult);
+        Assert.True(env.InCache.TryGetValue((Alice, Group), out bool matchingParentResult));
+        Assert.True(matchingParentResult);
+
+        int tryGetCountAfterFirstEvaluation = entities.TryGetCount;
+        Assert.True(tryGetCountAfterFirstEvaluation > 0);
+
+        Assert.Equal(CedarBool.True, evaluator.Eval(env));
+        Assert.Equal(tryGetCountAfterFirstEvaluation, entities.TryGetCount);
+        Assert.Equal(2, env.InCache.Count);
     }
 
     [Fact]

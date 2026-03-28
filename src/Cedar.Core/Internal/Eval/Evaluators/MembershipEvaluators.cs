@@ -44,7 +44,7 @@ internal static class InOperator
         return query switch
         {
             EntityUid parent => EntityInOne(env, entity, parent),
-            CedarSet set => EntityInSet(env.Entities, entity, set),
+            CedarSet set => EntityInSet(env, entity, set),
             _ => throw new EvalException($"expected set or entity, got {EvalErrors.TypeName(query)}")
         };
     }
@@ -62,12 +62,12 @@ internal static class InOperator
         return result;
     }
 
-    private static bool EntityInSet(IEntityGetter entities, EntityUid entity, CedarSet set)
+    private static bool EntityInSet(EvalEnv env, EntityUid entity, CedarSet set)
     {
         foreach (ICedarData candidate in set)
         {
             EntityUid parent = TypeConversion.ValueToEntity(candidate);
-            if (EntityInEntity(entities, entity, parent))
+            if (EntityInOne(env, entity, parent))
             {
                 return true;
             }
