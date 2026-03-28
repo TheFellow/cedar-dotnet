@@ -52,6 +52,24 @@ public sealed class CedarDurationTests
     }
 
     [Fact]
+    public void FromTimeSpanCreatesFromMilliseconds()
+    {
+        CedarDuration result = CedarDuration.FromTimeSpan(TimeSpan.FromMilliseconds(1000));
+
+        Assert.Equal(new CedarDuration(1000), result);
+    }
+
+    [Fact]
+    public void FromTimeSpanRoundTripsWithToTimeSpan()
+    {
+        CedarDuration original = new(42);
+
+        CedarDuration roundTripped = CedarDuration.FromTimeSpan(original.ToTimeSpan());
+
+        Assert.Equal(original, roundTripped);
+    }
+
+    [Fact]
     public void ParseRejectsEmptyInput()
     {
         Assert.Throws<FormatException>(() => CedarDuration.Parse(""));

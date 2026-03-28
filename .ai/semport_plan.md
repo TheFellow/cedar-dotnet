@@ -1,116 +1,80 @@
 PORT
 
-## Commit Summary
-**SHA:** 537c4d8  
-**Date:** 2024-09-18  
-**Title:** Add `datetime` extension type to Cedar
-
-Adds a `Datetime` Cedar value type backed by an `int64` (milliseconds since Unix epoch). Introduces:
-- `Datetime` type with parsing from ISO 8601 strings (`datetime()` extension function)
-- JSON marshaling/unmarshaling via `__extn` envelope (`{"__extn":{"fn":"datetime","arg":"..."}}`)
-- `Lesser` interface (`Less`, `LessEqual`) implemented by `Long` and `Datetime` for operator overloading
-- "Virtual" comparison evalers (`<`, `<=`, `>`, `>=`) that dispatch through `Lesser`
-- `toDate()` extension method that truncates a datetime to midnight UTC (floors to day boundary)
-- `ErrDatetime` sentinel error for parse failures
-
-Does NOT add: `duration` type, `toTime()`, `offset()`, or `durationSince()` methods.
-
----
+## Commit: a4e576e — "Address PR Feedback"
+Date: 2024-09-18T16:18:37-07:00
 
 ## Semantic Analysis
 
-### New type: `Datetime`
-- Go file: `types/datetime.go` (new)
-- Backed by `int64` milliseconds since Unix epoch (UTC)
-- Parsed from ISO 8601 strings via `time.Parse(time.RFC3339, s)` → convert to ms
-- Implements `Value`, `Lesser` (with `Less` and `LessEqual`)
-- Explicit JSON: `{"__extn":{"fn":"datetime","arg":"<iso8601>"}}`
-- Implicit JSON: bare string `"<iso8601>"`
-- `MarshalCedar()` → `datetime("<iso8601>")`
+This commit makes several meaningful behavioral and API changes that affect the C# implementation:
 
-### `Lesser` interface
-- Go file: `types/virtual.go` (new)
-- Interface: `Value` + `Less(Value) bool` + `LessEqual(Value) bool`
-- `Long` gains `Less` and `LessEqual` — Go file: `types/long.go`
+### 1. New `ErrNotComparable` sentinel error
+- **Go**: `var ErrNotComparable = fmt.Errorf("incompatible types in comparison")` in `types/value.go`
+- **C# target**: Add a corresponding `CedarTypeError` or exception/error value for incompatible comparison types. Check if `Cedar.Types` or `Cedar.Ast` already has a TypeError mechanism.
+- **Impact**: Comparison operations must return an error (not just bool) when types are incompatible.
 
-### Virtual comparison evalers
-- Go file: `internal/eval/evalers.go`
-- `virtualLessThanEval`, `virtualGreaterThanEval`, `virtualLessThanOrEqualEval`, `virtualGreaterThanOrEqualEval`
-- Each calls `evalLesser(evaler, env)` to assert both sides implement `Lesser`, then delegates to `Less`/`LessEqual`
-- These are wired into the AST node builder alongside (not replacing) the existing long-only comparisons
+### 2. `Lesser` interface replaced by `ComparableValue` (moved to evalers only)
+- **Go**: `types/virtual.go` deleted (had `Lesser` with `Less(Value) bool` and `LessEqual(Value) bool`). New `ComparableValue` interface in `internal/eval/` returns `(bool, error)`.
+- **C# target**: If `Cedar.Types` or `Cedar.Core` has a `ILesser` or comparable interface, it should be removed/moved to `Cedar.Ast` internal evaluation. The evaluation layer (Cedar.Ast evalers) should define a comparable abstraction.
+- **Impact**: Comparison failures return typed errors instead of panicking/returning false.
 
-### `toDate()` eval
-- Go file: `internal/eval/evalers.go` — `toDateEval`
-- Truncates datetime ms to day boundary: `value - (value % millisPerDay)` where `millisPerDay = 86_400_000`
+### 3. `LessThan`/`LessThanOrEqual` methods on `Long`, `Datetime`, `Duration`
+- **Go**: Each type now has `LessThan(Value) (bool, error)` and `LessThanOrEqual(Value) (bool, error)` that return `ErrNotComparable` when the RHS is wrong type.
+- **C# target**: 
+  - `src/Cedar.Types/CedarLong.cs` (or equivalent) — add `LessThan(CedarValue)` / `LessThanOrEqual(CedarValue)` returning `(bool, CedarTypeError?)` or throwing on type mismatch
+  - `src/Cedar.Types/CedarDatetime.cs` — same
+  - `src/Cedar.Types/CedarDuration.cs` — same
+- **Impact**: Evaluation of `<`, `<=`, `>`, `>=` operators must propagate type errors.
 
-### `ErrDatetime` sentinel
-- Go file: `types/value.go`
+### 4. `FromStdTime` replaces `UnsafeDatetime`
+- **Go**: `UnsafeDatetime(millis int64)` is removed; `FromStdTime(time.Time) Datetime` is added (wraps `time.UnixMilli`)
+- **C# target**: If `Cedar.Types` has a `CedarDatetime.FromMilliseconds(long)` or unsafe constructor, ensure there's also a `FromDateTimeOffset(DateTimeOffset)` factory and the unsafe/raw constructor is not public API.
+- **Impact**: Construction semantics are cleaner; raw milliseconds constructor may remain internal.
 
----
+### 5. `FromStdDuration` constructor for Duration
+- **Go**: `FromStdDuration(time.Duration) Duration` added
+- **C# target**: `src/Cedar.Types/CedarDuration.cs` — add `FromTimeSpan(TimeSpan)` factory if not present.
 
-## Port Tasks
+### 6. Datetime error message renames
+- "timezone indicator" → "time zone designator"
+- "expected time offset" → "invalid time zone offset"  
+- "unexpected trailer" → "unexpected trailer after time zone designator"
+- **C# target**: Update error messages in datetime parser (likely in `src/Cedar.Types/CedarDatetime.cs` or parser file).
 
-### 1. Add `CedarDatetime` value type to `Cedar.Types`
-**Target:** `src/Cedar.Types/CedarDatetime.cs` (new file)
+### 7. Magic constants extracted in evalers
+- **Go**: Comparison evalers use named constants instead of inline literals
+- **C# target**: Review evalers in `src/Cedar.Ast/` for inline magic values and extract to `const` fields.
 
-- `public sealed record CedarDatetime(long MillisecondsSinceEpoch) : CedarValue`
-- Parse from ISO 8601 string using `DateTimeOffset.Parse(s, null, DateTimeStyles.RoundtripKind)` → convert to ms
-- Throw / return error for unparseable strings (analogous to `ErrDatetime`)
-- Implement `ExplicitMarshalJson` → `{"__extn":{"fn":"datetime","arg":"<iso8601>"}}`
-- Implement `UnmarshalJson` for both explicit and implicit forms
-- Implement `MarshalCedar()` → `datetime("<iso8601>")`
-- Implement comparison: `IComparable<CedarDatetime>` (for operator overloading support)
+## Concrete Port Tasks
 
-### 2. Add `ILesser` interface to `Cedar.Types`
-**Target:** `src/Cedar.Types/ILesser.cs` (new file)
+### Task 1: Add ErrNotComparable equivalent
+- File: `src/Cedar.Types/` — find where Cedar errors/exceptions are defined
+- Add: `public static readonly CedarError NotComparable = ...` or appropriate .NET idiom (could be a specific exception type)
 
-- `public interface ILesser : ICedarValue { bool Less(ICedarValue other); bool LessEqual(ICedarValue other); }`
-- Implement on `CedarDatetime` and `CedarLong`
+### Task 2: Move/remove comparable interface from Types layer
+- Search for any `ILesser`, `IComparable`-like Cedar interface in `src/Cedar.Types/`
+- If found, move it to `src/Cedar.Ast/Internal/Eval/` as an internal interface
 
-### 3. Implement `ILesser` on `CedarLong`
-**Target:** `src/Cedar.Types/CedarLong.cs` (existing)
+### Task 3: Add `LessThan`/`LessThanOrEqual` with type-safety to value types
+- `src/Cedar.Types/CedarLong.cs` — add methods returning `(bool success, bool result)` or `Result<bool>` pattern
+- `src/Cedar.Types/CedarDatetime.cs` — same
+- `src/Cedar.Types/CedarDuration.cs` — same
+- Methods must return error/false when RHS is wrong Cedar type
 
-- Add `bool Less(ICedarValue other)` → cast to `CedarLong`, return `this.Value < other.Value`
-- Add `bool LessEqual(ICedarValue other)` → `this.Value <= other.Value`
+### Task 4: `FromDateTimeOffset` factory on `CedarDatetime`
+- `src/Cedar.Types/CedarDatetime.cs` — add `public static CedarDatetime FromDateTimeOffset(DateTimeOffset dt)`
+- Ensure `UnsafeDatetime`-equivalent (raw millis) constructor is internal only if it exists
 
-### 4. Add virtual comparison evalers to `Cedar.Ast`
-**Target:** `src/Cedar.Core/Internal/Eval/Evalers.cs` (or equivalent linked file)
+### Task 5: `FromTimeSpan` factory on `CedarDuration`
+- `src/Cedar.Types/CedarDuration.cs` — add `public static CedarDuration FromTimeSpan(TimeSpan ts)`
 
-- Add `VirtualLessThanEval`, `VirtualGreaterThanEval`, `VirtualLessThanOrEqualEval`, `VirtualGreaterThanOrEqualEval`
-- Each: evaluate both sides, assert they implement `ILesser`, call `Less`/`LessEqual`
-- Wire into the comparison node builder (alongside existing long-only evalers)
+### Task 6: Update datetime error messages
+- Search for "timezone indicator", "time offset", "expected time offset", "unexpected trailer" in datetime parsing code
+- Replace with "time zone designator", "time zone offset", "invalid time zone offset", "unexpected trailer after time zone designator"
 
-### 5. Add `toDate()` eval
-**Target:** `src/Cedar.Core/Internal/Eval/Evalers.cs` (or equivalent)
+### Task 7: Update evalers to use named constants
+- `src/Cedar.Ast/Internal/Eval/` — extract any inline magic numeric/string literals to `const` fields
 
-- `ToDateEval`: evaluate lhs as `CedarDatetime`, truncate to day: `ms - (ms % 86_400_000L)`
-- Register `datetime.toDate` in the extension function dispatch table
-
-### 6. Add `datetime()` extension function registration
-**Target:** wherever `ip()` and `decimal()` extension functions are registered
-
-- Parse string arg → `CedarDatetime` or error with `ErrDatetime`-equivalent
-
-### 7. Add `ErrDatetime` equivalent
-**Target:** `src/Cedar.Types/CedarErrors.cs` or similar
-
-- `public static readonly Exception ErrDatetime = new FormatException("error parsing datetime value");`
-- Or use a strongly-typed error pattern matching existing conventions
-
-### 8. Tests
-**Target:** `test/Cedar.Tests/CedarDatetimeTests.cs` (new file)
-
-- Parse valid ISO 8601 strings → correct ms value
-- Parse invalid strings → error
-- JSON round-trip: explicit and implicit forms
-- `Less`, `LessEqual` comparisons
-- `datetime.toDate()` truncation
-- Virtual comparison evalers via policy evaluation (e.g., `datetime("2024-01-02") > datetime("2024-01-01")`)
-- `MarshalCedar()` output format
-
----
-
-## Key Constants
-- `millisPerDay = 1_000 * 60 * 60 * 24 = 86_400_000L`
-- ISO 8601 / RFC 3339 format: `"yyyy-MM-dd'T'HH:mm:ssK"` (use `DateTimeOffset.Parse` with `RoundtripKind`)
-- JSON fn name: `"datetime"`
+### Task 8: Tests
+- `test/Cedar.Tests/` — add `LessThan`/`LessThanOrEqual` tests for Long, Datetime, Duration with type mismatch case returning ErrNotComparable equivalent
+- Add `FromDateTimeOffset`/`FromTimeSpan` construction tests
+- Add updated datetime parser error message tests

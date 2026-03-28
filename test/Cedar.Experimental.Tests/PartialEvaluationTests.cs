@@ -269,7 +269,7 @@ public sealed class PartialEvaluationTests
         Assert.NotNull(result.Policy);
         Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
         Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy!), new EvalEnv()));
-        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("incompatible types in comparison", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -291,7 +291,7 @@ public sealed class PartialEvaluationTests
         Assert.DoesNotContain("context.variable == 42", result.Policy.MarshalCedar(), StringComparison.Ordinal);
 
         Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
-        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("incompatible types in comparison", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -379,7 +379,7 @@ public sealed class PartialEvaluationTests
         Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
 
         Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
-        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("incompatible types in comparison", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public sealed class PartialEvaluationTests
         Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
 
         Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
-        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("incompatible types in comparison", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

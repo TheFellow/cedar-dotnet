@@ -83,7 +83,7 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
         if (cursor != value.Length)
         {
-            throw new FormatException("unexpected additional characters");
+            throw new FormatException("unexpected trailer after time zone designator");
         }
 
         return CreateFromParts(year, month, day, hour, minute, second, milliseconds, offsetMilliseconds);
@@ -286,7 +286,7 @@ public sealed record CedarDatetime(long Value) : CedarValue
 
         if (value[cursor] != expected)
         {
-            throw new FormatException($"unexpected character {value[cursor]}");
+            throw new FormatException($"unexpected character '{value[cursor]}'");
         }
 
         cursor++;
@@ -330,11 +330,18 @@ public sealed record CedarDatetime(long Value) : CedarValue
     {
         cursor++;
 
-        int hours = ParseDigits(value, ref cursor, 2, 23, "offset hours");
-        int minutes = ParseDigits(value, ref cursor, 2, 59, "offset minutes");
+        try
+        {
+            int hours = ParseDigits(value, ref cursor, 2, 23, "offset hours");
+            int minutes = ParseDigits(value, ref cursor, 2, 59, "offset minutes");
 
-        long magnitude = (hours * CedarConsts.MillisPerHour) + (minutes * CedarConsts.MillisPerMinute);
-        return sign * magnitude;
+            long magnitude = (hours * CedarConsts.MillisPerHour) + (minutes * CedarConsts.MillisPerMinute);
+            return sign * magnitude;
+        }
+        catch (FormatException)
+        {
+            throw new FormatException("invalid time zone offset");
+        }
     }
 
     private static void ValidateDate(int year, int month, int day)

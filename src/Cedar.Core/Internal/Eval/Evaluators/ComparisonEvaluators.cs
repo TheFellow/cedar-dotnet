@@ -70,10 +70,10 @@ internal static class ComparableValues
     {
         if (IsComparable(left) && IsComparable(right))
         {
-            throw new EvalException($"cannot compare {EvalErrors.TypeName(left)} with {EvalErrors.TypeName(right)}");
+            throw new EvalException(EvalErrors.IncompatibleComparison);
         }
 
-        throw new EvalException($"expected comparable value, got {EvalErrors.TypeName(!IsComparable(left) ? left : right)}");
+        throw new EvalException(EvalErrors.IncompatibleComparison);
     }
 
     private static bool IsComparable(ICedarData value)

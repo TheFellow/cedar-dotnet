@@ -108,6 +108,11 @@ public sealed record CedarDuration(long Value) : CedarValue
         return TimeSpan.FromMilliseconds(Value);
     }
 
+    public static CedarDuration FromTimeSpan(TimeSpan value)
+    {
+        return new CedarDuration((long)value.TotalMilliseconds);
+    }
+
     public override string MarshalCedar()
     {
         return "duration(\"" + FormatValue() + "\")";

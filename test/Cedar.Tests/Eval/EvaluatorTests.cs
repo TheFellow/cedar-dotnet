@@ -228,6 +228,16 @@ public sealed class EvaluatorTests
     }
 
     [Fact]
+    public void LessThanEvaluator_IncompatibleTypes_ThrowsEvalException()
+    {
+        IEvaluator evaluator = new LessThanEvaluator(Lit(CedarBool.True), Lit(new CedarLong(2)));
+
+        EvalException exception = Assert.Throws<EvalException>(() => evaluator.Eval(MakeEnv()));
+
+        Assert.Equal(EvalErrors.IncompatibleComparison, exception.Message);
+    }
+
+    [Fact]
     public void GreaterThanEvaluator_Greater_ReturnsTrue()
     {
         IEvaluator evaluator = new GreaterThanEvaluator(Lit(new CedarLong(5)), Lit(new CedarLong(3)));
