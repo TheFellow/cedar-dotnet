@@ -105,7 +105,15 @@ public sealed record CedarDuration(long Value) : CedarValue
 
     public TimeSpan ToTimeSpan()
     {
-        return TimeSpan.FromMilliseconds(Value);
+        const long MaxMilliseconds = long.MaxValue / TimeSpan.TicksPerMillisecond;
+        const long MinMilliseconds = long.MinValue / TimeSpan.TicksPerMillisecond;
+
+        if (Value is > MaxMilliseconds or < MinMilliseconds)
+        {
+            throw new OverflowException("Duration value is outside the range representable by TimeSpan.");
+        }
+
+        return TimeSpan.FromTicks(checked(Value * TimeSpan.TicksPerMillisecond));
     }
 
     public static CedarDuration FromTimeSpan(TimeSpan value)

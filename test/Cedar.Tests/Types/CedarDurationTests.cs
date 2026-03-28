@@ -70,6 +70,32 @@ public sealed class CedarDurationTests
     }
 
     [Fact]
+    public void ToTimeSpanReturnsNativeRepresentation()
+    {
+        CedarDuration value = CedarDuration.Parse("42ms");
+
+        Assert.Equal(TimeSpan.FromMilliseconds(42), value.ToTimeSpan());
+    }
+
+    [Fact]
+    public void ToTimeSpanThrowsOnPositiveOverflow()
+    {
+        long overflowMilliseconds = (long.MaxValue / TimeSpan.TicksPerMillisecond) + 1;
+        CedarDuration value = new(overflowMilliseconds);
+
+        Assert.Throws<OverflowException>(() => value.ToTimeSpan());
+    }
+
+    [Fact]
+    public void ToTimeSpanThrowsOnNegativeOverflow()
+    {
+        long underflowMilliseconds = (long.MinValue / TimeSpan.TicksPerMillisecond) - 1;
+        CedarDuration value = new(underflowMilliseconds);
+
+        Assert.Throws<OverflowException>(() => value.ToTimeSpan());
+    }
+
+    [Fact]
     public void ParseRejectsEmptyInput()
     {
         Assert.Throws<FormatException>(() => CedarDuration.Parse(""));

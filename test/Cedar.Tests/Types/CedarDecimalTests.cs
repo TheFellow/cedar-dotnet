@@ -165,6 +165,14 @@ public sealed class CedarDecimalTests
         Assert.Throws<ArgumentOutOfRangeException>(() => CedarDecimal.NewDecimalFromInt(922337203685478L));
     }
 
+    [Fact]
+    public void ToDoubleReturnsApproximation()
+    {
+        CedarDecimal value = CedarDecimal.NewDecimalFromFloat(42.42);
+
+        Assert.Equal(42.42, value.ToDouble());
+    }
+
     [Theory]
     [InlineData(0.0, "0.0")]
     [InlineData(1.0, "1.0")]

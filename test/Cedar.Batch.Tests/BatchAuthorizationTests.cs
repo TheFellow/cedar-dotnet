@@ -628,6 +628,60 @@ public sealed class BatchAuthorizationTests
     }
 
     [Fact]
+    public void CallbackException_EarlyAbort_StopsProcessingAtThrowingCallback()
+    {
+        PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));
+        BatchRequest request = new(Alice, Read, BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(("resource", [Doc1, Doc2, Doc3]))
+        };
+
+        int count = 0;
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => BatchAuthorization.Authorize(
+            policies,
+            new EntityMap(),
+            request,
+            _ =>
+            {
+                count++;
+                if (count == 2)
+                {
+                    throw new InvalidOperationException("callback error");
+                }
+            }));
+
+        Assert.Equal("callback error", exception.Message);
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
+    public void CancellationAndCallbackException_BothSurfaced()
+    {
+        PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));
+        BatchRequest request = new(Alice, Read, BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(("resource", [Doc1, Doc2, Doc3]))
+        };
+
+        CancellationTokenSource cts = new();
+        InvalidOperationException callbackError = new("callback error");
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => BatchAuthorization.Authorize(
+            policies,
+            new EntityMap(),
+            request,
+            _ =>
+            {
+                cts.Cancel();
+                throw callbackError;
+            },
+            cts.Token));
+
+        Assert.Same(callbackError, exception);
+    }
+
+    [Fact]
     public void CancellationAfterFirstResult_ReturnsPartialResults()
     {
         PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));

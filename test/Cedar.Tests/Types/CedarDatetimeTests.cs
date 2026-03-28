@@ -33,6 +33,14 @@ public sealed class CedarDatetimeTests
         CedarAssert.CedarText(CedarDatetime.Parse("1970-01-01T00:00:00.042Z"), "datetime(\"1970-01-01T00:00:00.042Z\")");
     }
 
+    [Fact]
+    public void ToDateTimeOffsetReturnsUtcRepresentation()
+    {
+        CedarDatetime value = CedarDatetime.Parse("1970-01-01T00:00:00.042Z");
+
+        Assert.Equal(DateTimeOffset.FromUnixTimeMilliseconds(42).ToUniversalTime(), value.ToDateTimeOffset());
+    }
+
     [Theory]
     [InlineData("0000-01-01", "datetime(\"0000-01-01T00:00:00.000Z\")")]
     [InlineData("+000000010-01-01", "datetime(\"0010-01-01T00:00:00.000Z\")")]
