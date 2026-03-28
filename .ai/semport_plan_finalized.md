@@ -1,179 +1,55 @@
-# Finalized Port Plan: b4c937e
-## ast: Add AST builder methods for datetime-related types and operators
+# Finalized Port Plan: 1a0d55f — Expose extension function calls in AST package
+
+## VERDICT: ACKNOWLEDGE (already implemented)
+
+The four named extension-call builder methods added by the Go commit are **already present** in the C# codebase with equivalent semantics. No code changes are needed.
 
 ---
 
-## Current State (as discovered by grep)
+## Evidence: Go → C# mapping
 
-### ✅ Already implemented — NO changes needed:
-- **Value factories** `Datetime(string)`, `Datetime(DateTimeOffset)`, `Duration(string)`, `Duration(TimeSpan)`  
-  → `src/Cedar.Ast/Values.cs:141-158`
-- **Extension registry** — `offset` (arity=2,isMethod=true) and `durationSince` (arity=2,isMethod=true) are both present  
-  → `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs:25-43`
-- **All nine operator methods** except `DurationSince` — `Offset`, `ToDate`, `ToTime`, `ToDays`, `ToHours`, `ToMinutes`, `ToSeconds`, `ToMilliseconds` are all present  
-  → `src/Cedar.Ast/ExtensionOperators.cs:52-139`
+| Go method (`ast/value.go`) | Cedar fn | C# equivalent (`src/Cedar.Ast/ExtensionOperators.cs`) |
+|---|---|---|
+| `DecimalExtensionCall(rhs Node) Node` | `decimal(arg)` | `public static Node Decimal(Node rhs)` — line 147 |
+| `IPExtensionCall(rhs Node) Node` | `ip(arg)` | `public static Node Ip(Node rhs)` — line 152 |
+| `DatetimeExtensionCall(rhs Node) Node` | `datetime(arg)` | `public static Node Datetime(Node rhs)` — line 157 |
+| `DurationExtensionCall(rhs Node) Node` | `duration(arg)` | `public static Node Duration(Node rhs)` — line 162 |
 
-### ❌ Missing — must be added:
-- **`DurationSince(Node rhs)`** extension method on `Node`  
-  → `src/Cedar.Ast/ExtensionOperators.cs` (between `Offset` at line ~52 and `DaysInMonth` at line ~57)
+All four delegate to `Operators.ExtensionCall("name", rhs)` — identical to the Go `ast.ExtensionCall("name", rhs.Node)` pattern.
 
-### ⚠️ Missing test coverage:
-- No tests in `test/Cedar.Tests/Ast/PolicyBuilderTests.cs` for any datetime/duration builder methods.
-  Tests exist only for IP, decimal, and general builder structure.
+## Evidence: Tests already exist
+
+**File:** `test/Cedar.Tests/Ast/OperatorTests.cs`
+- **Fact:** `ExtensionValueWrappersCreateSingleArgumentExtensionCalls` (approx line 248–254)
+  - `AssertExtensionCall(Decimal(String("1.25")), "decimal", 1)` ✅
+  - `AssertExtensionCall(Ip(String("127.0.0.1")), "ip", 1)` ✅
+  - `AssertExtensionCall(Datetime(String("2020-01-02T03:04:05Z")), "datetime", 1)` ✅
+  - `AssertExtensionCall(Duration(String("1h")), "duration", 1)` ✅
+
+These mirror exactly the Go table tests at `ast/ast_test.go:456–481`.
 
 ---
 
-## Task 1 — Add `DurationSince` to ExtensionOperators.cs
+## Action Required
 
-**File:** `src/Cedar.Ast/ExtensionOperators.cs`  
-**Insert after line ~54** (after the `Offset` method body, before `DaysInMonth`):
+Run the following commands (no file edits needed):
 
-```csharp
-public static Node DurationSince(this Node lhs, Node rhs)
-{
-    return Operators.ExtensionCall("durationSince", lhs, rhs);
-}
+```bash
+python3 semport/ledger.py update 1a0d55f acknowledged
+python3 semport/ledger.py sort
+git add semport/ledger.tsv
+git commit -m "semport: acknowledge 1a0d55f - extension call builders already implemented (Decimal/Ip/Datetime/Duration in ExtensionOperators.cs)"
+rm -f .ai/semport_new_commits.md
 ```
 
-**Pattern:** identical to `Offset` at line 52-54, just different method name and Cedar function name.  
-**Go source:** `ast/operator.go:171` → `func (lhs Node) DurationSince(rhs Node) Node { return wrapNode(lhs.Node.DurationSince(rhs.Node)) }`  
-**C# idiom:** `static` extension method on `Node`, delegates to `Operators.ExtensionCall(string, params Node[])`.
+Then update `.ai/semport_plan.md` first line to `SKIP` (or replace with this file's conclusion).
 
 ---
 
-## Task 2 — Add xUnit tests for datetime/duration builder methods
+## Key Files for Reference
 
-**File:** `test/Cedar.Tests/Ast/PolicyBuilderTests.cs`  
-**Insert:** a new test class or a `[Theory]` block at the end of the file (before the final `}`).
-
-**Required usings** (check existing usings at top of file — add any missing):
-- `Cedar.Ast` (likely present)
-- `Cedar.Ast.Internal` (for `NodeExtensionCall`)
-- `Cedar.Types` (for `CedarDatetime`, `CedarDuration`)
-
-**Test pattern to follow:** `test/Cedar.Tests/Json/PolicyJsonTests.cs:194-250` — asserts `NodeExtensionCall` with correct `Name` and `Args`.
-
-**Tests to add** (one `[Fact]` each):
-
-```csharp
-// Go: ast.Permit().When(ast.Datetime(time.Time{}).Offset(ast.Duration(time.Duration(100))))
-[Fact]
-public void Operator_Offset_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Datetime(DateTimeOffset.MinValue).Offset(Values.Duration(TimeSpan.Zero)));
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("offset", call.Name.Value);
-    Assert.Equal(2, call.Args.Length);
-}
-
-// Go: ast.Permit().When(ast.Datetime(time.Time{}).DurationSince(ast.Datetime(time.Time{})))
-[Fact]
-public void Operator_DurationSince_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Datetime(DateTimeOffset.MinValue).DurationSince(Values.Datetime(DateTimeOffset.MinValue)));
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("durationSince", call.Name.Value);
-    Assert.Equal(2, call.Args.Length);
-}
-
-// Go: ast.Permit().When(ast.Datetime(time.Time{}).ToDate())
-[Fact]
-public void Operator_ToDate_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Datetime(DateTimeOffset.MinValue).ToDate());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toDate", call.Name.Value);
-    Assert.Single(call.Args);
-}
-
-// Go: ast.Permit().When(ast.Datetime(time.Time{}).ToTime())
-[Fact]
-public void Operator_ToTime_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Datetime(DateTimeOffset.MinValue).ToTime());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toTime", call.Name.Value);
-    Assert.Single(call.Args);
-}
-
-// Go: ast.Permit().When(ast.Duration(time.Duration(100)).ToDays())
-[Fact]
-public void Operator_ToDays_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Duration(TimeSpan.Zero).ToDays());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toDays", call.Name.Value);
-    Assert.Single(call.Args);
-}
-
-[Fact]
-public void Operator_ToHours_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Duration(TimeSpan.Zero).ToHours());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toHours", call.Name.Value);
-    Assert.Single(call.Args);
-}
-
-[Fact]
-public void Operator_ToMinutes_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Duration(TimeSpan.Zero).ToMinutes());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toMinutes", call.Name.Value);
-    Assert.Single(call.Args);
-}
-
-[Fact]
-public void Operator_ToSeconds_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Duration(TimeSpan.Zero).ToSeconds());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toSeconds", call.Name.Value);
-    Assert.Single(call.Args);
-}
-
-[Fact]
-public void Operator_ToMilliseconds_ProducesExtensionCall()
-{
-    var policy = CedarAst.Permit()
-        .When(Values.Duration(TimeSpan.Zero).ToMilliseconds());
-    NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-    Assert.Equal("toMilliseconds", call.Name.Value);
-    Assert.Single(call.Args);
-}
-```
-
-**Note:** Verify the C# class/static accessor for `Values.Datetime(...)` — in Go it's `ast.Datetime(...)`. In C# it's `Values.Datetime(...)` (static class `Values` in `Cedar.Ast`). Check existing test imports to confirm.
-
----
-
-## Acceptance Criteria
-
-1. `dotnet build cedar-dotnet.sln` — zero errors, zero warnings.
-2. `dotnet test cedar-dotnet.sln` — all tests pass including the 9 new `[Fact]` tests.
-3. `src/Cedar.Ast/ExtensionOperators.cs` contains a public `DurationSince(this Node lhs, Node rhs)` method that calls `Operators.ExtensionCall("durationSince", lhs, rhs)`.
-4. `test/Cedar.Tests/Ast/PolicyBuilderTests.cs` contains 9 new `[Fact]` tests for the datetime/duration operator methods.
-
----
-
-## Go → C# Pattern Map
-
-| Go | C# |
-|----|----|
-| `func (lhs Node) Foo(rhs Node) Node` | `public static Node Foo(this Node lhs, Node rhs)` |
-| `wrapNode(lhs.Node.DurationSince(rhs.Node))` | `Operators.ExtensionCall("durationSince", lhs, rhs)` |
-| `NewMethodCall(lhs, "durationSince", rhs)` | `Operators.ExtensionCall("durationSince", lhs, rhs)` |
-| `types.FromStdTime(time.Time{})` | `CedarDatetime.FromDateTimeOffset(DateTimeOffset.MinValue)` |
-| `types.FromStdDuration(time.Duration(100))` | `new CedarDuration(...)` or `Values.Duration(TimeSpan.Zero)` |
-| `ast.Datetime(t)` in test | `Values.Datetime(DateTimeOffset.MinValue)` |
-| `ast.Duration(d)` in test | `Values.Duration(TimeSpan.Zero)` |
-| Go table-driven test `{ "opFoo", ast.Permit().When(...), internalast.Permit().When(...) }` | xUnit `[Fact]` asserting `NodeExtensionCall.Name.Value` and `Args.Length` |
+| File | Purpose |
+|---|---|
+| `src/Cedar.Ast/ExtensionOperators.cs:147–164` | The four static builder methods (implementation) |
+| `test/Cedar.Tests/Ast/OperatorTests.cs:248–254` | `ExtensionValueWrappersCreateSingleArgumentExtensionCalls` fact (tests) |
+| `src/Cedar.Ast/Operators.cs` | `ExtensionCall(string name, params Node[] args)` primitive |
