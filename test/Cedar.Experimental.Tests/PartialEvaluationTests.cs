@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Cedar.Ast;
+using Cedar.Ast.Internal;
 using Cedar.Experimental;
 using Cedar.Core;
+using Cedar.Core.Internal.Eval;
 using Cedar.Types;
 using Xunit;
 
@@ -348,6 +351,22 @@ public sealed class PartialEvaluationTests
         Assert.True(ok);
         Assert.NotNull(exception);
         Assert.Equal("boom", exception!.Message);
+    }
+
+    [Fact]
+    public void TryGetPartialError_WhenArgEvalFails_ReturnsFalse()
+    {
+        INode badArg = new NodeAdd(
+            new NodeValue(new CedarLong(42)),
+            new NodeValue(CedarBool.False));
+        INode node = new NodeExtensionCall(
+            new CedarPath(PartialEvaluator.PartialErrorExtensionName),
+            ImmutableArray.Create(badArg));
+
+        bool ok = PartialEvaluator.TryGetPartialError(node, out string message);
+
+        Assert.False(ok);
+        Assert.Equal(string.Empty, message);
     }
 
     [Fact]
