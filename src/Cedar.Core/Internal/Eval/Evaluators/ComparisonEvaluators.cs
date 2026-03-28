@@ -68,9 +68,14 @@ internal static class ComparableValues
 
     private static int CompareFailure(ICedarData left, ICedarData right)
     {
-        if (IsComparable(left) && IsComparable(right))
+        if (!IsComparable(left))
         {
-            throw new EvalException(EvalErrors.IncompatibleComparison);
+            throw new EvalException($"type error: expected comparable value, got {EvalErrors.TypeName(left)}");
+        }
+
+        if (!IsComparable(right))
+        {
+            throw new EvalException($"type error: expected comparable value, got {EvalErrors.TypeName(right)}");
         }
 
         throw new EvalException(EvalErrors.IncompatibleComparison);

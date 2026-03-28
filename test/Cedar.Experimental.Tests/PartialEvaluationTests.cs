@@ -533,6 +533,136 @@ public sealed class PartialEvaluationTests
         Assert.Equal(CedarBool.True, nodeValue);
     }
 
+    [Fact]
+    public void DatetimeComparisonLessThan_WithVariableContext_PreservesResidualCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") < context };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains(
+            "datetime(\"1970-01-01T00:00:00.042Z\") < context",
+            result.Policy!.MarshalCedar(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DatetimeComparisonLessThan_FoldsToTrue()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") < datetime("1970-01-01T00:00:00.043Z") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void DatetimeComparisonLessThanOrEqual_WithVariableContext_PreservesResidualCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") <= context };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains(
+            "datetime(\"1970-01-01T00:00:00.042Z\") <= context",
+            result.Policy!.MarshalCedar(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DatetimeComparisonLessThanOrEqual_FoldsToTrue()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") <= datetime("1970-01-01T00:00:00.043Z") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void DatetimeComparisonGreaterThan_WithVariableContext_PreservesResidualCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") > context };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains(
+            "datetime(\"1970-01-01T00:00:00.042Z\") > context",
+            result.Policy!.MarshalCedar(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DatetimeComparisonGreaterThan_FoldsToFalse()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") > datetime("1970-01-01T00:00:00.043Z") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.False(result.Keep);
+        Assert.Null(result.Policy);
+    }
+
+    [Fact]
+    public void DatetimeComparisonGreaterThanOrEqual_WithVariableContext_PreservesResidualCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") >= context };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains(
+            "datetime(\"1970-01-01T00:00:00.042Z\") >= context",
+            result.Policy!.MarshalCedar(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DatetimeComparisonGreaterThanOrEqual_FoldsToFalse()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { datetime("1970-01-01T00:00:00.042Z") >= datetime("1970-01-01T00:00:00.043Z") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.False(result.Keep);
+        Assert.Null(result.Policy);
+    }
+
     private static void AssertPolicyEquivalent(string expectedCedar, Policy actual)
     {
         Policy expected = Policy.UnmarshalCedar(expectedCedar);
