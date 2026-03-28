@@ -19,4 +19,4 @@ TestResults/
 attractor-logs/
 
 # Drafts
-docs/drafts/
+docs/**/drafts/
