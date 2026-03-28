@@ -10,6 +10,7 @@ internal static class EvalErrors
     public const string MissingAttribute = "does not have the attribute";
     public const string MissingTag = "does not have the tag";
     public const string MissingEntity = "does not exist";
+    public const string UnspecifiedEntity = "unspecified entity";
     public const string IncompatibleComparison = "incompatible types in comparison";
 
     public static string TypeName(ICedarData value)

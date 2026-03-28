@@ -13,6 +13,7 @@ public sealed class EvaluatorTests
     private static readonly EntityUid Action = new(new EntityType("Action"), new CedarString("read"));
     private static readonly EntityUid Resource = new(new EntityType("Document"), new CedarString("doc1"));
     private static readonly EntityUid Group = new(new EntityType("Group"), new CedarString("admins"));
+    private static readonly EntityUid UnspecifiedPrincipal = new(new EntityType("__cedar::empty"), new CedarString("principal"));
 
     private static EvalEnv MakeEnv(params Entity[] entities)
     {
@@ -642,6 +643,15 @@ public sealed class EvaluatorTests
     }
 
     [Fact]
+    public void GetTagEvaluator_UnspecifiedEntity_DoesNotEvaluateTagAndThrowsEvalException()
+    {
+        IEvaluator evaluator = new GetTagEvaluator(Lit(UnspecifiedPrincipal), new ThrowingEvaluator());
+
+        EvalException exception = Assert.Throws<EvalException>(() => evaluator.Eval(MakeEnv()));
+        Assert.Contains(EvalErrors.UnspecifiedEntity, exception.Message);
+    }
+
+    [Fact]
     public void HasTagEvaluator_TagFound_ReturnsTrue()
     {
         Entity entity = new(Alice,
@@ -667,6 +677,13 @@ public sealed class EvaluatorTests
     public void HasTagEvaluator_EntityMissing_ReturnsFalse()
     {
         IEvaluator evaluator = new HasTagEvaluator(Lit(Alice), Lit(new CedarString("tag")));
+        Assert.Equal(CedarBool.False, evaluator.Eval(MakeEnv()));
+    }
+
+    [Fact]
+    public void HasTagEvaluator_UnspecifiedEntity_ReturnsFalse()
+    {
+        IEvaluator evaluator = new HasTagEvaluator(Lit(UnspecifiedPrincipal), Lit(new CedarString("tag")));
         Assert.Equal(CedarBool.False, evaluator.Eval(MakeEnv()));
     }
 
