@@ -1,59 +1,49 @@
 PORT
 
 ## Commit Summary
-**SHA:** 4eb9960
-**Message:** add feature: extended has
-
-Adds support for chained `has` expressions in Cedar policy syntax. Instead of only `principal has attr`, users can now write `principal has a.b.c`, which the parser expands into:
-`principal has a && principal.a has b && principal.a.b has c`
+**SHA:** 60b4b94  
+**Message:** types: Address PR feedback  
+**Date:** 2026-01-06T09:25:52-08:00
 
 ## Semantic Analysis
 
-This is a parser-level feature. When parsing a `has` expression:
-- **Before:** `lhs has ident` → `lhs.Has(ident)`
-- **After:** `lhs has ident.ident.ident...` → chained `.And()` combining `.Has()` on each successive `.Access()` level
+This commit fixes a **parsing bug** in `EntityUID.UnmarshalCedar` (Go: `types/entity_uid.go`).
 
-The desugaring is:
-```
-x has a.b.c
-=>
-x.Has("a") && x.Access("a").Has("b") && x.Access("a").Access("b").Has("c")
-```
+### The Bug
+The original code used `strings.LastIndex(s, "::\"")`  to find the boundary between the entity type and the quoted ID. This is wrong: if the entity **ID** itself contains `::` (e.g. `X::Y::"asdf::"`) then `LastIndex` would find the `::` inside the ID, not the separator between type and ID. The fix switches to `strings.Index` (first occurrence), so the type portion is correctly extracted as everything before the first `::\"`.
 
-This is purely syntactic sugar in the parser — no AST node changes, no evaluator changes, no type system changes. The AST already supports `Has` and `Access` nodes; only the parser needs updating.
+Additionally, the fix adds proper unquoting of the ID string using `rust.Unquote` (Cedar uses Rust-style string escape sequences), replacing the naive raw substring slice that ignored escape characters.
 
-An error path is also added: if a dot is followed by a non-identifier token (e.g. `principal has a.b.`), the parser must return a descriptive error: `"expected ident after dot"`.
+### Impact
+Any C# code that parses `EntityUID` from Cedar text (e.g. `Type::"id"` syntax) and uses a "last index" or equivalent strategy to split type vs. ID is affected. Entity IDs containing `::` would be mis-parsed.
 
-## Go Source Reference
-**File:** `inspiration/cedar-go/internal/parser/cedar_unmarshal.go`
-**Function:** `func (p *parser) has(lhs ast.Node) (ast.Node, error)` — lines ~590–614
+## Port Tasks
 
-Key logic:
-1. Parse first attribute into `firstAttr`, build `result = lhs.Has(firstAttr)`, `currentLhs = lhs.Access(firstAttr)`
-2. Loop: while next token is `.`, consume dot, consume ident, build `hasExpr = currentLhs.Has(attr)`, `result = result.And(hasExpr)`, `currentLhs = currentLhs.Access(attr)`
-3. Return `result`
+### 1. Find the C# EntityUID Cedar-text parser
+- Look for the C# equivalent of `UnmarshalCedar` for `EntityUID`.
+- Likely location: `src/Cedar.Types/` or `src/Cedar.Ast/` — search for parsing of `::"`  or `EntityUID` from string.
+- Key files to check:
+  - `src/Cedar.Types/EntityUid.cs` (or similar)
+  - Any Cedar-text / policy parser that constructs `EntityUID` from text
 
-## Concrete Port Tasks
+### 2. Fix the split strategy
+- Change any `LastIndexOf("::\"")`  or `LastIndexOf("::")` call used to split type vs. ID to `IndexOf` (first occurrence).
+- After the first `::\"`, extract the quoted substring, validate it starts and ends with `"`, then unquote the inner content.
 
-### 1. Find the C# parser's `has` parsing logic
-**Target:** `src/Cedar.Ast/` — locate the Cedar text parser, specifically the method that handles `has` relational expressions.
-Look for a method named something like `ParseHas`, `RelationHas`, or a `relation`/`relop` parsing method that calls `Has(...)`.
+### 3. Ensure proper string unquoting
+- Cedar string literals use Rust-style escapes (`\n`, `\t`, `\\`, `\"`, `\u{XXXX}`, etc.).
+- The C# parser should call whatever unquoting utility already exists (search for `Unquote`, `UnescapeString`, or similar in `src/Cedar.Ast/Internal/`).
+- If no utility exists, implement one or reuse the existing Cedar string literal parser.
 
-### 2. Update the `has` parsing method
-After parsing the first identifier (the initial attribute), add a loop:
-- While the next token is `.` (dot), consume it
-- Consume the next token; if not an identifier, throw a parse error: `"expected ident after dot"`
-- Accumulate: `result = result.And(currentLhs.Has(attr))` and `currentLhs = currentLhs.Access(attr)`
-- Return the accumulated `result`
+### 4. Add / extend tests
+- Target: `test/Cedar.Tests/` — find existing `EntityUid` or `EntityUID` parse tests.
+- Add cases mirroring the new Go tests:
+  - `X::Y::"asdf::"` → type=`X::Y`, id=`asdf::`
+  - `Search::Algorithm::"A*"` → type=`Search::Algorithm`, id=`A*`
+  - `Super::"*"` → type=`Super`, id=`*`
+  - `namespace::type::""` → type=`namespace::type`, id=`` (empty)
+- Ensure existing invalid-input cases still fail (`::"id"`, missing closing quote, etc.)
 
-### 3. Add error test
-Add a test case verifying that `principal has a.b.` (trailing dot) produces a parse error containing `"expected ident after dot"`.
-
-### 4. Add feature test
-Add a test case verifying that `principal has a.b.c` in a policy parses to the equivalent of:
-`principal has a && principal.a has b && principal.a.b has c`
-(i.e., the AND-chain of Has/Access nodes as shown in the Go test).
-
-### C# Target Files (to discover via read):
-- `src/Cedar.Ast/` — parser source file(s), likely `CedarParser.cs` or similar
-- `test/Cedar.Tests/` — parser/policy tests, likely `PolicyParsingTests.cs` or similar
+### Go source reference
+- **Bug fix:** `inspiration/cedar-go/types/entity_uid.go`, `UnmarshalCedar` function, lines ~55-80
+- **New tests:** `inspiration/cedar-go/types/entity_uid_test.go`, `UnmarshalCedar with ::\" in ID` and expanded `MarshalBinary round trip`

@@ -13,5 +13,6 @@
     <Compile Include="..\Cedar.Core\Internal\MapSet\ImmutableMapSet.cs" Link="Internal\MapSet\ImmutableMapSet.cs" />
     <Compile Include="..\Cedar.Core\Internal\MapSet\MapSetBuilder.cs" Link="Internal\MapSet\MapSetBuilder.cs" />
     <Compile Include="..\Cedar.Core\Internal\Rust\RustPrintable.cs" Link="Internal\Rust\RustPrintable.cs" />
+    <Compile Include="..\Cedar.Core\Internal\Rust\RustStringHelper.cs" Link="Internal\Rust\RustStringHelper.cs" />
   </ItemGroup>
 </Project>

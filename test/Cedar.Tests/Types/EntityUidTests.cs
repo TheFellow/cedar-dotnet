@@ -141,9 +141,21 @@ public sealed class EntityUidTests
         Assert.Equal("id", result.Id.Value);
     }
 
+    [Fact]
+    public void TryParseCedar_IdContainingDoubleColon()
+    {
+        Assert.True(EntityUid.TryParseCedar("X::Y::\"asdf::\"", out EntityUid? result));
+        Assert.Equal("X::Y", result!.Type.Value);
+        Assert.Equal("asdf::", result.Id.Value);
+    }
+
     [Theory]
     [InlineData("User::\"alice\"")]
     [InlineData("Namespace::Type::\"id\"")]
+    [InlineData("X::Y::\"asdf::\"")]
+    [InlineData("Search::Algorithm::\"A*\"")]
+    [InlineData("Super::\"*\"")]
+    [InlineData("namespace::type::\"\"")]
     public void TryParseCedar_RoundTrip(string input)
     {
         Assert.True(EntityUid.TryParseCedar(input, out EntityUid? parsed));

@@ -1,72 +1,157 @@
-# Semport Plan Finalized: 4eb9960 — add feature: extended has
+# Finalized Port Plan: 60b4b94 — types: Address PR feedback
 
-## Status: ALREADY IMPLEMENTED — Acknowledge Only
-
-The "extended has" feature from upstream cedar-go commit `4eb9960` is **fully implemented** in the C# codebase. No code changes are needed.
+## Summary
+Fix a Cedar-text parsing bug in `EntityUid.TryParseCedar`: switch from `LastIndexOf` to `IndexOf` when finding the `::\"` separator between entity type and ID, and apply proper Rust-style unquoting to the ID.
 
 ---
 
-## Evidence
+## Bug: `LastIndexOf` → `IndexOf` + proper unquoting
 
-### Parser Implementation
+### Go fix (reference)
+`inspiration/cedar-go/types/entity_uid.go`, `UnmarshalCedar`:
+- Line ~59: `strings.LastIndex(s, "::\"")`  → `strings.Index(s, "::\"")`
+- Lines ~65-72: naive raw slice replaced by `rust.Unquote(quoted[1:len-1])`
 
-**File:** `src/Cedar.Core/Internal/Parser/ExpressionParser.cs`  
-**Method:** `ParseHas(INode lhs)` — lines 131–159
+### C# target file
+**`src/Cedar.Types/EntityUid.cs`**, `TryParseCedar` method, **lines 19–34**
 
-The method already implements the full chained `has` desugaring:
-
+Current buggy code (lines 23–32):
 ```csharp
-// Line 145-156 (exact current state):
-CedarString firstAttribute = new(token.Text);
-INode result = new NodeHas(lhs, firstAttribute);
-INode currentLhs = new NodeAccess(lhs, new NodeValue(firstAttribute));
-
-while (_state.Match(TokenType.Dot))
+int index = input.LastIndexOf("::\"", StringComparison.Ordinal);
+if (index <= 0 || !input.EndsWith('"'))
 {
-    Token attributeToken = _state.ExpectIdentifier("Expected identifier after '.'.");
-    CedarString attribute = new(attributeToken.Text);
-    INode hasNode = new NodeHas(currentLhs, attribute);
-    result = new NodeAnd(result, hasNode);
-    currentLhs = new NodeAccess(currentLhs, new NodeValue(attribute));
+    result = null;
+    return false;
 }
 
-return result;
+string type = input[..index];
+string id = input[(index + 3)..^1];
+result = new EntityUid(new EntityType(type), new CedarString(id));
+return true;
 ```
 
-Maps exactly to the Go logic: `result.And(currentLhs.Has(attr))` + `currentLhs = currentLhs.Access(attr)`.
+### Required fix
+1. Change `LastIndexOf` → `IndexOf` (line 23) — **exact 1-line change**
+2. After finding the split index, extract the quoted substring `input[(index+2)..]` (includes the leading `"`), validate it starts with `"` and ends with `"`, then call `RustStringHelper.Unquote(quoted)` to decode escape sequences.
 
-Error path (line 151): `_state.ExpectIdentifier("Expected identifier after '.'.")` — throws on trailing dot.
+**`RustStringHelper.Unquote` is already available** in `src/Cedar.Core/Internal/Rust/RustStringHelper.cs` (line 8). It accepts a `string`, validates surrounding quotes internally (lines 12-17), and returns the unescaped inner value.
 
----
-
-### Tests
-
-**Happy path tests** — `test/Cedar.Tests/Parser/ParserTests.cs`:
-- Line 493: `ParseExtendedHasChain()` — tests `context has user.name` (2-level)
-- Line 503: `ParseExtendedHasThreeLevelChain()` — tests `principal has a.b.c` (3-level), verifies the full AND-chain of `NodeHas`/`NodeAccess` nodes
-
-**Error path test** — `test/Cedar.Tests/Parser/ParserErrorTests.cs`:
-- Line 173: `ChainedHasTrailingDotProducesParseError()` — tests `principal has a.b.` produces a `ParseException`
+**Note:** `Cedar.Types` does NOT currently reference `Cedar.Core`. Check if `Cedar.Types` already has a project reference to `Cedar.Core`, or if `RustStringHelper` needs to be made accessible another way (e.g. move, copy, or expose via a shared internal utility). The `Cedar.Types` → `Cedar.Core` dependency direction must be verified — if it's inverted, use `CedarString.EscapeCharAll` as the reverse path and locate another approach. The `SchemaStringHelper.Unquote` in `src/Cedar.Schema/Internal/SchemaStringHelper.cs` is an alternative but is schema-scoped.
 
 ---
 
-## Go → C# Mapping (for reference)
+## Changes Required
+
+### Change 1 — `src/Cedar.Types/EntityUid.cs`
+
+Replace `TryParseCedar` body (lines 19–34):
+
+**Old:**
+```csharp
+public static bool TryParseCedar(string input, [NotNullWhen(true)] out EntityUid? result)
+{
+    ArgumentNullException.ThrowIfNull(input);
+
+    int index = input.LastIndexOf("::\"", StringComparison.Ordinal);
+    if (index <= 0 || !input.EndsWith('"'))
+    {
+        result = null;
+        return false;
+    }
+
+    string type = input[..index];
+    string id = input[(index + 3)..^1];
+    result = new EntityUid(new EntityType(type), new CedarString(id));
+    return true;
+}
+```
+
+**New:**
+```csharp
+public static bool TryParseCedar(string input, [NotNullWhen(true)] out EntityUid? result)
+{
+    ArgumentNullException.ThrowIfNull(input);
+
+    // Use IndexOf (first occurrence) so that IDs containing "::" are handled correctly.
+    int index = input.IndexOf("::\"", StringComparison.Ordinal);
+    if (index <= 0)
+    {
+        result = null;
+        return false;
+    }
+
+    string type = input[..index];
+    string quoted = input[(index + 2)..]; // includes the leading '"'
+
+    if (quoted.Length < 2 || quoted[^1] != '"')
+    {
+        result = null;
+        return false;
+    }
+
+    try
+    {
+        string id = RustStringHelper.Unquote(quoted);
+        result = new EntityUid(new EntityType(type), new CedarString(id));
+        return true;
+    }
+    catch (FormatException)
+    {
+        result = null;
+        return false;
+    }
+}
+```
+
+**Required using / dependency:**  
+Add `using Cedar.Core.Internal.Rust;` to `EntityUid.cs` IF `Cedar.Types` already references `Cedar.Core`.  
+Verify with: `grep -r "Cedar.Core" src/Cedar.Types/Cedar.Types.csproj`  
+If the reference does not exist, check whether the dependency is valid or use an inline minimal unquote.
+
+---
+
+### Change 2 — `test/Cedar.Tests/Types/EntityUidTests.cs`
+
+Add new test cases to the existing `TryParseCedar_RoundTrip` theory (currently lines 144–152) and a new test for IDs containing `::`.
+
+**Add to `[InlineData]` in `TryParseCedar_RoundTrip` (after line 146):**
+```csharp
+[InlineData("X::Y::\"asdf::\"")]
+[InlineData("Search::Algorithm::\"A*\"")]
+[InlineData("Super::\"*\"")]
+[InlineData("namespace::type::\"\"")]
+```
+
+**Add new test fact** (after `TryParseCedar_NamespacedType`):
+```csharp
+[Fact]
+public void TryParseCedar_IdContainingDoubleColon()
+{
+    Assert.True(EntityUid.TryParseCedar("X::Y::\"asdf::\"", out EntityUid? result));
+    Assert.Equal("X::Y", result!.Type.Value);
+    Assert.Equal("asdf::", result.Id.Value);
+}
+```
+
+---
+
+## Acceptance Criteria
+
+1. `EntityUid.TryParseCedar("X::Y::\"asdf::\"", out _)` returns `true` with `Type="X::Y"`, `Id="asdf::"`.
+2. `EntityUid.TryParseCedar("Namespace::Type::\"id\"", out _)` still works correctly (regression).
+3. `EntityUid.TryParseCedar("::\"id\"", out _)` still returns `false` (no type).
+4. `EntityUid.TryParseCedar("Type::\"id", out _)` still returns `false` (unclosed quote).
+5. `MarshalCedar()` + `TryParseCedar()` round-trip holds for IDs containing `::`, `*`, and empty string.
+6. All existing `EntityUidTests` pass without modification.
+7. `dotnet test cedar-dotnet.sln` exits 0.
+
+---
+
+## Go → C# Pattern Mapping
 
 | Go | C# |
-|----|----|
-| `ast.Node.Has(attr)` | `new NodeHas(lhs, attribute)` |
-| `ast.Node.Access(attr)` | `new NodeAccess(lhs, new NodeValue(attribute))` |
-| `result.And(expr)` | `new NodeAnd(result, expr)` |
-| `p.errorf("expected ident after dot")` | `_state.ExpectIdentifier("Expected identifier after '.'.")` |
-| Go `types.String(t.Text)` | `new CedarString(token.Text)` |
-
----
-
-## Action Required
-
-**Acknowledge this commit** — run:
-```
-python3 semport/ledger.py update 4eb9960 acknowledged && python3 semport/ledger.py sort
-git add semport/ledger.tsv && git commit -m "semport: acknowledge 4eb9960 - extended has already implemented in C#"
-rm -f .ai/semport_new_commits.md
-```
+|---|---|
+| `strings.Index(s, "::\"")` | `input.IndexOf("::\"", StringComparison.Ordinal)` |
+| `rust.Unquote([]byte(quoted))` returns `(string, int, error)` | `RustStringHelper.Unquote(string quoted)` returns `string`, throws `FormatException` |
+| `return errInvalidUID` | `result = null; return false;` |
+| `*e = NewEntityUID(typ, String(id))` | `result = new EntityUid(new EntityType(type), new CedarString(id)); return true;` |
