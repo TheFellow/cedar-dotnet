@@ -1,107 +1,98 @@
-# Semport Finalized Port Plan
+# Finalized Port Plan — a94e3e2
 
-## Commit
-- **SHA:** 5876726
-- **Date:** 2024-08-23
-- **Summary:** cedar: add Map method to PolicySet
-
-## C# Architecture Context
-
-| Item | C# Location |
-|---|---|
-| `PolicySet` class | `src/Cedar.Core/PolicySet.cs` |
-| `PolicyId` type | `src/Cedar.Core/PolicyId.cs` — `public readonly record struct PolicyId(string Value)` |
-| `PolicySet` tests | `test/Cedar.Tests/Policy/PolicySetTests.cs` |
-| Internal storage | `ConcurrentDictionary<PolicyId, Policy> _policies` (line 13) |
-
-## Task 1 — Add `Map()` method to `PolicySet`
-**File:** `src/Cedar.Core/PolicySet.cs`
-
-**Insert after `All()` method (after line 62):**
-```csharp
-/// <summary>
-/// Returns a snapshot copy of all policies in this <see cref="PolicySet" />,
-/// keyed by their <see cref="PolicyId" />.
-/// </summary>
-public IReadOnlyDictionary<PolicyId, Policy> Map()
-{
-    return new Dictionary<PolicyId, Policy>(_policies);
-}
-```
-
-**Go→C# mapping:**
-- Go `maps.Clone(p.policies)` → `new Dictionary<PolicyId, Policy>(_policies)` (copy constructor gives an independent snapshot)
-- Return type: `IReadOnlyDictionary<PolicyId, Policy>` (immutable-surface idiom; internal storage stays `ConcurrentDictionary`)
-- No new `using` needed — `System.Collections.Generic` is already required by `KeyValuePair` usage
-
-**Acceptance criteria:**
-- `PolicySet.Map()` compiles and returns a dictionary
-- Mutating the returned dictionary does NOT affect the original `PolicySet`
-- Count of returned dictionary equals number of policies added
+## Summary
+Upstream Go commit adds explicit lowercase JSON struct tags to `Position`
+(`filename`, `offset`, `line`, `column`). C# `System.Text.Json` defaults to
+the property name as written (PascalCase), so the same attributes must be
+added explicitly via `[JsonPropertyName]`.
 
 ---
 
-## Task 2 — Add test for `Map()`
-**File:** `test/Cedar.Tests/Policy/PolicySetTests.cs`
+## Target Files
 
-**Append a new `[Fact]` to the `PolicySetTests` class (after the last test method, before the closing `}`):**
+| Role | File | Key line(s) |
+|------|------|-------------|
+| **C# type to change** | `src/Cedar.Core/Position.cs` | line 3 — the entire `record struct` declaration |
+| **Existing test file** | `test/Cedar.Tests/Policy/PolicyTests.cs` | lines 1–5 (usings), line 106–110 (closest existing Position test) |
+
+---
+
+## Change 1 — `src/Cedar.Core/Position.cs`
+
+**Current (line 3):**
+```csharp
+public readonly record struct Position(string Filename, int Offset, int Line, int Column);
+```
+
+**Required — add `[JsonPropertyName]` to each positional parameter and a
+`using` directive:**
+```csharp
+using System.Text.Json.Serialization;
+
+namespace Cedar.Core;
+
+public readonly record struct Position(
+    [property: JsonPropertyName("filename")] string Filename,
+    [property: JsonPropertyName("offset")]   int Offset,
+    [property: JsonPropertyName("line")]     int Line,
+    [property: JsonPropertyName("column")]   int Column);
+```
+
+> **Note:** The file has no usings today (just `namespace Cedar.Core;` and the
+> one-liner record on line 3). Add the `using` above the namespace line, then
+> expand the record to multi-line form with the attributes.
+
+---
+
+## Change 2 — `test/Cedar.Tests/Policy/PolicyTests.cs` (new test method)
+
+Add after the existing `UnmarshalJson_AssignsDefaultPosition` test (≈ line 110).
+The file already imports `System.Text.Json` and `Cedar.Core`.
+
 ```csharp
 [Fact]
-public void Map_ReturnsSnapshotOfAllPolicies()
+public void Position_JsonRoundTrip_UsesLowercaseKeys()
 {
-    PolicySet set = PolicySet.ParseCedar("permit(principal, action, resource);");
-    IReadOnlyDictionary<PolicyId, Policy> map = set.Map();
-    Assert.Single(map);
-}
+    var pos = new Position("foo.cedar", Offset: 1, Line: 2, Column: 3);
+    string json = JsonSerializer.Serialize(pos);
 
-[Fact]
-public void Map_IsIndependentCopy()
-{
-    PolicySet set = new();
-    Policy policy = Policy.UnmarshalCedar("permit(principal, action, resource);");
-    set.Add(new PolicyId("p0"), policy);
+    Assert.Contains("\"filename\"", json);
+    Assert.Contains("\"offset\"",   json);
+    Assert.Contains("\"line\"",     json);
+    Assert.Contains("\"column\"",   json);
 
-    IReadOnlyDictionary<PolicyId, Policy> map = set.Map();
-    set.Remove(new PolicyId("p0"));
-
-    // map is a snapshot — removing from set does not affect map
-    Assert.Single(map);
-    Assert.Empty(set.Policies);
+    var deserialized = JsonSerializer.Deserialize<Position>(json);
+    Assert.Equal(pos, deserialized);
 }
 ```
 
-**Required `using` in test file:** Check if `System.Collections.Generic` is already present (it is, via `KeyValuePair` usage in the existing tests).
-
-**Acceptance criteria:**
-- Both facts pass with `dotnet test`
-- `Map_IsIndependentCopy` confirms snapshot semantics (mutation isolation)
+No additional `using` directives required — `System.Text.Json` and
+`Cedar.Core` are already present at lines 2–3.
 
 ---
 
-## Task 3 — No rename needed (`Upsert` → `Set`)
-
-**Finding:** Our C# codebase uses `UpsertPolicy` (line 33) and `UpsertPolicySet` (line 39) in `PolicySet.cs`, NOT bare `Upsert`. The Go rename was `Upsert` → `Set` (dropping the method entirely for an internal helper). Our C# API is already differently named and more descriptive.
-
-**Decision:** Do NOT rename `UpsertPolicy` to `Set` — our C# API is intentionally more verbose (`UpsertPolicy` vs Go's `Set`). The semantics are identical; the naming follows C# conventions. No action required.
-
----
-
-## Task 4 — Do NOT remove `UpsertPolicySet`
-
-**Finding:** Go deleted the commented-out `UpsertPolicySet`, but our C# `UpsertPolicySet` (lines 39–47 of `PolicySet.cs`) is **live, tested code** with passing tests in `PolicySetTests.cs` (lines 197–243). The Go deletion was of a *commented-out stub*; our implementation is fully operational.
-
-**Decision:** Keep `UpsertPolicySet` as-is.
+## Acceptance Criteria
+1. `dotnet build cedar-dotnet.sln` produces zero warnings/errors.
+2. `dotnet test cedar-dotnet.sln` passes all tests including the new
+   `Position_JsonRoundTrip_UsesLowercaseKeys` fact.
+3. `JsonSerializer.Serialize(new Position("f", 0, 1, 1))` produces JSON with
+   keys `filename`, `offset`, `line`, `column` (all lowercase).
+4. Deserialization of `{"filename":"f","offset":0,"line":1,"column":1}`
+   reconstructs the struct correctly.
 
 ---
 
-## Summary of Changes
+## Go → C# Pattern Map
 
-| File | Change |
-|---|---|
-| `src/Cedar.Core/PolicySet.cs` | Add `Map()` method returning `IReadOnlyDictionary<PolicyId, Policy>` |
-| `test/Cedar.Tests/Policy/PolicySetTests.cs` | Add `Map_ReturnsSnapshotOfAllPolicies` and `Map_IsIndependentCopy` facts |
+| Go pattern | C# equivalent used here |
+|------------|------------------------|
+| `json:"filename"` struct tag | `[property: JsonPropertyName("filename")]` on positional record parameter |
+| Go `json.MarshalIndent` + round-trip test | `JsonSerializer.Serialize` + `JsonSerializer.Deserialize<T>` xUnit `[Fact]` |
+| Go `t.Parallel()` | xUnit runs tests in parallel by default — no action needed |
 
-## Validation Command
-```
-dotnet test test/Cedar.Tests/Cedar.Tests.csproj --filter "PolicySetTests"
-```
+---
+
+## No Other JSON Paths to Update
+`grep` for `JsonNamingPolicy` and `JsonConverter.*Position` across `src/`
+returned no results — there are no custom converters or naming policies that
+could interfere with the new attributes.

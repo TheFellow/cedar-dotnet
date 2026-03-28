@@ -1,62 +1,72 @@
 PORT
 
 ## Commit
-- **SHA:** 5876726
-- **Date:** 2024-08-23
-- **Summary:** cedar: add Map method to PolicySet
+a94e3e2 — 2024-09-05T10:06:03-07:00
+"cedar: change JSON marshaling of the Position struct to use conventional lower case keys"
 
 ## Semantic Analysis
+The Go `Position` struct gained explicit JSON struct tags with **lowercase** keys:
+- `Filename` → `"filename"`
+- `Offset`   → `"offset"`
+- `Line`     → `"line"`
+- `Column`   → `"column"`
 
-Three meaningful changes in this commit:
+Before this commit Go's default marshaling would have produced `"Filename"`, `"Offset"`, etc. (PascalCase). After this commit the canonical wire format is all-lowercase. This is a **public contract change**: any system that serializes/deserializes `Position` over JSON must use the lowercase key names.
 
-1. **`Upsert` renamed to `Set`** on `PolicySet` — a public API rename. If our C# `PolicySet` has an `Upsert` method, it should be renamed to `Set` (or we ensure our equivalent method uses the idiomatic name).
+In C#, `System.Text.Json` defaults to the property name as written. Our `Position` type (wherever it lives) must carry `[JsonPropertyName("...")]` attributes (or a matching naming policy) to guarantee the same lowercase wire format.
 
-2. **`policyMap` promoted to `PolicyMap`** (exported type) — in Go this makes the map type part of the public API. In C#, the equivalent would be exposing `IReadOnlyDictionary<PolicyId, Policy>` or a type alias. The `Map()` method returns this type.
+## Port Tasks
 
-3. **New `Map()` method** — returns a *clone* of the internal policy dictionary. This is a real semantic addition: callers can now get a snapshot of all policies as an independent copy without mutating the set. This is the core change to port.
+### 1. Locate the C# `Position` type
+- Expected location: `src/Cedar.Core/` or `src/Cedar.Ast/` — search for `class Position` or `record Position`.
+- Command to confirm: `grep -rn "Position" src/ --include="*.cs" -l`
 
-## C# Port Tasks
+### 2. Add `[JsonPropertyName]` attributes to each property
+For whatever record/class holds `Filename`, `Offset`, `Line`, `Column`, add:
 
-### Task 1 — Check if `Upsert` exists; rename to `Set` if so
-- **Go source:** `policy_map.go` — `func (p *PolicySet) Set(...)` (was `Upsert`)
-- **C# target:** Locate `PolicySet` class/record in `src/Cedar.Ast` or `src/Cedar.Core`
-  - Search for method named `Upsert` on `PolicySet`
-  - If found, rename to `Set` (keeping signature identical)
-  - If already named `Set`, no action needed
+```csharp
+using System.Text.Json.Serialization;
 
-### Task 2 — Add `Map()` method to `PolicySet`
-- **Go source:** `policy_map.go` lines ~61-63
-  ```go
-  func (p *PolicySet) Map() PolicyMap {
-      return maps.Clone(p.policies)
-  }
-  ```
-- **C# target:** `PolicySet` class — add a method:
-  ```csharp
-  public IReadOnlyDictionary<PolicyId, Policy> Map()
-      => _policies.ToImmutableDictionary();  // or new Dictionary<>(_policies) for a mutable clone
-  ```
-  - The Go version returns a *mutable clone* (maps.Clone). The C# idiomatic equivalent is returning a new `Dictionary<PolicyId, Policy>` copy, OR an `ImmutableDictionary`. Prefer `ImmutableDictionary<PolicyId, Policy>` per cedar-dotnet immutable collections convention.
-  - If `PolicyId` does not exist yet, use the string-based key type already in use.
+public sealed record Position(
+    [property: JsonPropertyName("filename")] string Filename,
+    [property: JsonPropertyName("offset")]   int Offset,
+    [property: JsonPropertyName("line")]     int Line,
+    [property: JsonPropertyName("column")]   int Column
+);
+```
 
-### Task 3 — Add test for `Map()`
-- **Go source:** `policy_map_test.go` — `TestPolicyMap`
-  ```go
-  ps, err := cedar.NewPolicySetFromBytes("", []byte(`permit (principal, action, resource);`))
-  m := ps.Map()
-  // len(m) == 1
-  ```
-- **C# target:** `test/Cedar.Tests` — add a test fact in the `PolicySet` test class (or create one):
-  ```csharp
-  [Fact]
-  public void Map_ReturnsCopyOfPolicies()
-  {
-      var ps = PolicySet.Parse("permit (principal, action, resource);");
-      var map = ps.Map();
-      Assert.Single(map);
-  }
-  ```
+If `Position` is not a positional record, add `[JsonPropertyName("...")]` above each auto-property instead.
 
-### Task 4 — (Optional) Remove any dead `UpsertPolicySet` code
-- **Go source:** Commented-out `UpsertPolicySet` was fully deleted
-- **C# target:** If there is a commented-out or stub `UpsertPolicySet`/`MergeFrom` equivalent, remove it for cleanliness.
+### 3. Add a xUnit serialization round-trip test
+Analogous to Go's `TestPositionJSON`. Add to the appropriate test project (likely `test/Cedar.Tests/`):
+
+```csharp
+[Fact]
+public void Position_JsonRoundTrip_UsesLowercaseKeys()
+{
+    var pos = new Position("foo.cedar", Offset: 1, Line: 2, Column: 3);
+    var json = JsonSerializer.Serialize(pos);
+
+    // Assert lowercase keys present
+    Assert.Contains("\"filename\"", json);
+    Assert.Contains("\"offset\"", json);
+    Assert.Contains("\"line\"", json);
+    Assert.Contains("\"column\"", json);
+
+    // Round-trip
+    var deserialized = JsonSerializer.Deserialize<Position>(json);
+    Assert.Equal(pos, deserialized);
+}
+```
+
+### 4. Verify no other JSON serialization paths override these names
+Search for `JsonNamingPolicy` or custom converters that might affect `Position`.
+
+### File references
+| Side | Location |
+|------|----------|
+| Go source (before) | `inspiration/cedar-go/policy.go` lines 100-106 (old struct fields) |
+| Go source (after)  | `inspiration/cedar-go/policy.go` lines 100-116 (tagged fields) |
+| Go test            | `inspiration/cedar-go/policy_test.go` lines 108-128 |
+| C# target (type)   | `src/Cedar.Core/` or `src/Cedar.Ast/` — `Position` record/class |
+| C# target (tests)  | `test/Cedar.Tests/` — new `PositionJsonTests.cs` or existing position test file |

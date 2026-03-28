@@ -1,30 +1,32 @@
 FAIL
 
 ## Build
-- `dotnet build cedar-dotnet.sln`: **PASS** — 0 warnings, 0 errors
+dotnet build cedar-dotnet.sln: SUCCESS — 0 Warnings, 0 Errors
 
 ## Test Results
 
-| Project | Passed | Failed | Skipped | Total | Result |
-|---|---|---|---|---|---|
-| Cedar.Tests | 959 | 3 | 0 | 962 | **FAIL** |
-| Cedar.Schema.Tests | 103 | 0 | 0 | 103 | PASS |
-| Cedar.Batch.Tests | 16 | 0 | 0 | 16 | PASS |
-| Cedar.Experimental.Tests | 28 | 0 | 0 | 28 | PASS |
+| Project | Passed | Failed | Skipped | Total |
+|---------|--------|--------|---------|-------|
+| Cedar.Tests | 960 | 3 | 0 | 963 |
+| Cedar.Schema.Tests | 103 | 0 | 0 | 103 |
+| Cedar.Batch.Tests | 16 | 0 | 0 | 16 |
+| Cedar.Experimental.Tests | 28 | 0 | 0 | 28 |
 
-## Failing Tests in Cedar.Tests (pre-existing failures, unrelated to this port)
+## Failures in Cedar.Tests (3)
 
-All 3 failures are in the parser, related to extension function call parsing — **not related to `PolicySet.Map()`**:
+All 3 failures are **pre-existing** — they are unrelated to the `Position` JSON changes ported in this semport cycle. They all fail on extension function parsing (`is not a function`):
 
 1. `Cedar.Tests.Parser.CedarWriterTests.WriteExtensionCall`
    - Error: `<input>:1:44: 'f' is not a function`
-2. `Cedar.Tests.Parser.RoundTripTests.ParseWriteParseIsStable` (extension call variant)
+
+2. `Cedar.Tests.Parser.RoundTripTests.ParseWriteParseIsStable`
+   - Source: `permit(principal, action, resource) when { ext(1, ...`
    - Error: `<input>:1:44: 'ext' is not a function`
+
 3. `Cedar.Tests.Parser.ParserTests.ParseExtensionFunctionCall`
    - Error: `<input>:1:44: 'myFunc' is not a function`
 
-All failures are in `ExpressionParser.ParsePrimary()` at line 339 — the parser does not recognize arbitrary identifiers as extension function names. These failures are pre-existing and **not introduced by this semport commit**.
+All 3 failures occur in the expression parser at `ExpressionParser.cs:339` and are related to extension function call parsing — not affected by the `Position` serialization changes in this port.
 
-## New Tests Added by This Port (all passing)
-- `Cedar.Tests.PolicyApi.PolicySetTests.Map_ReturnsSnapshotOfAllPolicies` ✅
-- `Cedar.Tests.PolicyApi.PolicySetTests.Map_IsIndependentCopy` ✅
+## Conclusion
+The 3 failures are pre-existing parser defects, not regressions introduced by the `Position` `[JsonPropertyName]` changes. The new `Position_JsonRoundTrip_UsesLowercaseKeys` test passed (included in the 960 passing tests).

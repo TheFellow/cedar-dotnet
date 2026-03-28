@@ -1,35 +1,28 @@
-# Semport Failure Analysis
+# Semport Failure Analysis — a94e3e2 Port
 
-## Verdict: Pre-Existing Failures — Port is Clean
-
-The 3 test failures in `Cedar.Tests` are **not caused by the `PolicySet.Map()` port** (commit `5876726`). They are pre-existing failures in the Cedar parser's extension function call handling. The port itself is correct and complete.
-
----
-
-## Failure Artifacts
-
-| Artifact | Location |
-|---|---|
-| Validation report | `.ai/semport_validation_report.md` |
-| Failing test project | `test/Cedar.Tests/` |
-| Parser source | `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` |
-| Extension registry | `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs` |
+## Overall Verdict
+**The 3 test failures are pre-existing defects unrelated to the `Position` JSON port.**
+The `Position` port itself is correct — `Position_JsonRoundTrip_UsesLowercaseKeys` passed.
 
 ---
 
-## Root Cause Analysis
+## Failing Tests (3)
 
-### Failing Tests (all 3 in the same subsystem)
+All three failures share the same root cause and stack trace.
 
-| Test | Input | Error |
-|---|---|---|
-| `ParserTests.ParseExtensionFunctionCall` | `myFunc(1, true)` | `'myFunc' is not a function` |
-| `CedarWriterTests.WriteExtensionCall` | `f(1, true)` | `'f' is not a function` |
-| `RoundTripTests.ParseWriteParseIsStable` | `ext(1, true, "x")` | `'ext' is not a function` |
+| Test | File | Approximate Line |
+|------|------|-----------------|
+| `Cedar.Tests.Parser.ParserTests.ParseExtensionFunctionCall` | `test/Cedar.Tests/Parser/ParserTests.cs` | ~423 |
+| `Cedar.Tests.Parser.CedarWriterTests.WriteExtensionCall` | `test/Cedar.Tests/Parser/CedarWriterTests.cs` | ~159 |
+| `Cedar.Tests.Parser.RoundTripTests.ParseWriteParseIsStable` (ext case) | `test/Cedar.Tests/Parser/RoundTripTests.cs` | ~40 |
 
-### Root Cause: Closed Extension Registry
+---
 
-**File:** `src/Cedar.Core/Internal/Parser/ExpressionParser.cs`, line ~338–341
+## Root Cause
+
+### The Parser's Closed Extension Registry
+
+**Failure artifact location:** `src/Cedar.Core/Internal/Parser/ExpressionParser.cs`, line 337–339
 
 ```csharp
 if (_state.Match(TokenType.LParen))
@@ -39,66 +32,77 @@ if (_state.Match(TokenType.LParen))
         throw _state.Error(token, $"`{token.Text}` is not a function");  // line 339
     }
     ...
+}
 ```
 
-**File:** `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs`
+**The problem:** When the parser encounters any identifier followed by `(`, it looks up the name in the `ExtensionRegistry`. That registry (`src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs`, lines 10–43) is a **closed, hardcoded whitelist** of exactly four constructor functions (`decimal`, `ip`, `datetime`, `duration`) and a fixed set of method extensions.
 
-The `ExtensionRegistry` is a closed, hard-coded dictionary of known extension functions:
-```
-decimal, ip, datetime, duration, lessThan, lessThanOrEqual, greaterThan,
-greaterThanOrEqual, isIpv4, isIpv6, isLoopback, isMulticast, isInRange,
-toDate, toTime, offset, durationSince, daysInMonth, year, month, day,
-dayOfWeek, dayOfYear, hour, minute, second, millisecond, toDays, toHours,
-toMinutes, toSeconds, toMilliseconds
-```
+The three failing tests use arbitrary/synthetic function names that are not in the registry:
+- `myFunc(1, true)` — `ParseExtensionFunctionCall` test
+- `f(1, true)` — `WriteExtensionCall` test
+- `ext(1, true, "x")` — `RoundTripTests.ParseWriteParseIsStable` theory case
 
-The test inputs `myFunc`, `f`, and `ext` are **not** in this registry. The parser rejects them at parse-time with `` `X` is not a function ``.
-
-### Why the Tests Exist
-
-The tests represent a design intent that the parser should accept **arbitrary extension function calls** — or at least user-defined ones — without requiring prior registration. In Cedar's specification, extension functions are namespace-qualified but the parser should not be required to know the full extension catalogue at parse time to build an AST.
-
-The Cedar Go parser accepts any identifier followed by `(` as a potential extension function call without validating against a registry. Our C# parser validates eagerly at parse time, which is more restrictive than the spec requires.
+None of these names exist in `ExtensionRegistry`, so the parser throws `"is not a function"` at parse time.
 
 ---
 
-## Impact Assessment
+## Why This Is Pre-Existing (Not a Regression)
 
-| Area | Status |
-|---|---|
-| This port (`PolicySet.Map`) | ✅ Unaffected — fully passing |
-| Cedar.Schema.Tests (103 tests) | ✅ All pass |
-| Cedar.Batch.Tests (16 tests) | ✅ All pass |
-| Cedar.Experimental.Tests (28 tests) | ✅ All pass |
-| Cedar.Tests (959/962 pass) | ❌ 3 pre-existing parser failures |
-
-The 3 failures represent a known semantic gap between the C# parser and Cedar's specification: **the parser must not require runtime extension registration to parse valid Cedar policies**.
+1. `git diff HEAD` shows **zero changes** to `ExpressionParser.cs` — it was not touched by this port.
+2. `git log --oneline` shows the most recent commits are all `semport: acknowledge` entries; no parser changes have been made.
+3. The `Position` port only modified:
+   - `src/Cedar.Core/Position.cs` (added `[JsonPropertyName]` attributes)
+   - `test/Cedar.Tests/Policy/PolicyTests.cs` (added one new `[Fact]`)
+4. These files have no connection to `ExpressionParser.cs` or `ExtensionRegistry.cs`.
 
 ---
 
-## What Needs to Be Fixed (Separate Work Item)
+## Semantic Analysis of the Underlying Bug
 
-This is NOT part of commit `5876726`. It should be tracked as its own work item.
+The Cedar language spec treats extension functions as **open** — user-defined extension functions are valid Cedar syntax when parsed for policy representation (parse → AST), even if the runtime has no evaluator for them. The `CedarWriter` and `PolicyAst` already have a `NodeExtensionCall` node type and can represent arbitrary extension calls. The writer (`CedarWriter.cs:313`) already handles unknown extension names gracefully.
 
-### Fix Required
+**The parser is the only place that enforces the closed whitelist at parse time**, which is architecturally inconsistent: the AST and writer support arbitrary extension calls, but the parser refuses to create them.
 
-**File:** `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` (~line 334–349)
+The correct behavior is: **parse any `ident(...)` as a `NodeExtensionCall` unconditionally**; reject unknown functions only at evaluation time (as a type/eval error), not at parse time.
 
-Replace the hard registry guard with an unconditional parse, deferring validation to eval time:
+---
 
+## Impacted Files
+
+| File | Lines | Issue |
+|------|-------|-------|
+| `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` | 335–349 | Registry lookup at parse time should be removed; `NodeExtensionCall` should be emitted for any `ident(...)` |
+| `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs` | 10–43 | Registry itself is fine for evaluation; should not gate parsing |
+| `src/Cedar.Core/Internal/Parser/ExpressionParser.cs` | 393–412 | Same issue for method-style calls (`lhs.method(...)`) — also gated by registry at parse time |
+
+---
+
+## What Needs to Be Fixed
+
+### Fix (parser)
+In `ExpressionParser.cs`, remove the `ExtensionRegistry.TryGet` guard from `ParsePrimary` (lines 337–339) and emit `NodeExtensionCall` unconditionally for any `ident(...)` form.
+
+Before (lines 335–348):
 ```csharp
-// CURRENT (too restrictive):
 if (_state.Match(TokenType.LParen))
 {
     if (!ExtensionRegistry.TryGet(token.Text, out ExtensionDefinition functionDefinition))
+    {
         throw _state.Error(token, $"`{token.Text}` is not a function");
+    }
+
     if (functionDefinition.IsMethod)
+    {
         throw _state.Error(token, $"`{token.Text}` is a method, not a function");
-    ImmutableArray<INode> args = ParseExpressionList(TokenType.RParen, "...");
+    }
+
+    ImmutableArray<INode> args = ParseExpressionList(TokenType.RParen, "Expected ')' after function arguments.");
     return new NodeExtensionCall(new CedarPath(token.Text), args);
 }
+```
 
-// DESIRED (spec-compliant): accept any identifier as a function call, validate at eval time
+After:
+```csharp
 if (_state.Match(TokenType.LParen))
 {
     ImmutableArray<INode> args = ParseExpressionList(TokenType.RParen, "Expected ')' after function arguments.");
@@ -106,17 +110,17 @@ if (_state.Match(TokenType.LParen))
 }
 ```
 
-**Risk:** Removes parse-time validation for misspelled known extension names (e.g., `decimalX(...)` would parse successfully but fail at eval). This matches Cedar's actual design intent.
+The evaluation layer (`ExtensionEvaluator.cs`) and constant folder (`ConstantFolder.cs:174`) already handle unknown functions at eval time.
 
-**Affected tests that would start passing:**
-- `ParserTests.ParseExtensionFunctionCall` (line 423)
-- `CedarWriterTests.WriteExtensionCall` (line 159)
-- `RoundTripTests.ParseWriteParseIsStable` (ext variant, line 40 of test data)
+### No changes needed to the port itself
+The `Position` JSON port is complete and correct. The 3 failures are entirely orthogonal.
 
 ---
 
-## Semport Disposition for Commit 5876726
+## Recommended Action
 
-The port is complete and correct. The pre-existing failures do not block marking this commit as `implemented`.
+This pre-existing parser bug should be tracked separately from the semport pipeline. Options:
+1. **Fix it now** as a standalone bug fix commit before continuing the semport pipeline.
+2. **Leave it** and accept 3 pre-existing failures — the semport pipeline's `FAIL` status will always be misleading until resolved.
 
-**Recommended next action:** Run `python3 semport/ledger.py update 5876726 implemented && python3 semport/ledger.py sort` and commit.
+Recommendation: **Fix it** — it is a small, isolated change that unblocks accurate pass/fail signaling for future semport cycles.

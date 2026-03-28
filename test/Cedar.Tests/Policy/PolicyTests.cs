@@ -111,6 +111,23 @@ public sealed class PolicyTests
     }
 
     [Fact]
+    public void Position_JsonRoundTrip_UsesLowercaseKeys()
+    {
+        Position position = new("foo.cedar", 1, 2, 3);
+
+        string json = JsonSerializer.Serialize(position);
+
+        Assert.Contains("\"filename\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"offset\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"line\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"column\"", json, StringComparison.Ordinal);
+
+        Position? deserialized = JsonSerializer.Deserialize<Position>(json);
+
+        Assert.Equal(position, deserialized);
+    }
+
+    [Fact]
     public void MarshalJson_UsesUnlessForTopLevelNotCondition()
     {
         string json = Policy.UnmarshalCedar("permit(principal, action, resource) unless { principal };").MarshalJson();

@@ -1,3 +1,9 @@
+using System.Text.Json.Serialization;
+
 namespace Cedar.Core;
 
-public readonly record struct Position(string Filename, int Offset, int Line, int Column);
+public readonly record struct Position(
+    [property: JsonPropertyName("filename")] string Filename,
+    [property: JsonPropertyName("offset")] int Offset,
+    [property: JsonPropertyName("line")] int Line,
+    [property: JsonPropertyName("column")] int Column);
