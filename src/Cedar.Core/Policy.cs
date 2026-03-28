@@ -1,4 +1,5 @@
 using System;
+using Cedar.Ast;
 using Cedar.Ast.Internal;
 using Cedar.Core.Internal.Json;
 using Cedar.Core.Internal.Parser;
@@ -58,6 +59,13 @@ public sealed class Policy
         ArgumentException.ThrowIfNullOrEmpty(json);
 
         return new Policy(PolicyJsonUnmarshal.Unmarshal(json));
+    }
+
+    public static Policy FromAst(PolicyBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        return new Policy(builder.Ast);
     }
 
     public string MarshalJson()

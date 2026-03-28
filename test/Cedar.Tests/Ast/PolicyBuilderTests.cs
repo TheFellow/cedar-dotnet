@@ -223,4 +223,18 @@ public sealed class PolicyBuilderTests
 
         Assert.Equal(position, policy.Ast.Position);
     }
+
+    [Fact]
+    public void FromAstConstructsPolicy()
+    {
+        PolicyBuilder builder = CedarAst.Permit()
+            .ActionEq(new EntityUid(new EntityType("Action"), new CedarString("editPhoto")))
+            .When(Resource().Access("owner").Equal(Principal()));
+
+        Policy policy = Policy.FromAst(builder);
+
+        Assert.NotNull(policy);
+        Assert.Equal(Effect.Permit, policy.Effect);
+        Assert.Equal(builder.Ast, policy.Ast);
+    }
 }
