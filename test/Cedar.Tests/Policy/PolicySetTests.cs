@@ -127,4 +127,44 @@ public sealed class PolicySetTests
 
         Assert.Equal(100, set.All().Count());
     }
+
+    [Fact]
+    public void ParseCedar_AssignsGeneratedIdsInOrder()
+    {
+        PolicySet set = PolicySet.ParseCedar("permit(principal, action, resource);\n\nforbid(principal, action, resource);");
+
+        Policy? first = set.Get(new PolicyId("policy0"));
+        Policy? second = set.Get(new PolicyId("policy1"));
+
+        Assert.NotNull(first);
+        Assert.NotNull(second);
+        Assert.Equal(Effect.Permit, first.Effect);
+        Assert.Equal(Effect.Forbid, second.Effect);
+    }
+
+    [Fact]
+    public void ParseCedar_MarshalCedarRoundTripsWithGeneratedIds()
+    {
+        const string cedarText = "permit(principal, action, resource);\n\nforbid(principal, action, resource);";
+
+        PolicySet set = PolicySet.ParseCedar(cedarText);
+
+        Assert.Equal(cedarText, set.MarshalCedar());
+    }
+
+    [Fact]
+    public void ParseCedarFile_AssignsGeneratedIdsAndUpdatesFilename()
+    {
+        PolicySet set = PolicySet.ParseCedarFile("example.cedar", "permit(principal, action, resource);\n\nforbid(principal, action, resource);");
+
+        Policy? first = set.Get(new PolicyId("policy0"));
+        Policy? second = set.Get(new PolicyId("policy1"));
+
+        Assert.NotNull(first);
+        Assert.NotNull(second);
+        Assert.Equal("example.cedar", first.Position.Filename);
+        Assert.Equal("example.cedar", second.Position.Filename);
+        Assert.Equal(Effect.Permit, first.Effect);
+        Assert.Equal(Effect.Forbid, second.Effect);
+    }
 }

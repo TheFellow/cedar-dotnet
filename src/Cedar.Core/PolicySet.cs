@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using Cedar.Ast.Internal;
 using Cedar.Core.Internal.Json;
 
 namespace Cedar.Core;
@@ -88,6 +89,44 @@ public sealed class PolicySet : IPolicyIterator
         foreach (KeyValuePair<string, string> entry in entries)
         {
             result.Add(new PolicyId(entry.Key), Policy.UnmarshalCedar(entry.Value));
+        }
+
+        return result;
+    }
+
+    public static PolicySet ParseCedar(string cedarText)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(cedarText);
+
+        Policy[] policies = PolicyList.ParseCedar(cedarText);
+        PolicySet result = new();
+
+        for (int i = 0; i < policies.Length; i++)
+        {
+            result.Add(new PolicyId($"policy{i}"), policies[i]);
+        }
+
+        return result;
+    }
+
+    public static PolicySet ParseCedarFile(string filename, string cedarText)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(filename);
+        ArgumentException.ThrowIfNullOrEmpty(cedarText);
+
+        Policy[] policies = PolicyList.ParseCedar(cedarText);
+        PolicySet result = new();
+
+        for (int i = 0; i < policies.Length; i++)
+        {
+            Policy policy = policies[i];
+            Position position = policy.Position;
+            PolicyAst ast = policy.Ast with
+            {
+                Position = new Position(filename, position.Offset, position.Line, position.Column)
+            };
+
+            result.Add(new PolicyId($"policy{i}"), new Policy(ast));
         }
 
         return result;

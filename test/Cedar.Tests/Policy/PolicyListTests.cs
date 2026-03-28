@@ -53,4 +53,48 @@ public sealed class PolicyListTests
     {
         Assert.Throws<ArgumentException>(() => PolicyList.ParseCedar(string.Empty));
     }
+
+    [Fact]
+    public void MarshalCedar_RoundTripsMultiplePolicies()
+    {
+        const string cedarText = "permit(principal, action, resource);\n\nforbid(principal, action, resource);";
+
+        Policy[] policies = PolicyList.ParseCedar(cedarText);
+
+        string actual = PolicyList.MarshalCedar(policies);
+
+        Assert.Equal(cedarText, actual);
+    }
+
+    [Fact]
+    public void MarshalCedar_EmptyArrayReturnsEmptyString()
+    {
+        string actual = PolicyList.MarshalCedar([]);
+
+        Assert.Equal(string.Empty, actual);
+    }
+
+    [Fact]
+    public void MarshalCedar_SinglePolicyHasNoExtraSeparator()
+    {
+        Policy[] policies = PolicyList.ParseCedar("permit(principal, action, resource);");
+
+        string actual = PolicyList.MarshalCedar(policies);
+
+        Assert.Equal("permit(principal, action, resource);", actual);
+    }
+
+    [Fact]
+    public void MarshalCedar_MultiplePoliciesUseBlankLineSeparator()
+    {
+        Policy[] policies =
+        [
+            Policy.UnmarshalCedar("permit(principal, action, resource);"),
+            Policy.UnmarshalCedar("forbid(principal, action, resource);")
+        ];
+
+        string actual = PolicyList.MarshalCedar(policies);
+
+        Assert.Equal("permit(principal, action, resource);\n\nforbid(principal, action, resource);", actual);
+    }
 }
