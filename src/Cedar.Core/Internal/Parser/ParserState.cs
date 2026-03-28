@@ -76,7 +76,7 @@ internal sealed class ParserState
     public Token ExpectAnnotationKey()
     {
         Token token = Current;
-        if (token.Type == TokenType.Ident || IsKeywordToken(token.Type))
+        if (token.Type == TokenType.Ident || IsAnnotationKeywordToken(token.Type))
         {
             return Advance();
         }
@@ -205,13 +205,9 @@ internal sealed class ParserState
         }
     }
 
-    private static bool IsKeywordToken(TokenType tokenType)
+    internal static bool IsReservedKeywordToken(TokenType tokenType)
     {
-        return tokenType is TokenType.Permit
-            or TokenType.Forbid
-            or TokenType.When
-            or TokenType.Unless
-            or TokenType.True
+        return tokenType is TokenType.True
             or TokenType.False
             or TokenType.If
             or TokenType.Then
@@ -220,5 +216,13 @@ internal sealed class ParserState
             or TokenType.Like
             or TokenType.Has
             or TokenType.Is;
+    }
+
+    private static bool IsAnnotationKeywordToken(TokenType tokenType)
+    {
+        return tokenType is TokenType.Permit
+            or TokenType.Forbid
+            or TokenType.When
+            or TokenType.Unless;
     }
 }

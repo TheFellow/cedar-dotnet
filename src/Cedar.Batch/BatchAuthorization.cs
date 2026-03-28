@@ -14,16 +14,65 @@ public static class BatchAuthorization
 {
     private static readonly EntityType UnknownEntityType = new("__cedar::unknown");
 
+    private readonly record struct AuthorizationOptions(Action<BatchResult> Callback, Effect IgnoreBias, bool IncludeDiagnostics);
+
     public static void Authorize(
-        IPolicyIterator policies,
+        PolicySet policies,
+        IEntityGetter? entities,
+        BatchRequest request,
+        params BatchOption[] options)
+    {
+        Authorize(policies, entities, request, (IReadOnlyList<BatchOption>)options, CancellationToken.None);
+    }
+
+    public static void Authorize(
+        PolicySet policies,
+        IEntityGetter? entities,
+        BatchRequest request,
+        IReadOnlyList<BatchOption> options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        AuthorizationOptions authorizationOptions = ParseOptionCallback(options);
+        AuthorizeCore(policies, entities, request, authorizationOptions, cancellationToken);
+    }
+
+    public static void Authorize(
+        PolicySet policies,
         IEntityGetter? entities,
         BatchRequest request,
         Action<BatchResult> callback,
         CancellationToken cancellationToken = default)
     {
+        Authorize(policies, entities, request, callback, options: null, cancellationToken);
+    }
+
+    public static void Authorize(
+        PolicySet policies,
+        IEntityGetter? entities,
+        BatchRequest request,
+        Action<BatchResult> callback,
+        IReadOnlyList<BatchOption>? options,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(policies);
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(callback);
+
+        AuthorizationOptions authorizationOptions = ParseExplicitCallbackOptions(callback, options);
+        AuthorizeCore(policies, entities, request, authorizationOptions, cancellationToken);
+    }
+
+    private static void AuthorizeCore(
+        PolicySet policies,
+        IEntityGetter? entities,
+        BatchRequest request,
+        AuthorizationOptions options,
+        CancellationToken cancellationToken)
+    {
+        Effect ignoreBias = Effect.Permit;
+        ignoreBias = options.IgnoreBias;
 
         ValidateRequest(request);
         if (request.Variables.Values.Any(static values => values.Count == 0))
@@ -34,7 +83,8 @@ public static class BatchAuthorization
         cancellationToken.ThrowIfCancellationRequested();
 
         IEntityGetter effectiveEntities = entities ?? new EntityMap();
-        IReadOnlyDictionary<PolicyId, Policy> policyMap = EnumeratePolicies(policies);
+        IReadOnlyDictionary<PolicyId, Policy> policyMap = policies.Map();
+        PolicyBatch policyBatch = new(policyMap);
         EvalEnv env = new(
             effectiveEntities,
             request.Principal!,
@@ -49,42 +99,44 @@ public static class BatchAuthorization
 
         if (variables.Length == 0)
         {
-            IReadOnlyDictionary<PolicyId, Policy> partialPolicies = PartialPolicies(policyMap, env);
-            EmitResult(partialPolicies, FixIgnores(env), new Dictionary<string, ICedarData>(StringComparer.Ordinal), callback, cancellationToken);
+            IReadOnlyDictionary<PolicyId, Policy> partialPolicies = PartialPolicies(policyMap, env, ignoreBias);
+            EmitResult(new PolicyBatch(partialPolicies), FixIgnores(env), new Dictionary<string, ICedarData>(StringComparer.Ordinal), options, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             return;
         }
 
         Execute(
-            policyMap,
+            policyBatch,
             env,
             variables,
             0,
+            ignoreBias,
             new Dictionary<string, ICedarData>(StringComparer.Ordinal),
-            callback,
+            options,
             cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
     }
 
     private static void Execute(
-        IReadOnlyDictionary<PolicyId, Policy> policies,
+        PolicyBatch policies,
         EvalEnv env,
         VariableItem[] variables,
         int index,
+        Effect ignoreBias,
         Dictionary<string, ICedarData> values,
-        Action<BatchResult> callback,
+        AuthorizationOptions options,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (index == variables.Length)
         {
-            EmitResult(policies, env, values, callback, cancellationToken);
+            EmitResult(policies, env, values, options, cancellationToken);
             return;
         }
 
-        IReadOnlyDictionary<PolicyId, Policy> partialPolicies = PartialPolicies(policies, env);
+        PolicyBatch partialPolicies = new(PartialPolicies(policies.Policies, env, ignoreBias));
         EvalEnv loopEnv = variables.Length - index == 1 ? FixIgnores(env) : env;
         VariableItem variable = variables[index];
 
@@ -94,17 +146,17 @@ public static class BatchAuthorization
 
             values[variable.Key] = candidate;
             EvalEnv nextEnv = Substitute(loopEnv, variable.Key, candidate);
-            Execute(partialPolicies, nextEnv, variables, index + 1, values, callback, cancellationToken);
+            Execute(partialPolicies, nextEnv, variables, index + 1, ignoreBias, values, options, cancellationToken);
         }
 
         values.Remove(variable.Key);
     }
 
     private static void EmitResult(
-        IReadOnlyDictionary<PolicyId, Policy> policies,
+        PolicyBatch policies,
         EvalEnv env,
         IReadOnlyDictionary<string, ICedarData> values,
-        Action<BatchResult> callback,
+        AuthorizationOptions options,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -113,50 +165,131 @@ public static class BatchAuthorization
             ConvertEntityPart("principal", env.Principal),
             ConvertEntityPart("action", env.Action),
             ConvertEntityPart("resource", env.Resource),
-            ConvertContextPart(env.Context));
+            env.Context is null ? null : ConvertContextPart(env.Context));
 
         (Decision decision, Diagnostic diagnostic) = EvaluatePolicies(policies, env);
+        if (!options.IncludeDiagnostics)
+        {
+            diagnostic = Diagnostic.Empty;
+        }
+
         BatchResult result = new(
             request,
             new Dictionary<string, ICedarData>(values, StringComparer.Ordinal),
             decision,
             diagnostic);
 
-        callback(result);
+        options.Callback(result);
     }
 
-    private static (Decision Decision, Diagnostic Diagnostic) EvaluatePolicies(IReadOnlyDictionary<PolicyId, Policy> policies, EvalEnv env)
+    private static AuthorizationOptions ParseOptionCallback(IReadOnlyList<BatchOption> options)
+    {
+        Effect ignoreBias = Effect.Permit;
+        Action<BatchResult>? callback = null;
+        bool includeDiagnostics = true;
+
+        foreach (BatchOption option in options)
+        {
+            ArgumentNullException.ThrowIfNull(option);
+
+            if (option.IgnoreBias is Effect optionIgnoreBias)
+            {
+                ignoreBias = optionIgnoreBias;
+            }
+
+            if (option.Callback is null)
+            {
+                continue;
+            }
+
+            if (callback is not null)
+            {
+                throw new ArgumentException("multiple callback options are not supported", nameof(options));
+            }
+
+            callback = option.Callback;
+            includeDiagnostics = option.IncludeDiagnostics;
+        }
+
+        if (callback is null)
+        {
+            throw new ArgumentException("a callback option is required", nameof(options));
+        }
+
+        return new AuthorizationOptions(callback, ignoreBias, includeDiagnostics);
+    }
+
+    private static AuthorizationOptions ParseExplicitCallbackOptions(Action<BatchResult> callback, IReadOnlyList<BatchOption>? options)
+    {
+        Effect ignoreBias = Effect.Permit;
+
+        if (options is not null)
+        {
+            foreach (BatchOption option in options)
+            {
+                ArgumentNullException.ThrowIfNull(option);
+
+                if (option.Callback is not null)
+                {
+                    throw new ArgumentException("callback options cannot be combined with an explicit callback parameter", nameof(options));
+                }
+
+                if (option.IgnoreBias is Effect optionIgnoreBias)
+                {
+                    ignoreBias = optionIgnoreBias;
+                }
+            }
+        }
+
+        return new AuthorizationOptions(callback, ignoreBias, IncludeDiagnostics: true);
+    }
+
+    private static (Decision Decision, Diagnostic Diagnostic) EvaluatePolicies(PolicyBatch policies, EvalEnv env)
+    {
+        CompiledPolicySet compiledPolicies = policies.EnsureCompiled();
+        return EvaluateCompiledPolicies(compiledPolicies, env);
+    }
+
+    private static (Decision Decision, Diagnostic Diagnostic) EvaluateCompiledPolicies(CompiledPolicySet policies, EvalEnv env)
     {
         ImmutableArray<DiagnosticReason>.Builder permitReasons = ImmutableArray.CreateBuilder<DiagnosticReason>();
         ImmutableArray<DiagnosticReason>.Builder forbidReasons = ImmutableArray.CreateBuilder<DiagnosticReason>();
         ImmutableArray<DiagnosticError>.Builder errors = ImmutableArray.CreateBuilder<DiagnosticError>();
 
-        foreach ((PolicyId policyId, Policy policy) in policies)
+        foreach (CompiledPolicy policy in policies.Forbids)
         {
-            BoolEvaluator evaluator = Compiler.Compile(policy.Ast);
-
             try
             {
-                if (!evaluator.Eval(env))
+                if (!policy.Evaluator.Eval(env))
                 {
                     continue;
                 }
             }
             catch (EvalException exception)
             {
-                errors.Add(new DiagnosticError(policyId, policy.Position, exception.Message));
+                errors.Add(new DiagnosticError(policy.PolicyId, policy.Position, exception.Message));
                 continue;
             }
 
-            DiagnosticReason reason = new(policyId, policy.Position);
-            if (policy.Effect == Effect.Forbid)
+            forbidReasons.Add(new DiagnosticReason(policy.PolicyId, policy.Position));
+        }
+
+        foreach (CompiledPolicy policy in policies.Permits)
+        {
+            try
             {
-                forbidReasons.Add(reason);
+                if (!policy.Evaluator.Eval(env))
+                {
+                    continue;
+                }
             }
-            else
+            catch (EvalException exception)
             {
-                permitReasons.Add(reason);
+                errors.Add(new DiagnosticError(policy.PolicyId, policy.Position, exception.Message));
+                continue;
             }
+
+            permitReasons.Add(new DiagnosticReason(policy.PolicyId, policy.Position));
         }
 
         if (forbidReasons.Count > 0)
@@ -172,12 +305,12 @@ public static class BatchAuthorization
         return (Decision.Deny, new Diagnostic(ImmutableArray<DiagnosticReason>.Empty, errors.ToImmutable()));
     }
 
-    private static IReadOnlyDictionary<PolicyId, Policy> PartialPolicies(IReadOnlyDictionary<PolicyId, Policy> policies, EvalEnv env)
+    private static IReadOnlyDictionary<PolicyId, Policy> PartialPolicies(IReadOnlyDictionary<PolicyId, Policy> policies, EvalEnv env, Effect ignoreBias)
     {
         Dictionary<PolicyId, Policy> partialPolicies = new(policies.Count);
         foreach ((PolicyId policyId, Policy policy) in policies)
         {
-            PolicyAst? partialPolicy = PartialEvaluator.PartialPolicy(env, policy.Ast, out bool keep);
+            PolicyAst? partialPolicy = PartialEvaluator.PartialPolicy(env, policy.Ast, out bool keep, ignoreBias);
             if (!keep || partialPolicy is null)
             {
                 continue;
@@ -196,7 +329,7 @@ public static class BatchAuthorization
             CloneSubstitution(env.Principal, key, value),
             CloneSubstitution(env.Action, key, value),
             CloneSubstitution(env.Resource, key, value),
-            CloneSubstitution(env.Context, key, value));
+            env.Context is null ? null : CloneSubstitution(env.Context, key, value));
     }
 
     private static EvalEnv FixIgnores(EvalEnv env)
@@ -206,7 +339,7 @@ public static class BatchAuthorization
             PartialEvaluator.IsIgnore(env.Principal) ? UnknownEntity("principal") : env.Principal,
             PartialEvaluator.IsIgnore(env.Action) ? UnknownEntity("action") : env.Action,
             PartialEvaluator.IsIgnore(env.Resource) ? UnknownEntity("resource") : env.Resource,
-            PartialEvaluator.IsIgnore(env.Context) ? new CedarRecord() : env.Context);
+            env.Context is not null && PartialEvaluator.IsIgnore(env.Context) ? null : env.Context);
     }
 
     private static EntityUid UnknownEntity(string name)
@@ -222,7 +355,7 @@ public static class BatchAuthorization
         }
         catch (EvalException exception)
         {
-            throw new InvalidOperationException($"invalid {partName}: {exception.Message}", exception);
+            throw new BatchInvalidPartException(partName, exception);
         }
     }
 
@@ -234,7 +367,7 @@ public static class BatchAuthorization
         }
         catch (EvalException exception)
         {
-            throw new InvalidOperationException($"invalid context: {exception.Message}", exception);
+            throw new BatchInvalidPartException("context", exception);
         }
     }
 
@@ -242,29 +375,32 @@ public static class BatchAuthorization
     {
         if (request.Principal is null)
         {
-            throw new ArgumentException("missing part: principal", nameof(request));
+            throw new BatchMissingPartException("principal");
         }
 
         if (request.Action is null)
         {
-            throw new ArgumentException("missing part: action", nameof(request));
+            throw new BatchMissingPartException("action");
         }
 
         if (request.Resource is null)
         {
-            throw new ArgumentException("missing part: resource", nameof(request));
+            throw new BatchMissingPartException("resource");
         }
 
         if (request.Context is null)
         {
-            throw new ArgumentException("missing part: context", nameof(request));
+            throw new BatchMissingPartException("context");
         }
 
         HashSet<string> found = new(StringComparer.Ordinal);
         FindVariables(found, request.Principal);
         FindVariables(found, request.Action);
         FindVariables(found, request.Resource);
-        FindVariables(found, request.Context);
+        if (request.Context is not null)
+        {
+            FindVariables(found, request.Context);
+        }
 
         foreach (string variableName in found)
         {
@@ -282,29 +418,6 @@ public static class BatchAuthorization
             }
         }
 
-    }
-
-    private static IReadOnlyDictionary<PolicyId, Policy> EnumeratePolicies(IPolicyIterator policies)
-    {
-        Dictionary<PolicyId, Policy> result = new();
-        if (policies is PolicySet policySet)
-        {
-            foreach ((PolicyId policyId, Policy policy) in policySet.All())
-            {
-                result.Add(policyId, policy);
-            }
-
-            return result;
-        }
-
-        int index = 0;
-        foreach (Policy policy in policies.Policies)
-        {
-            result.Add(new PolicyId($"policy{index}"), policy);
-            index++;
-        }
-
-        return result;
     }
 
     private static ICedarData CloneSubstitution(ICedarData value, string key, ICedarData replacement)
@@ -381,4 +494,48 @@ public static class BatchAuthorization
     }
 
     private readonly record struct VariableItem(string Key, ICedarData[] Values);
+
+    private sealed class PolicyBatch
+    {
+        private CompiledPolicySet? compiledPolicies;
+
+        public PolicyBatch(IReadOnlyDictionary<PolicyId, Policy> policies)
+        {
+            Policies = policies;
+        }
+
+        public IReadOnlyDictionary<PolicyId, Policy> Policies { get; }
+
+        public CompiledPolicySet EnsureCompiled()
+        {
+            compiledPolicies ??= CompiledPolicySet.Compile(Policies);
+            return compiledPolicies;
+        }
+    }
+
+    private readonly record struct CompiledPolicy(PolicyId PolicyId, Position Position, BoolEvaluator Evaluator);
+
+    private sealed record CompiledPolicySet(ImmutableArray<CompiledPolicy> Forbids, ImmutableArray<CompiledPolicy> Permits)
+    {
+        public static CompiledPolicySet Compile(IReadOnlyDictionary<PolicyId, Policy> policies)
+        {
+            ImmutableArray<CompiledPolicy>.Builder forbids = ImmutableArray.CreateBuilder<CompiledPolicy>(policies.Count);
+            ImmutableArray<CompiledPolicy>.Builder permits = ImmutableArray.CreateBuilder<CompiledPolicy>(policies.Count);
+
+            foreach ((PolicyId policyId, Policy policy) in policies)
+            {
+                CompiledPolicy compiledPolicy = new(policyId, policy.Position, Compiler.Compile(policy.Ast));
+                if (policy.Effect == Effect.Forbid)
+                {
+                    forbids.Add(compiledPolicy);
+                }
+                else
+                {
+                    permits.Add(compiledPolicy);
+                }
+            }
+
+            return new CompiledPolicySet(forbids.ToImmutable(), permits.ToImmutable());
+        }
+    }
 }

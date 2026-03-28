@@ -70,6 +70,69 @@ public sealed class BatchAuthorizationTests
     }
 
     [Fact]
+    public void ForbidPolicies_EvaluatedBeforePermitPolicies()
+    {
+        PolicySet policies = Set(
+            ("allow_all", "permit(principal, action, resource);"),
+            ("deny_all", "forbid(principal, action, resource);"));
+
+        BatchResult result = Assert.Single(Collect(policies, new BatchRequest(Alice, Read, Doc1, new CedarRecord())));
+
+        Assert.Equal(Decision.Deny, result.Decision);
+        DiagnosticReason reason = Assert.Single(result.Diagnostic.Reasons);
+        Assert.Equal(new PolicyId("deny_all"), reason.PolicyId);
+    }
+
+    [Fact]
+    public void ForbidOverridesPermit_AcrossMultipleBatchResults()
+    {
+        PolicySet policies = Set(
+            ("allow_all", "permit(principal, action, resource);"),
+            ("deny_doc1", "forbid(principal, action, resource == Document::\"doc1\");"));
+        BatchRequest request = new(Alice, Read, BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(("resource", [Doc1, Doc2]))
+        };
+
+        IReadOnlyList<BatchResult> results = Collect(policies, request)
+            .OrderBy(static result => result.Request.Resource!.Id.Value)
+            .ToArray();
+
+        Assert.Equal(2, results.Count);
+
+        Assert.Equal(Doc1, results[0].Request.Resource);
+        Assert.Equal(Decision.Deny, results[0].Decision);
+        DiagnosticReason doc1Reason = Assert.Single(results[0].Diagnostic.Reasons);
+        Assert.Equal(new PolicyId("deny_doc1"), doc1Reason.PolicyId);
+
+        Assert.Equal(Doc2, results[1].Request.Resource);
+        Assert.Equal(Decision.Allow, results[1].Decision);
+        DiagnosticReason doc2Reason = Assert.Single(results[1].Diagnostic.Reasons);
+        Assert.Equal(new PolicyId("allow_all"), doc2Reason.PolicyId);
+    }
+
+    [Fact]
+    public void AllPoliciesPruned_ProducesDefaultDeny()
+    {
+        PolicySet policies = Set(
+            ("alice_only", "permit(principal == User::\"alice\", action, resource);"));
+        BatchRequest request = new(Bob, Read, BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(("resource", [Doc1, Doc2]))
+        };
+
+        IReadOnlyList<BatchResult> results = Collect(policies, request);
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, static result =>
+        {
+            Assert.Equal(Decision.Deny, result.Decision);
+            Assert.Empty(result.Diagnostic.Reasons);
+            Assert.Empty(result.Diagnostic.Errors);
+        });
+    }
+
+    [Fact]
     public void VariableContextValue_Works()
     {
         PolicySet policies = Set(("ctx", """
@@ -106,6 +169,21 @@ public sealed class BatchAuthorizationTests
     }
 
     [Fact]
+    public void StaticContextValue_Works_WithoutVariables()
+    {
+        PolicySet policies = Set(("ctx", """
+            permit(principal, action, resource)
+            when { context.key == 42 };
+            """));
+        BatchRequest request = new(Alice, Read, Doc1, Record(("key", new CedarLong(42))));
+
+        BatchResult result = Assert.Single(Collect(policies, request));
+
+        Assert.Equal(Decision.Allow, result.Decision);
+        Assert.Equal(new Request(Alice, Read, Doc1, Record(("key", new CedarLong(42)))), result.Request);
+    }
+
+    [Fact]
     public void NullEntities_DefaultsToEmptyMap()
     {
         PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));
@@ -136,7 +214,7 @@ public sealed class BatchAuthorizationTests
         BatchResult result = Assert.Single(Collect(policies, request));
 
         Assert.Equal(Decision.Allow, result.Decision);
-        Assert.Equal(new CedarRecord(), result.Request.Context);
+        Assert.Null(result.Request.Context);
     }
 
     [Fact]
@@ -167,6 +245,102 @@ public sealed class BatchAuthorizationTests
     }
 
     [Fact]
+    public void IgnoreContext_WithExplicitPermitBias_MatchesDefaultBehavior()
+    {
+        PolicySet policies = Set(
+            ("permit", """
+                permit(
+                    principal == User::"alice",
+                    action == Action::"read",
+                    resource == Document::"doc1"
+                );
+                """),
+            ("forbid", """
+                forbid(
+                    principal == User::"alice",
+                    action == Action::"read",
+                    resource == Document::"doc1"
+                )
+                when { context.level == 42 };
+                """));
+
+        BatchRequest request = new(Alice, Read, Doc1, BatchVariable.Ignore());
+
+        BatchResult defaultResult = Assert.Single(Collect(policies, request));
+        BatchResult explicitResult = Assert.Single(Collect(policies, request, options: [BatchOption.WithIgnorePermit()]));
+
+        Assert.Equal(Decision.Allow, defaultResult.Decision);
+        Assert.Equal(defaultResult.Decision, explicitResult.Decision);
+        Assert.True(defaultResult.Diagnostic.Reasons.SequenceEqual(explicitResult.Diagnostic.Reasons));
+        Assert.True(defaultResult.Diagnostic.Errors.SequenceEqual(explicitResult.Diagnostic.Errors));
+    }
+
+    [Fact]
+    public void IgnoreContext_WithForbidBias_DropsPermitPolicy()
+    {
+        PolicySet policies = Set(
+            ("permit", """
+                permit(
+                    principal == User::"alice",
+                    action == Action::"read",
+                    resource == Document::"doc1"
+                )
+                when { context.level == 42 };
+                """),
+            ("forbid", """
+                forbid(
+                    principal == User::"alice",
+                    action == Action::"read",
+                    resource == Document::"doc1"
+                );
+                """));
+
+        BatchRequest request = new(Alice, Read, Doc1, BatchVariable.Ignore());
+
+        BatchResult result = Assert.Single(Collect(policies, request, options: [BatchOption.WithIgnoreForbid()]));
+
+        Assert.Equal(Decision.Deny, result.Decision);
+        Assert.Single(result.Diagnostic.Reasons);
+        Assert.Equal(new PolicyId("forbid"), result.Diagnostic.Reasons[0].PolicyId);
+    }
+
+    [Fact]
+    public void IgnoreContext_WithMultipleVariables_ProducesCartesianResults()
+    {
+        PolicySet policies = Set(("permit_ctx", """
+            permit(
+                principal == User::"alice",
+                action == Action::"read",
+                resource == Document::"doc2"
+            )
+            when { context.key == 42 };
+            """));
+        BatchRequest request = new(
+            Alice,
+            BatchVariable.Variable("action"),
+            BatchVariable.Variable("resource"),
+            BatchVariable.Ignore())
+        {
+            Variables = Values(
+                ("action", [Read, Write]),
+                ("resource", [Doc1, Doc2]))
+        };
+
+        IReadOnlyList<BatchResult> results = Collect(policies, request);
+
+        Assert.Equal(4, results.Count);
+        Assert.All(results, static result => Assert.Null(result.Request.Context));
+
+        BatchResult[] allowed = results.Where(static result => result.Request.Action == Read && result.Request.Resource == Doc2).ToArray();
+        BatchResult[] denied = results.Where(static result => !(result.Request.Action == Read && result.Request.Resource == Doc2)).ToArray();
+
+        Assert.Single(allowed);
+        Assert.All(allowed, static result => Assert.Equal(Decision.Allow, result.Decision));
+        Assert.Equal(3, denied.Length);
+        Assert.All(denied, static result => Assert.Equal(Decision.Deny, result.Decision));
+    }
+
+    [Fact]
     public void Diagnostics_MatchSingleAuthorization()
     {
         PolicySet policies = Set(
@@ -191,6 +365,121 @@ public sealed class BatchAuthorizationTests
         Assert.Equal(diagnostic.Errors.Length, batchResult.Diagnostic.Errors.Length);
         Assert.True(diagnostic.Reasons.SequenceEqual(batchResult.Diagnostic.Reasons));
         Assert.True(diagnostic.Errors.SequenceEqual(batchResult.Diagnostic.Errors));
+    }
+
+    [Fact]
+    public void WithCallback_UsesOptionDrivenApi_AndSuppressesDiagnostics()
+    {
+        PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));
+        BatchRequest request = new(Alice, Read, BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(("resource", [Doc1, Doc2]))
+        };
+
+        List<BatchResult> results = [];
+
+        BatchAuthorization.Authorize(
+            policies,
+            new EntityMap(),
+            request,
+            BatchOption.WithCallback(result => results.Add(result)));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, static result =>
+        {
+            Assert.Equal(Decision.Allow, result.Decision);
+            Assert.Empty(result.Diagnostic.Reasons);
+            Assert.Empty(result.Diagnostic.Errors);
+        });
+    }
+
+    [Fact]
+    public void WithDiagnosticCallback_UsesOptionDrivenApi_AndPreservesDiagnostics()
+    {
+        PolicySet policies = Set(("permit_all", "permit(principal, action, resource);"));
+        BatchRequest request = new(Alice, Read, BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(("resource", [Doc1, Doc2]))
+        };
+
+        List<BatchResult> results = [];
+
+        BatchAuthorization.Authorize(
+            policies,
+            new EntityMap(),
+            request,
+            BatchOption.WithDiagnosticCallback(result => results.Add(result)));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, static result =>
+        {
+            Assert.Equal(Decision.Allow, result.Decision);
+            DiagnosticReason reason = Assert.Single(result.Diagnostic.Reasons);
+            Assert.Equal(new PolicyId("permit_all"), reason.PolicyId);
+            Assert.Empty(result.Diagnostic.Errors);
+        });
+    }
+
+    [Fact]
+    public void WithCallback_CanBeCombinedWithIgnoreBiasOptions()
+    {
+        PolicySet policies = Set(
+            ("permit", """
+                permit(
+                    principal == User::"alice",
+                    action == Action::"read",
+                    resource == Document::"doc1"
+                )
+                when { context.level == 42 };
+                """),
+            ("forbid", """
+                forbid(
+                    principal == User::"alice",
+                    action == Action::"read",
+                    resource == Document::"doc1"
+                );
+                """));
+
+        BatchRequest request = new(Alice, Read, Doc1, BatchVariable.Ignore());
+        BatchResult? result = null;
+
+        BatchAuthorization.Authorize(
+            policies,
+            new EntityMap(),
+            request,
+            BatchOption.WithCallback(batchResult => result = batchResult),
+            BatchOption.WithIgnoreForbid());
+
+        Assert.NotNull(result);
+        Assert.Equal(Decision.Deny, result!.Decision);
+        Assert.Empty(result.Diagnostic.Reasons);
+        Assert.Empty(result.Diagnostic.Errors);
+    }
+
+    [Fact]
+    public void EvaluationError_CapturedInDiagnosticErrors_WithPolicyId()
+    {
+        PolicySet policies = Set(
+            ("erroring_policy", """
+                permit(principal, action, resource)
+                when { "test" < 42 };
+                """));
+        BatchRequest request = new(BatchVariable.Variable("principal"), BatchVariable.Variable("action"), BatchVariable.Variable("resource"), new CedarRecord())
+        {
+            Variables = Values(
+                ("principal", [Alice]),
+                ("action", [Read]),
+                ("resource", [Doc1]))
+        };
+
+        BatchResult result = Assert.Single(Collect(policies, request));
+
+        Assert.Equal(Decision.Deny, result.Decision);
+        Assert.Empty(result.Diagnostic.Reasons);
+
+        DiagnosticError error = Assert.Single(result.Diagnostic.Errors);
+        Assert.Equal(new PolicyId("erroring_policy"), error.PolicyId);
+        Assert.False(string.IsNullOrWhiteSpace(error.Message));
     }
 
     [Fact]
@@ -221,9 +510,39 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(null, Read, Doc1, new CedarRecord());
 
-        ArgumentException exception = Assert.Throws<ArgumentException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
 
-        Assert.Contains("missing part: principal", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("principal", exception.PartName);
+    }
+
+    [Fact]
+    public void MissingAction_Throws()
+    {
+        BatchRequest request = new(Alice, null, Doc1, new CedarRecord());
+
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+
+        Assert.Equal("action", exception.PartName);
+    }
+
+    [Fact]
+    public void MissingResource_Throws()
+    {
+        BatchRequest request = new(Alice, Read, null, new CedarRecord());
+
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+
+        Assert.Equal("resource", exception.PartName);
+    }
+
+    [Fact]
+    public void MissingContext_Throws()
+    {
+        BatchRequest request = new(Alice, Read, Doc1, null);
+
+        BatchMissingPartException exception = Assert.Throws<BatchMissingPartException>(() => BatchAuthorization.Authorize(new PolicySet(), new EntityMap(), request, static _ => { }));
+
+        Assert.Equal("context", exception.PartName);
     }
 
     [Fact]
@@ -244,9 +563,54 @@ public sealed class BatchAuthorizationTests
     {
         BatchRequest request = new(new CedarString("not-an-entity"), Read, Doc1, new CedarRecord());
 
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
 
-        Assert.Contains("invalid principal", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("principal", exception.PartName);
+    }
+
+    [Fact]
+    public void InvalidActionType_Throws()
+    {
+        BatchRequest request = new(Alice, new CedarString("not-an-entity"), Doc1, new CedarRecord());
+
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+
+        Assert.Equal("action", exception.PartName);
+    }
+
+    [Fact]
+    public void InvalidResourceType_Throws()
+    {
+        BatchRequest request = new(Alice, Read, new CedarString("not-an-entity"), new CedarRecord());
+
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+
+        Assert.Equal("resource", exception.PartName);
+    }
+
+    [Fact]
+    public void InvalidContextType_Throws()
+    {
+        BatchRequest request = new(Alice, Read, Doc1, new CedarString("not-a-record"));
+
+        BatchInvalidPartException exception = Assert.Throws<BatchInvalidPartException>(() => BatchAuthorization.Authorize(Set(("permit_all", "permit(principal, action, resource);")), new EntityMap(), request, static _ => { }));
+
+        Assert.Equal("context", exception.PartName);
+    }
+
+    [Fact]
+    public void PreCancelledToken_ThrowsOperationCanceledException()
+    {
+        BatchRequest request = new(Alice, Read, Doc1, new CedarRecord());
+        CancellationTokenSource cancellationTokenSource = new();
+        cancellationTokenSource.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() => BatchAuthorization.Authorize(
+            new PolicySet(),
+            new EntityMap(),
+            request,
+            static _ => { },
+            cancellationTokenSource.Token));
     }
 
     [Fact]
@@ -304,10 +668,23 @@ public sealed class BatchAuthorizationTests
         Assert.Equal(3, count);
     }
 
-    private static IReadOnlyList<BatchResult> Collect(PolicySet policies, BatchRequest request, IEntityGetter? entities = null)
+    private static IReadOnlyList<BatchResult> Collect(
+        PolicySet policies,
+        BatchRequest request,
+        IEntityGetter? entities = null,
+        IReadOnlyList<BatchOption>? options = null,
+        CancellationToken cancellationToken = default)
     {
         List<BatchResult> results = [];
-        BatchAuthorization.Authorize(policies, entities, request, result => results.Add(result));
+        if (options is null)
+        {
+            BatchAuthorization.Authorize(policies, entities, request, result => results.Add(result), cancellationToken);
+        }
+        else
+        {
+            BatchAuthorization.Authorize(policies, entities, request, result => results.Add(result), options, cancellationToken);
+        }
+
         return results;
     }
 

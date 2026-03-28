@@ -12,7 +12,7 @@ internal sealed class VariableEvaluator(CedarString variableName) : IEvaluator
             CedarConsts.Principal => env.Principal,
             CedarConsts.Action => env.Action,
             CedarConsts.Resource => env.Resource,
-            CedarConsts.Context => env.Context,
+            CedarConsts.Context => env.Context ?? throw new EvalException("missing context"),
             _ => throw new EvalException($"unknown variable `{variableName.Value}`")
         };
     }

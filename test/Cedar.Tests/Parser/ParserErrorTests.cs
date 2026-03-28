@@ -168,4 +168,18 @@ public sealed class ParserErrorTests
         Assert.Equal(2, parse.Position.Line);
         Assert.True(parse.Position.Column >= 1);
     }
+
+    [Theory]
+    [InlineData("permit(principal, action, resource) when { {false: 43} };", "identifier or string")]
+    [InlineData("permit(principal, action, resource) when { {} has false };", "identifier or string")]
+    [InlineData("permit(principal == false::\"42\", action, resource);", "entity type identifier")]
+    [InlineData("permit(principal, action, resource) when { context.false };", "identifier after '.'")]
+    [InlineData("@false(\"x\") permit(principal, action, resource);", "annotation key")]
+    public void ReservedKeywordsCannotBeUsedWhereIdentifiersAreExpected(string policy, string expectedMessage)
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies(policy));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains(expectedMessage, parse.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }

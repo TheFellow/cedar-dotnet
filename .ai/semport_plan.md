@@ -1,72 +1,100 @@
 PORT
 
-## Commit
-a94e3e2 — 2024-09-05T10:06:03-07:00
-"cedar: change JSON marshaling of the Position struct to use conventional lower case keys"
+## Commit: cae58f3 — internal/eval: add constant folding
 
-## Semantic Analysis
-The Go `Position` struct gained explicit JSON struct tags with **lowercase** keys:
-- `Filename` → `"filename"`
-- `Offset`   → `"offset"`
-- `Line`     → `"line"`
-- `Column`   → `"column"`
+### Summary
+Extends the compile-time optimization pass from "bake" (only pre-compute literal Sets, Records, and extension values) to full **constant folding**: recursively evaluate any sub-expression whose operands are all statically known values (no variables, no entity lookups). The result replaces the compound AST node with a single `literalEval` node. This is a meaningful runtime performance improvement — arithmetic, equality, comparisons, boolean logic, contains, etc. are all pre-computed once at policy compile time rather than on every authorization call.
 
-Before this commit Go's default marshaling would have produced `"Filename"`, `"Offset"`, etc. (PascalCase). After this commit the canonical wire format is all-lowercase. This is a **public contract change**: any system that serializes/deserializes `Position` over JSON must use the lowercase key names.
+### Semantic Changes
 
-In C#, `System.Text.Json` defaults to the property name as written. Our `Position` type (wherever it lives) must carry `[JsonPropertyName("...")]` attributes (or a matching naming policy) to guarantee the same lowercase wire format.
+1. **Rename bake → fold** — `bakePolicy`/`bake` become `foldPolicy`/`fold`. Pure rename, but reflects the broader scope.
 
-## Port Tasks
+2. **Recursive constant folding for all operators** — `fold()` now handles every node type:
+   - Arithmetic: Add, Sub, Mult, Negate
+   - Comparison: Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual
+   - Logical: And, Or, Not
+   - Set membership: Contains, ContainsAll, ContainsAny
+   - Container literals: Record, Set (already existed in bake, now folds inner expressions too)
+   - Variables: returned as-is (cannot fold)
+   - In/IsIn: special-cased — cannot fold entity membership at compile time (runtime data needed)
 
-### 1. Locate the C# `Position` type
-- Expected location: `src/Cedar.Core/` or `src/Cedar.Ast/` — search for `class Position` or `record Position`.
-- Command to confirm: `grep -rn "Position" src/ --include="*.cs" -l`
+3. **`tryFold` / `tryFoldBinary` / `tryFoldUnary` helpers** — Generic helpers that:
+   - Recursively fold children
+   - Attempt to evaluate the result using the existing evaler
+   - If evaluation succeeds with a concrete value, return `NodeValue` (constant)
+   - If it errors or children are not fully constant, return the partially-folded node
 
-### 2. Add `[JsonPropertyName]` attributes to each property
-For whatever record/class holds `Filename`, `Offset`, `Line`, `Column`, add:
+4. **`newIsInEval` introduced** — Consolidates the `IsIn` case (was: 3 eval nodes — `isEval`, `inEval`, `andEval`; now: 1 dedicated `isInEval` struct).
 
-```csharp
-using System.Text.Json.Serialization;
+5. **Constructor return types broadened** — `newOrEval`, `newAndEval`, `newNotEval`, `newAddEval`, `newSubtractEval`, etc. now return `Evaler` (interface) instead of concrete pointer types. This enables fold helpers to substitute a `literalEval` without a type mismatch.
 
-public sealed record Position(
-    [property: JsonPropertyName("filename")] string Filename,
-    [property: JsonPropertyName("offset")]   int Offset,
-    [property: JsonPropertyName("line")]     int Line,
-    [property: JsonPropertyName("column")]   int Column
-);
-```
+### Port Tasks
 
-If `Position` is not a positional record, add `[JsonPropertyName("...")]` above each auto-property instead.
+#### Task 1 — Rename Bake → Fold in C#
+- **Go source:** `inspiration/cedar-go/internal/eval/bake.go` (now `fold.go`)
+- **C# target:** `src/Cedar.Ast/Internal/Eval/` — find the file implementing `BakePolicy`/`Bake` (likely `Bake.cs` or similar)
+- Rename the class/method from `Bake`/`BakePolicy` to `Fold`/`FoldPolicy` (or keep both as aliases if needed for back-compat)
 
-### 3. Add a xUnit serialization round-trip test
-Analogous to Go's `TestPositionJSON`. Add to the appropriate test project (likely `test/Cedar.Tests/`):
+#### Task 2 — Implement `TryFold` / `TryFoldBinary` / `TryFoldUnary` helpers
+- **Go source:** `inspiration/cedar-go/internal/eval/fold.go` — `tryFold`, `tryFoldBinary`, `tryFoldUnary`
+- **C# target:** `src/Cedar.Ast/Internal/Eval/Fold.cs` (new or renamed file)
+- Implement static helper methods:
+  ```csharp
+  // Attempt to fold a unary node: fold child, try to evaluate, return NodeValue or reconstructed node
+  static INode TryFoldUnary(INode child, Func<IEvaler, IEvaler> makeEvaler, Func<INode, INode> makeNode)
+  
+  // Attempt to fold a binary node: fold both children, try to evaluate, return NodeValue or reconstructed node
+  static INode TryFoldBinary(INode left, INode right, Func<IEvaler, IEvaler, IEvaler> makeEvaler, Func<INode, INode, INode> makeNode)
+  
+  // General fold: fold N children, if all are NodeValue run the evaler, else reconstruct
+  static INode TryFold(IReadOnlyList<INode> children, Func<IReadOnlyList<Value>, IEvaler> makeEvaler, Func<IReadOnlyList<INode>, INode> makeNode)
+  ```
+- Use a dummy `EvalContext` (empty env) for the compile-time trial evaluation
+- Catch any eval errors and return the unfolded node
 
-```csharp
-[Fact]
-public void Position_JsonRoundTrip_UsesLowercaseKeys()
-{
-    var pos = new Position("foo.cedar", Offset: 1, Line: 2, Column: 3);
-    var json = JsonSerializer.Serialize(pos);
+#### Task 3 — Extend `Fold()` dispatch to all node types
+- **Go source:** `inspiration/cedar-go/internal/eval/fold.go` — the `fold()` switch statement
+- **C# target:** `src/Cedar.Ast/Internal/Eval/Fold.cs` — the `Fold(INode)` method
+- Add cases for every operator node type, wiring to `TryFoldBinary`/`TryFoldUnary`:
+  - `NodeTypeAdd`, `NodeTypeSub`, `NodeTypeMult`, `NodeTypeNegate`
+  - `NodeTypeEquals`, `NodeTypeNotEquals`
+  - `NodeTypeGreaterThan`, `NodeTypeGreaterThanOrEqual`, `NodeTypeLessThan`, `NodeTypeLessThanOrEqual`
+  - `NodeTypeAnd`, `NodeTypeOr`, `NodeTypeNot`
+  - `NodeTypeContains`, `NodeTypeContainsAll`, `NodeTypeContainsAny`
+  - `NodeTypeVariable` → return as-is
+  - `NodeTypeIn` → fold children but do NOT evaluate (entity membership needs runtime data); return partially-folded node
+  - `NodeTypeRecord` and `NodeTypeSet` → fold each element; if all yield `NodeValue`, collapse to single `NodeValue`
 
-    // Assert lowercase keys present
-    Assert.Contains("\"filename\"", json);
-    Assert.Contains("\"offset\"", json);
-    Assert.Contains("\"line\"", json);
-    Assert.Contains("\"column\"", json);
+#### Task 4 — Introduce `IsInEval` (dedicated evaluator for `is ... in ...`)
+- **Go source:** `inspiration/cedar-go/internal/eval/evalers.go` — `newIsInEval` (new struct combining is+in+and)
+- **C# target:** `src/Cedar.Ast/Internal/Eval/Evalers.cs` or `IsInEval.cs`
+- Add sealed class `IsInEval : IEvaler` with fields: `IEvaler Obj`, `EntityType EntityUid`, `IEvaler Entity`
+- Implement `Eval(EvalContext)`: evaluate obj, check type matches `EntityType`, evaluate entity target, check `in` membership — short-circuit appropriately
+- Wire `Convert.cs` (the `ToEval` switch) to use `new IsInEval(...)` for `NodeTypeIsIn`
 
-    // Round-trip
-    var deserialized = JsonSerializer.Deserialize<Position>(json);
-    Assert.Equal(pos, deserialized);
-}
-```
+#### Task 5 — Widen constructor return types (C# equivalent)
+- **Go source:** `inspiration/cedar-go/internal/eval/evalers.go` — constructors now return `Evaler` interface
+- **C# target:** `src/Cedar.Ast/Internal/Eval/Evalers.cs` (or individual evaler files)
+- Change factory methods `NewOrEval`, `NewAndEval`, `NewNotEval`, `NewAddEval`, `NewSubtractEval`, etc. to return `IEvaler` instead of the concrete type
+- This is required so `TryFold*` helpers can substitute a `LiteralEval` transparently
 
-### 4. Verify no other JSON serialization paths override these names
-Search for `JsonNamingPolicy` or custom converters that might affect `Position`.
+#### Task 6 — Wire `FoldPolicy` into `Compile`
+- **Go source:** `inspiration/cedar-go/internal/eval/compile.go`
+- **C# target:** `src/Cedar.Ast/Internal/Eval/Compile.cs` (or wherever `Compile(Policy)` lives)
+- Replace call to `BakePolicy(p)` with `FoldPolicy(p)` in `Compile`
 
-### File references
-| Side | Location |
-|------|----------|
-| Go source (before) | `inspiration/cedar-go/policy.go` lines 100-106 (old struct fields) |
-| Go source (after)  | `inspiration/cedar-go/policy.go` lines 100-116 (tagged fields) |
-| Go test            | `inspiration/cedar-go/policy_test.go` lines 108-128 |
-| C# target (type)   | `src/Cedar.Core/` or `src/Cedar.Ast/` — `Position` record/class |
-| C# target (tests)  | `test/Cedar.Tests/` — new `PositionJsonTests.cs` or existing position test file |
+#### Task 7 — Tests
+- **Go source:** `inspiration/cedar-go/internal/eval/fold_test.go`
+- **C# target:** `test/Cedar.Tests/` — add `FoldTests.cs`
+- Port the test cases:
+  - `record-bake`: `Record({"key": true})` → `Value(Record{"key": True})`
+  - `set-bake`: `Set(true)` → `Value(Set{True})`
+  - `record-fold`: `Record({"key": 6*7})` → `Value(Record{"key": Long(42)})` ← NEW: arithmetic folded
+  - `set-fold`: `Set(6*7)` → `Value(Set{Long(42)})` ← NEW
+  - `record-blocked`: `Record({"key": 6 * context})` → unchanged (variable blocks folding)
+  - `set-blocked`: `Set(6 * context)` → unchanged
+
+### Notes
+- The Go `In` case has commented-out code (fold attempted but reverted) — do not attempt to fold `In` in C# either; just fold children and reconstruct
+- The `tryFold` trial evaluation uses a no-entity, no-context eval environment; any error aborts the fold and returns the node unchanged — match this behavior exactly
+- This is a compile-time-only optimization; authorization semantics are unchanged

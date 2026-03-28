@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Cedar.Ast.Internal;
+using Cedar.Core;
 using Cedar.Core.Internal.Eval.Evaluators;
 using Cedar.Types;
 
@@ -61,7 +62,7 @@ internal static class PartialEvaluator
         return value is EntityUid entityUid && entityUid.Type == IgnoreEntityType;
     }
 
-    public static PolicyAst? PartialPolicy(EvalEnv env, PolicyAst policy, out bool keep)
+    public static PolicyAst? PartialPolicy(EvalEnv env, PolicyAst policy, out bool keep, Effect ignoreBias = Effect.Permit)
     {
         ArgumentNullException.ThrowIfNull(env);
         ArgumentNullException.ThrowIfNull(policy);
@@ -116,7 +117,7 @@ internal static class PartialEvaluator
             }
             catch (PartialSentinelException exception) when (exception.Sentinel == PartialSentinel.Ignore)
             {
-                if (policy.Effect == Effect.Permit)
+                if (policy.Effect == ignoreBias)
                 {
                     continue;
                 }
@@ -227,19 +228,21 @@ internal static class PartialEvaluator
         {
             ScopeAll => (true, true),
             ScopeEq equals => (true, entity.Equals(equals.Entity)),
-            ScopeIn contains => (true, InOperator.Contains(env.Entities, entity, contains.Entity)),
+            ScopeIn contains => (true, InOperator.Contains(env, entity, contains.Entity)),
             ScopeInSet set => (true, EntityInSet(env.Entities, entity, set.Entities)),
             ScopeIs isScope => (true, string.Equals(entity.Type.Value, isScope.Type.Value, System.StringComparison.Ordinal)),
-            ScopeIsIn isIn => (true, string.Equals(entity.Type.Value, isIn.Type.Value, System.StringComparison.Ordinal) && InOperator.Contains(env.Entities, entity, isIn.Entity)),
+            ScopeIsIn isIn => (true, string.Equals(entity.Type.Value, isIn.Type.Value, System.StringComparison.Ordinal) && InOperator.Contains(env, entity, isIn.Entity)),
             _ => throw new EvalException($"unsupported scope type `{scope.GetType().Name}`")
         };
     }
 
     private static bool EntityInSet(IEntityGetter entities, EntityUid entity, IEnumerable<EntityUid> candidates)
     {
+        EvalEnv env = new(entities, entity, entity, entity, new CedarRecord());
+
         foreach (EntityUid candidate in candidates)
         {
-            if (InOperator.Contains(entities, entity, candidate))
+            if (InOperator.Contains(env, entity, candidate))
             {
                 return true;
             }

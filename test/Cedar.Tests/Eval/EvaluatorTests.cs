@@ -406,6 +406,45 @@ public sealed class EvaluatorTests
     }
 
     [Fact]
+    public void InEvaluator_DeepHierarchy_ReusesSingularCache()
+    {
+        EntityUid team = new(new EntityType("Group"), new CedarString("team"));
+        EntityUid org = new(new EntityType("Group"), new CedarString("org"));
+        EntityUid root = new(new EntityType("Group"), new CedarString("root"));
+
+        Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+        Entity groupEntity = new(Group, new EntityUidSet(new[] { team }), new CedarRecord(), new CedarRecord());
+        Entity teamEntity = new(team, new EntityUidSet(new[] { org }), new CedarRecord(), new CedarRecord());
+        Entity orgEntity = new(org, new EntityUidSet(new[] { root }), new CedarRecord(), new CedarRecord());
+        EvalEnv env = MakeEnv(aliceEntity, groupEntity, teamEntity, orgEntity);
+        IEvaluator evaluator = new InEvaluator(Lit(Alice), Lit(root));
+
+        Assert.Equal(CedarBool.True, evaluator.Eval(env));
+        Assert.Single(env.InCache);
+        Assert.True(env.InCache.TryGetValue((Alice, root), out bool cached));
+        Assert.True(cached);
+
+        Assert.Equal(CedarBool.True, evaluator.Eval(env));
+        Assert.Single(env.InCache);
+    }
+
+    [Fact]
+    public void InEvaluator_SingularCache_IsolatedPerEnvironment()
+    {
+        Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+        IEvaluator evaluator = new InEvaluator(Lit(Alice), Lit(Group));
+        EvalEnv firstEnv = MakeEnv(aliceEntity);
+        EvalEnv secondEnv = MakeEnv(aliceEntity);
+
+        Assert.Empty(firstEnv.InCache);
+        Assert.Empty(secondEnv.InCache);
+
+        Assert.Equal(CedarBool.True, evaluator.Eval(firstEnv));
+        Assert.Single(firstEnv.InCache);
+        Assert.Empty(secondEnv.InCache);
+    }
+
+    [Fact]
     public void IsEvaluator_MatchingType_ReturnsTrue()
     {
         IEvaluator evaluator = new IsEvaluator(Lit(Alice), new CedarPath("User"));

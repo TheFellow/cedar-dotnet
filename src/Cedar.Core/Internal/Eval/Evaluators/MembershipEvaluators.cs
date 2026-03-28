@@ -9,7 +9,7 @@ internal sealed class InEvaluator(IEvaluator left, IEvaluator right) : IEvaluato
     {
         EntityUid leftValue = TypeConversion.ValueToEntity(left.Eval(env));
         ICedarData rightValue = right.Eval(env);
-        return new CedarBool(InOperator.Contains(env.Entities, leftValue, rightValue));
+        return new CedarBool(InOperator.Contains(env, leftValue, rightValue));
     }
 }
 
@@ -33,20 +33,33 @@ internal sealed class IsInEvaluator(IEvaluator left, CedarPath entityType, IEval
         }
 
         ICedarData rightValue = right.Eval(env);
-        return new CedarBool(InOperator.Contains(env.Entities, leftValue, rightValue));
+        return new CedarBool(InOperator.Contains(env, leftValue, rightValue));
     }
 }
 
 internal static class InOperator
 {
-    public static bool Contains(IEntityGetter entities, EntityUid entity, ICedarData query)
+    public static bool Contains(EvalEnv env, EntityUid entity, ICedarData query)
     {
         return query switch
         {
-            EntityUid parent => EntityInEntity(entities, entity, parent),
-            CedarSet set => EntityInSet(entities, entity, set),
+            EntityUid parent => EntityInOne(env, entity, parent),
+            CedarSet set => EntityInSet(env.Entities, entity, set),
             _ => throw new EvalException($"expected set or entity, got {EvalErrors.TypeName(query)}")
         };
+    }
+
+    private static bool EntityInOne(EvalEnv env, EntityUid entity, EntityUid parent)
+    {
+        (EntityUid Lhs, EntityUid Rhs) key = (entity, parent);
+        if (env.InCache.TryGetValue(key, out bool cached))
+        {
+            return cached;
+        }
+
+        bool result = EntityInEntity(env.Entities, entity, parent);
+        env.InCache[key] = result;
+        return result;
     }
 
     private static bool EntityInSet(IEntityGetter entities, EntityUid entity, CedarSet set)

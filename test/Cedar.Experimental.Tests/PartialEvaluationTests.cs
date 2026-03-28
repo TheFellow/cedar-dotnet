@@ -152,6 +152,110 @@ public sealed class PartialEvaluationTests
     }
 
     [Fact]
+    public void IgnoreOnPermit_WithIgnoredPrincipalScope_DropsScope()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(
+                principal == User::"alice",
+                action,
+                resource
+            );
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv(principal: PartialEvaluation.Ignore()));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void IgnoreOnForbid_WithIgnoredPrincipalScope_DropsScope()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            forbid(
+                principal == User::"alice",
+                action,
+                resource
+            );
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv(principal: PartialEvaluation.Ignore()));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("forbid(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void IgnoreOnPermit_InAndCondition_DropsIgnoredBranch()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.variable && context.ignore == 42 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("ignore", PartialEvaluation.Ignore()), ("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void IgnoreOnPermit_InOrCondition_DropsIgnoredBranch()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.variable || context.ignore == 42 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("ignore", PartialEvaluation.Ignore()), ("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void IgnoreOnPermit_InIfThenElseThenBranch_DropsCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { if context.variable then context.ignore == 42 else true };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("ignore", PartialEvaluation.Ignore()), ("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void IgnoreOnPermit_InIfThenElseElseBranch_DropsCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { if context.variable then true else context.ignore == 42 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("ignore", PartialEvaluation.Ignore()), ("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
     public void TypeErrorsBecomePartialErrors()
     {
         Policy policy = Policy.UnmarshalCedar("""
@@ -169,6 +273,72 @@ public sealed class PartialEvaluationTests
     }
 
     [Fact]
+    public void ErrorConditionShortCircuit_PolicyKeptWithErrorNode()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { "oops" < 3 }
+            when { context.variable == 42 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+        Assert.DoesNotContain("context.variable == 42", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ErrorConditionShortCircuit_PrecedingVariableConditionKept()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.variable == 42 }
+            when { "oops" < 3 }
+            when { context.variable == 99 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("context.variable == 42", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+        Assert.Contains("__cedar::partialError", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+        Assert.DoesNotContain("context.variable == 99", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ErrorConditionShortCircuit_NonBooleanConditionBecomesPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { true }
+            when { "test" }
+            when { context.variable == 42 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+        Assert.DoesNotContain("context.variable == 42", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("condition expected bool", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PartialError_RoundTrips()
     {
         Node node = PartialEvaluation.PartialError("boom");
@@ -178,6 +348,170 @@ public sealed class PartialEvaluationTests
         Assert.True(ok);
         Assert.NotNull(exception);
         Assert.Equal("boom", exception!.Message);
+    }
+
+    [Fact]
+    public void AndWithFalseLeft_ShortCircuitsErrorRight_DropsPolicy()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { false && "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.False(result.Keep);
+        Assert.Null(result.Policy);
+    }
+
+    [Fact]
+    public void AndWithTrueLeft_PropagatesErrorRight_AsPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { true && "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OrWithTrueLeft_ShortCircuitsErrorRight_RemovesCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { true || "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void OrWithFalseLeft_PropagatesErrorRight_AsPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { false || "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("__cedar::partialError", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+
+        Exception exception = Assert.ThrowsAny<Exception>(() => NodeEvaluation.Evaluate(PartialEvaluation.ToNode(result.Policy), new EvalEnv()));
+        Assert.Contains("cannot compare string with long", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndWithVariableLeft_AndErrorRight_PreservesResidualAndPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.variable && "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("context.variable", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+        Assert.Contains("__cedar::partialError", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OrWithVariableLeft_AndErrorRight_PreservesResidualOrPartialError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.variable || "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("context.variable", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+        Assert.Contains("__cedar::partialError", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IfThenElseWithTrueCondition_DoesNotEvaluateElseError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { if true then context.variable == 42 else "oops" < 3 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent(
+            """
+            permit(principal, action, resource)
+            when { context.variable == 42 };
+            """,
+            result.Policy!);
+        Assert.DoesNotContain("__cedar::partialError", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IfThenElseWithFalseCondition_DoesNotEvaluateThenError()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { if false then "oops" < 3 else context.variable == 42 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent(
+            """
+            permit(principal, action, resource)
+            when { context.variable == 42 };
+            """,
+            result.Policy!);
+        Assert.DoesNotContain("__cedar::partialError", result.Policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IfThenElseWithVariableCondition_PreservesResidualCondition()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { if context.variable then true else false };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(context: Record(("variable", PartialEvaluation.Variable("variable")))));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("if context.variable then true else false", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
     }
 
     [Fact]

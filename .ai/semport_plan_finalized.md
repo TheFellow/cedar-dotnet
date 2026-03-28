@@ -1,98 +1,51 @@
-# Finalized Port Plan — a94e3e2
+# Semport Finalized Plan: cae58f3 — internal/eval: add constant folding
 
-## Summary
-Upstream Go commit adds explicit lowercase JSON struct tags to `Position`
-(`filename`, `offset`, `line`, `column`). C# `System.Text.Json` defaults to
-the property name as written (PascalCase), so the same attributes must be
-added explicitly via `[JsonPropertyName]`.
+## Decision: ACKNOWLEDGE — Already Fully Implemented
 
----
+### Summary of Go Commit
+`cae58f3` adds compile-time constant folding to cedar-go's eval pipeline:
+- Renames `bake`→`fold`, extends folding from container-literal-only to all operator types
+- Introduces `tryFold`/`tryFoldBinary`/`tryFoldUnary` helpers that trial-evaluate a node and substitute a `NodeValue` if successful
+- Adds `newIsInEval` (dedicated `is ... in ...` evaluator, replacing 3-node and+is+in composition)
+- Widens constructor return types from concrete types to `Evaler` interface
 
-## Target Files
+### C# Status: 100% Already Implemented
 
-| Role | File | Key line(s) |
-|------|------|-------------|
-| **C# type to change** | `src/Cedar.Core/Position.cs` | line 3 — the entire `record struct` declaration |
-| **Existing test file** | `test/Cedar.Tests/Policy/PolicyTests.cs` | lines 1–5 (usings), line 106–110 (closest existing Position test) |
+Every semantic change in this Go commit exists in our C# codebase. Evidence:
 
----
+| Go Change | C# Implementation | File |
+|---|---|---|
+| `foldPolicy` / `fold` / `FoldNode` | `ConstantFolder.FoldPolicy` / `FoldNode` | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:14,32` |
+| `tryFold` with `CanEvaluate` guard + `ConstantEnv` trial-eval | `TryFold(INode)` using `ConstantEnv` + `CanEvaluate(INode)` | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:103,126` |
+| Folding all operators: Add, Sub, Mult, Negate, Equals, …, And, Or, Not, Contains, ContainsAll, ContainsAny | All node types handled in `FoldNode` switch + `CanEvaluate` switch | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:34–68,126–211` |
+| In/IsIn/Is/Has/NodeAccess blocked from folding (entity-runtime-dependent) | `CanEvaluate` returns `false` for `NodeIn`, `NodeIsIn`, `NodeIs`, `NodeAccess`, `NodeHas`, `NodeHasTag`, `NodeGetTag` | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:133–140` |
+| `newIsInEval` — dedicated `is ... in ...` evaluator | `IsInEvaluator` sealed class with `is`-check short-circuit before `in` | `src/Cedar.Core/Internal/Eval/Evaluators/MembershipEvaluators.cs:25–39` |
+| `Compile` calls `foldPolicy` | `Compiler.Compile` calls `ConstantFolder.FoldPolicy` | `src/Cedar.Core/Internal/Eval/Compiler.cs:12` |
+| `fold_test.go` test cases | `ConstantFolderTests` with 18 test methods covering all cases | `test/Cedar.Tests/Eval/ConstantFolderTests.cs` |
 
-## Change 1 — `src/Cedar.Core/Position.cs`
+### Key Architectural Notes (C# vs Go)
 
-**Current (line 3):**
-```csharp
-public readonly record struct Position(string Filename, int Offset, int Line, int Column);
-```
+| Go Pattern | C# Equivalent | Notes |
+|---|---|---|
+| `Evaler` interface | `IEvaluator` interface | `src/Cedar.Core/Internal/Eval/IEvaluator.cs` |
+| `literalEval` / `NodeValue` | `NodeValue` (AST node) / `LiteralEvaluator` | C# uses `NodeValue` at fold-time, `LiteralEvaluator` at eval-time |
+| `EvalEnv` with dummy entity | `ConstantEnv` static field | `new EntityUid("__constant","__constant")` used as dummy PARC |
+| `tryFold` returns `NodeValue` on success | `TryFold` returns `new NodeValue(value)` | Identical semantics |
+| Error → return unfoldable node | `catch (EvalException) { return node; }` | Identical semantics |
+| `tryFoldBinary`/`tryFoldUnary` helpers | Inlined into `FoldNode` switch + `TryFold` call | C# approach is slightly simpler: fold children in switch, then call `TryFold(folded)` unconditionally |
+| Constructor return types widened to `Evaler` | N/A — C# never exposed concrete types | C# factory constructors already use primary constructors returning `IEvaluator` implicitly via interface |
 
-**Required — add `[JsonPropertyName]` to each positional parameter and a
-`using` directive:**
-```csharp
-using System.Text.Json.Serialization;
+### Acceptance Criteria: ALL MET ✅
 
-namespace Cedar.Core;
+- [x] `ConstantFolder.FoldPolicy` exists and is called from `Compiler.Compile`
+- [x] All arithmetic/logical/comparison operators fold when all operands are constant
+- [x] `NodeIn`, `NodeIsIn`, `NodeIs`, `NodeAccess`, `NodeHas`, `NodeHasTag`, `NodeGetTag` do NOT fold
+- [x] `NodeVariable` does NOT fold
+- [x] `NodeSet` and `NodeRecord` with all-constant elements fold to `NodeValue`
+- [x] Partial folds (some children constant, some not) are preserved as partially-folded nodes
+- [x] Eval errors during trial evaluation return the unfolded node (no exception propagation)
+- [x] `IsInEvaluator` exists as a single dedicated evaluator (not 3-node composition)
+- [x] Tests cover record-bake, set-bake, record-fold, set-fold, blocked cases
 
-public readonly record struct Position(
-    [property: JsonPropertyName("filename")] string Filename,
-    [property: JsonPropertyName("offset")]   int Offset,
-    [property: JsonPropertyName("line")]     int Line,
-    [property: JsonPropertyName("column")]   int Column);
-```
-
-> **Note:** The file has no usings today (just `namespace Cedar.Core;` and the
-> one-liner record on line 3). Add the `using` above the namespace line, then
-> expand the record to multi-line form with the attributes.
-
----
-
-## Change 2 — `test/Cedar.Tests/Policy/PolicyTests.cs` (new test method)
-
-Add after the existing `UnmarshalJson_AssignsDefaultPosition` test (≈ line 110).
-The file already imports `System.Text.Json` and `Cedar.Core`.
-
-```csharp
-[Fact]
-public void Position_JsonRoundTrip_UsesLowercaseKeys()
-{
-    var pos = new Position("foo.cedar", Offset: 1, Line: 2, Column: 3);
-    string json = JsonSerializer.Serialize(pos);
-
-    Assert.Contains("\"filename\"", json);
-    Assert.Contains("\"offset\"",   json);
-    Assert.Contains("\"line\"",     json);
-    Assert.Contains("\"column\"",   json);
-
-    var deserialized = JsonSerializer.Deserialize<Position>(json);
-    Assert.Equal(pos, deserialized);
-}
-```
-
-No additional `using` directives required — `System.Text.Json` and
-`Cedar.Core` are already present at lines 2–3.
-
----
-
-## Acceptance Criteria
-1. `dotnet build cedar-dotnet.sln` produces zero warnings/errors.
-2. `dotnet test cedar-dotnet.sln` passes all tests including the new
-   `Position_JsonRoundTrip_UsesLowercaseKeys` fact.
-3. `JsonSerializer.Serialize(new Position("f", 0, 1, 1))` produces JSON with
-   keys `filename`, `offset`, `line`, `column` (all lowercase).
-4. Deserialization of `{"filename":"f","offset":0,"line":1,"column":1}`
-   reconstructs the struct correctly.
-
----
-
-## Go → C# Pattern Map
-
-| Go pattern | C# equivalent used here |
-|------------|------------------------|
-| `json:"filename"` struct tag | `[property: JsonPropertyName("filename")]` on positional record parameter |
-| Go `json.MarshalIndent` + round-trip test | `JsonSerializer.Serialize` + `JsonSerializer.Deserialize<T>` xUnit `[Fact]` |
-| Go `t.Parallel()` | xUnit runs tests in parallel by default — no action needed |
-
----
-
-## No Other JSON Paths to Update
-`grep` for `JsonNamingPolicy` and `JsonConverter.*Position` across `src/`
-returned no results — there are no custom converters or naming policies that
-could interfere with the new attributes.
+### Action
+Mark `cae58f3` as **acknowledged** — no code changes required.
