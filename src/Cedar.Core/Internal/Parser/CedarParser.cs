@@ -163,11 +163,6 @@ public static class CedarParser
 
         SkipWhitespace(text, ref index);
         string key = ReadIdentifier(text, ref index, token);
-        TokenType keyTokenType = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes(key))[0].Type;
-        if (ParserState.IsReservedKeywordToken(keyTokenType))
-        {
-            throw new ParseException(token.Position, "Expected annotation key.");
-        }
 
         SkipWhitespace(text, ref index);
         if (!TryReadChar(text, ref index, '('))

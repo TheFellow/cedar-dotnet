@@ -174,7 +174,6 @@ public sealed class ParserErrorTests
     [InlineData("permit(principal, action, resource) when { {} has false };", "identifier or string")]
     [InlineData("permit(principal == false::\"42\", action, resource);", "entity type identifier")]
     [InlineData("permit(principal, action, resource) when { context.false };", "identifier after '.'")]
-    [InlineData("@false(\"x\") permit(principal, action, resource);", "annotation key")]
     public void ReservedKeywordsCannotBeUsedWhereIdentifiersAreExpected(string policy, string expectedMessage)
     {
         AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies(policy));

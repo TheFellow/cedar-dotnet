@@ -76,7 +76,7 @@ internal sealed class ParserState
     public Token ExpectAnnotationKey()
     {
         Token token = Current;
-        if (token.Type == TokenType.Ident || IsAnnotationKeywordToken(token.Type))
+        if (token.Type == TokenType.Ident || IsAnnotationKeywordToken(token.Type) || IsReservedKeywordToken(token.Type))
         {
             return Advance();
         }

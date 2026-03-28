@@ -131,6 +131,26 @@ public sealed class ParserTests
     }
 
     [Fact]
+    public void ParseCollapsedAnnotationWithReservedKeywordKey()
+    {
+        PolicyAst policy = ParseSingle("@is(\"bar\") permit(principal, action, resource);");
+
+        Annotation annotation = Assert.Single(policy.Annotations);
+        Assert.Equal("is", annotation.Key.Value);
+        Assert.Equal("bar", annotation.Value.Value);
+    }
+
+    [Fact]
+    public void ParseInlineAnnotationWithReservedKeywordKey()
+    {
+        PolicyAst policy = ParseSingle("@ if ( \"bar\" ) permit(principal, action, resource);");
+
+        Annotation annotation = Assert.Single(policy.Annotations);
+        Assert.Equal("if", annotation.Key.Value);
+        Assert.Equal("bar", annotation.Value.Value);
+    }
+
+    [Fact]
     public void ParseMultiplePolicies()
     {
         PolicyAst[] policies = CedarParser.ParsePolicies("permit(principal, action, resource); forbid(principal, action, resource);");
