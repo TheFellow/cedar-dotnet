@@ -520,6 +520,44 @@ public sealed class ParserTests
     }
 
     [Fact]
+    public void ParseTrailingCommaInSetLiteral()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { [1, 2,].isEmpty() };");
+
+        NodeIsEmpty node = Assert.IsType<NodeIsEmpty>(Assert.Single(policy.Conditions));
+        NodeSet set = Assert.IsType<NodeSet>(node.Arg);
+        Assert.Equal(2, set.Elements.Length);
+        Assert.All(set.Elements, static element => Assert.IsType<NodeValue>(element));
+    }
+
+    [Fact]
+    public void ParseTrailingCommaInRecordLiteral()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { {\"key\": 1,} has key };");
+
+        NodeHas node = Assert.IsType<NodeHas>(Assert.Single(policy.Conditions));
+        NodeRecord record = Assert.IsType<NodeRecord>(node.Arg);
+        NodeRecordElement element = Assert.Single(record.Elements);
+        Assert.Equal(new CedarString("key"), element.Key);
+        Assert.IsType<NodeValue>(element.Value);
+        Assert.Equal(new CedarString("key"), node.Attribute);
+    }
+
+    [Fact]
+    public void ParseTrailingCommaInEntityListExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { User::\"alice\" in [User::\"bob\",] };");
+
+        NodeIn node = Assert.IsType<NodeIn>(Assert.Single(policy.Conditions));
+        NodeValue left = Assert.IsType<NodeValue>(node.Left);
+        Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), left.Value);
+
+        NodeSet set = Assert.IsType<NodeSet>(node.Right);
+        NodeValue element = Assert.IsType<NodeValue>(Assert.Single(set.Elements));
+        Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("bob")), element.Value);
+    }
+
+    [Fact]
     public void ParseNestedParenthesizedExpression()
     {
         PolicyAst policy = ParseSingle("permit(principal, action, resource) when { (((1 + 2))) };");

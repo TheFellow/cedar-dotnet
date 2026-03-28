@@ -1,62 +1,62 @@
 PORT
 
 ## Commit Summary
-**SHA:** c3c8479  
-**Message:** Add DOT graph export for EntityMap  
-**Author:** Pierre-Henri Symoneaux  
-**Date:** 2025-11-05T16:27:54+01:00
+- **SHA**: a12ba1d
+- **Message**: add feather: trailing commas
+- **Author**: jaredzhou
+- **Date**: 2025-11-23T15:50:11+08:00
 
 ## Semantic Analysis
+This commit adds **trailing comma support** to the Cedar policy language parser in three list-like constructs:
 
-This commit adds a new experimental package `x/exp/dot` in cedar-go that exports an `EntityMap` (a collection of `Entity` values) as a DOT (Graphviz) digraph. The key semantics are:
+1. **Entity lists** (e.g., `[User::"alice", User::"bob",]`) — parsed by `entlist()`
+2. **Expression lists** (e.g., `[1, 2,]` or function args with trailing comma) — parsed by `expressions()`
+3. **Record literals** (e.g., `{"key": 1,}`) — parsed by `record()`
 
-1. **Grouping by entity type** — entities are clustered into DOT subgraphs keyed by their `EntityType`.
-2. **Nodes** — each entity becomes a node, labeled by its `EntityUID.ID` (the local ID, not the full type::id string), identified by its full `EntityUID.String()`.
-3. **Edges** — parent relationships (`entity.Parents`) become directed edges `entity -> parent`.
-4. **Output format** — `strict digraph { ordering="out" node[shape=box] ... }` with subgraph clusters per type.
-5. **ID quoting** — all DOT identifiers are double-quoted (using `strconv.Quote` equivalent).
+The Go change refactors the comma-handling from a "require comma before each item after the first" pattern to a "consume item, then switch on what follows: comma → advance; end-marker → stop; else → error" pattern. This allows a trailing comma before the closing delimiter.
 
-Our `Cedar.Experimental` project already has DOT export per CLAUDE.md. This port should add or extend `EntityMap`-level DOT export with the same subgraph-clustering semantics.
+This is a **language-level semantic change** — Cedar policies with trailing commas in these positions should now be accepted as valid. It must be reflected in the C# parser to maintain conformance.
 
 ## Port Tasks
 
-### 1. Locate existing DOT export code in Cedar.Experimental
-- Target project: `src/Cedar.Experimental/`
-- Look for any existing `Dot` or `DotExport` class/file (likely `DotExporter.cs` or similar).
-- If it exists, extend it; if not, create `src/Cedar.Experimental/Dot/EntityMapDotExporter.cs`.
+### 1. Locate the C# parser's list-parsing methods
+Target project: `src/Cedar.Ast` (or `src/Cedar.Core` linked files)
+Look for the equivalent of:
+- `entlist()` — parses `[EntityUID, EntityUID, ...]`
+- `expressions()` — parses comma-separated expression lists
+- `record()` — parses `{ key: value, ... }` record literals
 
-### 2. Implement `EntityMapDotExporter` (or extend existing)
-Create a static method `WriteDot(IEnumerable<Entity> entities, TextWriter writer)` that:
-- Writes the DOT prelude: `strict digraph {\n\tordering="out"\n\tnode[shape=box]`
-- Groups entities by `EntityType` (from `entity.Uid.Type`)
-- For each type group, writes a subgraph cluster:
-  ```
-  \tsubgraph "cluster_<type>" {
-  \t\tlabel=<quoted_type>
-  \t\t<quoted_uid> [label=<quoted_id>]
-  \t}
-  ```
-- Writes edges for all parent relationships:
-  ```
-  \t<quoted_uid> -> <quoted_parent_uid>
-  ```
-- Writes closing `}`
-- ID quoting: use `JsonEncodedText` or simply `"\"" + value.Replace("\\","\\\\").Replace("\"","\\\"") + "\""` — consistent with `strconv.Quote`.
+Likely files (search for these):
+- `src/Cedar.Ast/Parser/` — look for a Cedar policy parser class
+- Search for methods handling `[` / `]` delimited entity lists
+- Search for `ParseRecord`, `ParseExpressionList`, `ParseEntityList` or similar
 
-C# target file: `src/Cedar.Experimental/Dot/EntityMapDotExporter.cs` (create if missing)  
-Go source reference: `inspiration/cedar-go/x/exp/dot/dot.go` lines 1–76
+### 2. Update `entlist` equivalent
+**Go before**: check `len(res) > 0` then require exact(",")
+**Go after**: after appending each entity, switch on next token:
+  - `,` → advance (consume comma, allow trailing)
+  - `]` → break out of loop
+  - else → error "got X want ,"
 
-### 3. Add xUnit tests
-Create `test/Cedar.Experimental.Tests/Dot/EntityMapDotExporterTests.cs` with cases:
-- `WritesNodesAndEdges` — mirrors Go test: Group::admins, User::alice (parent=Group::admins), User::bob (no parents). Verifies subgraph clusters, node lines, and edge line.
-- `NoEdgesWhenNoParents` — two entities of different types, no parents, verifies nodes present and no `->` in output.
-- `EmptyEntities` — empty collection produces valid `strict digraph { ... }` with just prelude and closing brace.
+Port the same logic to C# for the entity list parser.
 
-Go test reference: `inspiration/cedar-go/x/exp/dot/dot_test.go` lines 1–170
+### 3. Update `expressions` equivalent
+Same pattern as entlist but for general expression lists, using `endOfListMarker` as the closing token.
+- `,` → advance
+- endOfListMarker → break
+- else → error
 
-### 4. Wire up public API
-Ensure the method is accessible from the public surface of `Cedar.Experimental`. Check the project's existing exports and add a using/re-export if needed.
+### 4. Update `record` equivalent
+Same pattern for record literal parsing:
+- After each key-value pair, switch on next token:
+  - `,` → advance
+  - `}` → break
+  - else → error
 
-### 5. Build and test
-- `dotnet build cedar-dotnet.sln`
-- `dotnet test test/Cedar.Experimental.Tests/`
+### 5. Add tests
+In `test/Cedar.Tests` (or wherever parser tests live), add xUnit test cases mirroring the Go test additions:
+- `"expr list with trailing comma"`: `permit (principal, action, resource) when {[1,2,].isEmpty() };`
+- `"record with trailing comma"`: `permit (principal, action, resource) when {{"key":1,} has key };`
+- `"entity list with trailing comma"`: `permit (principal, action, resource) when {User::"alice" in [User::"bob",] };`
+
+These should parse successfully and produce the same AST as without the trailing comma.
