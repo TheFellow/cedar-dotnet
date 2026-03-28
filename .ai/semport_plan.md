@@ -1,39 +1,47 @@
 PORT
 
-## Commit Summary
-- **SHA:** ace189d
-- **Date:** 2024-08-23
-- **Message:** types: made record output the same as the rust cedar formatter (IDX-142)
+## Commit
+432ab3e — 2024-08-23T13:41:25-06:00
+cedar-go/types: Change type of EntityUID.Type to EntityType
 
 ## Semantic Analysis
-The upstream Go implementation changed the Cedar text serialization of `Record` values to remove the space after the colon separator between a key and its value:
+In Go, `EntityUID.Type` was `string`; it is now `EntityType` (a distinct named type `type EntityType string`).
+This strengthens type safety: code that accepted a raw string for an entity type namespace now requires an explicit `EntityType(...)` cast in Go.
 
-- Before: `{"foo": true, "bar": 42}`
-- After:  `{"foo":true, "bar":42}`
+In our C# codebase the parallel concept is `EntityUid` (or `EntityUid.Type`). We likely represent the type portion as a plain `string`. We should introduce (or confirm the existence of) an `EntityType` value type — a strongly-typed wrapper around `string` — and ensure `EntityUid.Type` uses it, mirroring the upstream intent.
 
-Note: there is still a space after the comma between entries (`"bar":42` is preceded by `, `), but the `: ` between key and value becomes `:`.
-
-This is a **semantic change to the Cedar output format** — it affects how Cedar policies and values are rendered as text, which impacts round-trip parsing, conformance tests, and any output compared against the Rust cedar formatter.
+Also removed upstream: the helper `EntityValueFromSlice([]string)` — check whether we have an equivalent and remove/deprecate it.
 
 ## Port Tasks
 
-### 1. Find the C# Record `Cedar()` / `ToString()` serialization method
-Look in `src/Cedar.Types/` for the `Record` type (likely `Record.cs` or similar). Find the method that renders a record as a Cedar string. It will have a colon+space separator like `": "` between key and value — change it to `":"` (no space).
+### 1. Introduce `EntityType` as a strongly-typed wrapper in `Cedar.Types`
+- **Go source:** `types/value.go` line ~393 — `type EntityType string`
+- **C# target:** `src/Cedar.Types/` — add a new file `EntityType.cs`
+  - `public sealed record EntityType(string Value)` with implicit conversion from `string` and `ToString()` override returning `Value`.
+  - Alternatively, if it already exists as a `record struct`, confirm it matches this shape.
 
-**Go source reference:** `inspiration/cedar-go/types/record.go` line ~94:
-```go
-// Before:
-sb.WriteString(": ")
-// After:
-sb.WriteString(":")
-```
+### 2. Change `EntityUid.Type` from `string` to `EntityType`
+- **Go source:** `types/value.go` — `EntityUID.Type EntityType`
+- **C# target:** `src/Cedar.Types/EntityUid.cs` (or wherever `EntityUid` is defined)
+  - Change the `Type` property from `string` to `EntityType`.
+  - Update `NewEntityUID` / constructors to wrap the raw string in `EntityType(...)`.
+  - Update `Cedar()` / `ToString()` to call `.Value` (or use implicit conversion) when building the Cedar string representation.
 
-**C# target:** `src/Cedar.Types/Record.cs` (or equivalent) — find the Cedar string builder logic and replace `": "` with `":"` in the key-value separator.
+### 3. Update JSON serialization
+- **Go source:** `types/json.go` — `extEntity.Type EntityType` and `entityValueJSON.Type *EntityType`
+- **C# target:** wherever `EntityUid` JSON (de)serialization lives (likely `src/Cedar.Types/` or a converter in `Cedar.Ast`)
+  - Ensure the `JsonConverter` for `EntityUid` reads/writes the `Type` field through `EntityType`, not raw `string`.
 
-### 2. Update any affected tests
-Look in `test/Cedar.Tests/` for tests that assert Record Cedar string output. Update expected strings from `{"key": value}` to `{"key":value}`.
+### 4. Remove or deprecate `EntityValueFromSlice` equivalent
+- **Go source:** removed `EntityValueFromSlice([]string)` from `types/value.go`
+- **C# target:** search for any helper that builds an `EntityUid` from a `string[]` path segments and remove or mark obsolete.
 
-**Go test reference:** `inspiration/cedar-go/types/record_test.go` and `inspiration/cedar-go/internal/eval/evalers_test.go` — both updated expected strings to remove the space after colon.
+### 5. Update all call sites
+- Parser, evaluator, test helpers that construct `EntityUID{Type: someString}` must now pass `EntityType(someString)`.
+- **C# targets:** `src/Cedar.Ast/`, `src/Cedar.Core/`, `test/Cedar.Tests/` — any `new EntityUid(type: "Foo", ...)` or similar.
 
-### 3. Verify conformance tests still pass
-Run `dotnet test cedar-dotnet.sln` to ensure no conformance or other tests regress. If any conformance test fixtures contain `{"key": value}` format expectations, they may need updating too.
+### 6. Add/update tests
+- **C# target:** `test/Cedar.Tests/`
+  - Add a test asserting `EntityType` implicit conversion from `string` works.
+  - Add a test asserting `EntityUid.Type` is of type `EntityType`, not `string`.
+  - Ensure existing `EntityUid` round-trip JSON tests still pass.
