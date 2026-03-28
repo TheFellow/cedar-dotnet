@@ -1,122 +1,99 @@
-# Finalized Port Plan: b7a52e1 — Deterministic Set JSON Serialization
+# Finalized Port Plan: e796ce2
 
-## Summary
-Upstream Go commit makes `MapSet[T].MarshalJSON()` sort elements by their lexicographic JSON byte representation before emitting a JSON array. The C# equivalent must do the same in `CedarValueJsonConverter.WriteValue`.
+## Status: ALREADY IMPLEMENTED (partially)
+
+### Upstream Change
+`inspiration/cedar-go/types/entity.go` — sort Entity parents by `(Type, ID)` before JSON marshaling.
+
+### C# Implementation Status
+
+**The sort is already present** in `src/Cedar.Core/Internal/Json/EntityJsonConverter.cs` at **line 48**:
+```csharp
+foreach (EntityUid parent in value.Parents
+    .OrderBy(static item => item.Type.Value, StringComparer.Ordinal)
+    .ThenBy(static item => item.Id.Value, StringComparer.Ordinal))
+```
+This directly mirrors the Go `slices.SortFunc` by `(Type, ID)`.
+
+### Gap: Missing Deterministic-Ordering Test
+
+The existing test at `test/Cedar.Tests/Types/EntityTests.cs:69` (`JsonSerializeUsesImplicitUidForms`) only checks two parents that happen to already be in sorted order. There is **no test that verifies sorted output when parents are added in non-alphabetical order**.
 
 ---
 
-## Exact Change Location
+## Single Required Task
 
-### File to modify: `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs` — lines 64–71
+### Add test to `test/Cedar.Tests/Types/EntityTests.cs`
 
-**Current code (lines 64–71):**
-```csharp
-case CedarSet set:
-    writer.WriteStartArray();
-    foreach (ICedarData item in set)
-    {
-        WriteValue(writer, item);
-    }
+**File:** `test/Cedar.Tests/Types/EntityTests.cs`
+**Insert after:** the last `[Fact]` method in the class (currently ends around line 145)
 
-    writer.WriteEndArray();
-    break;
-```
-
-**Required change:**
-Instead of writing each element directly to the writer in iteration order (non-deterministic, since `CedarSet` wraps an `ImmutableHashSet`), serialize each element to a `string` first, sort those strings with `StringComparer.Ordinal`, then write each pre-serialized JSON fragment to the array.
-
-**Go → C# pattern mapping:**
-| Go | C# |
-|---|---|
-| `json.Marshal(elem)` → `[]byte` | `JsonSerializer.Serialize<ICedarData>(item, options)` → `string` |
-| `slices.SortFunc(elems, slices.Compare)` | `.OrderBy(s => s, StringComparer.Ordinal)` |
-| `bytes.Join(...)` | Write each raw string via `writer.WriteRawValue(s)` |
-
-**New code:**
-```csharp
-case CedarSet set:
-    writer.WriteStartArray();
-    // Serialize each element independently, sort lexicographically, then emit — matching
-    // the deterministic ordering introduced in cedar-go b7a52e1.
-    JsonSerializerOptions innerOptions = new(options);
-    // Reuse the same converters already on the writer's options.
-    List<string> serialized = new(set.Count);
-    foreach (ICedarData item in set)
-    {
-        serialized.Add(JsonSerializer.Serialize<ICedarData>(item, options));
-    }
-    serialized.Sort(StringComparer.Ordinal);
-    foreach (string s in serialized)
-    {
-        writer.WriteRawValue(s, skipInputValidation: true);
-    }
-    writer.WriteEndArray();
-    break;
-```
-
-> **Note on `options`**: The `Write` method signature is `Write(Utf8JsonWriter writer, ICedarData value, JsonSerializerOptions options)`. The `options` parameter is already in scope and carries all registered converters, so passing it directly to `JsonSerializer.Serialize` will correctly recurse through nested sets/records.
-
----
-
-## File to modify: `test/Cedar.Tests/Types/CedarSetTests.cs`
-
-Add a new test class/region for JSON serialization ordering (after line 101, end of file).
-
-**New tests to add:**
+**Test to add** (mirrors upstream `TestEntityMarshalJSON` exactly):
 ```csharp
 [Fact]
-public void JsonSerializesEmptySetAsEmptyArray()
+public void JsonSerializeParentsInConsistentOrder()
 {
-    string json = CedarJson.SerializeData(new CedarSet());
-    Assert.Equal("[]", json);
-}
+    // Parents added in non-alphabetical order — serialized output must be sorted (Type, Id) lexicographically
+    Entity entity = new(
+        Uid: new EntityUid(new EntityType("FooType"), new CedarString("1")),
+        Parents: new EntityUidSet([
+            new EntityUid(new EntityType("BazType"), new CedarString("1")),
+            new EntityUid(new EntityType("BarType"), new CedarString("2")),
+            new EntityUid(new EntityType("BarType"), new CedarString("1")),
+            new EntityUid(new EntityType("QuuxType"), new CedarString("30")),
+            new EntityUid(new EntityType("QuuxType"), new CedarString("3")),
+        ]),
+        Attributes: new CedarRecord(),
+        Tags: new CedarRecord()
+    );
 
-[Fact]
-public void JsonSerializesIntegerSetInLexicographicOrder()
-{
-    // Input order is 3,2,1 — output must be sorted: 1,2,3
-    CedarSet set = new(new CedarLong(3), new CedarLong(2), new CedarLong(1));
-    string json = CedarJson.SerializeData(set);
-    Assert.Equal("[1,2,3]", json);
-}
+    string json = CedarJson.SerializeEntity(entity);
 
-[Fact]
-public void JsonSerializesSingleElementSet()
-{
-    CedarSet set = new(new CedarLong(1));
-    string json = CedarJson.SerializeData(set);
-    Assert.Equal("[1]", json);
-}
+    // Parents array must appear in (Type, Id) lexicographic order
+    int bar1 = json.IndexOf("\"BarType\",\"id\":\"1\"", StringComparison.Ordinal);
+    int bar2 = json.IndexOf("\"BarType\",\"id\":\"2\"", StringComparison.Ordinal);
+    int baz1 = json.IndexOf("\"BazType\",\"id\":\"1\"", StringComparison.Ordinal);
+    int quux3 = json.IndexOf("\"QuuxType\",\"id\":\"3\"", StringComparison.Ordinal);
+    int quux30 = json.IndexOf("\"QuuxType\",\"id\":\"30\"", StringComparison.Ordinal);
 
-[Fact]
-public void JsonSerializesStringSetInLexicographicOrder()
-{
-    CedarSet set = new(new CedarString("3"), new CedarString("1"), new CedarString("2"));
-    string json = CedarJson.SerializeData(set);
-    Assert.Equal("""["1","2","3"]""", json);
+    Assert.True(bar1 < bar2, "BarType:1 must precede BarType:2");
+    Assert.True(bar2 < baz1, "BarType:2 must precede BazType:1");
+    Assert.True(baz1 < quux3, "BazType:1 must precede QuuxType:3");
+    Assert.True(quux3 < quux30, "QuuxType:3 must precede QuuxType:30");
 }
 ```
 
-**Required `using` at top of `CedarSetTests.cs`** (check if already present):
-- `using Cedar.Tests.TestSupport;`
+**Note on `quux3` vs `quux30`:** The `IndexOf` for `"id\":\"3\""` will match before `"id\":\"30\""` in the JSON string (since `3"` appears at a lower position than `30"`), so the ordering assertions are unambiguous as long as the full JSON contains both. If needed, use `"\"id\":\"3\","` (with trailing comma) to avoid substring collision — but since these are different elements in the array, the positions will differ.
+
+**Alternatively**, use `Contains` + index ordering on the full serialized JSON, or serialize with `JsonSerializerOptions` with indentation (using `CedarJson` or directly) and do a more robust regex-based check.
 
 ---
 
 ## Acceptance Criteria
 
-1. `dotnet build cedar-dotnet.sln` — no warnings or errors.
-2. `dotnet test cedar-dotnet.sln` — all tests pass including the 4 new ones.
-3. Serializing `new CedarSet(new CedarLong(3), new CedarLong(2), new CedarLong(1))` produces `"[1,2,3]"`.
-4. Serializing `new CedarSet()` produces `"[]"`.
-5. Existing round-trip tests (`JsonRoundTripSupportsPrimitiveMembers`, `JsonRoundTripSupportsEntityMembers`) still pass — they only check equality not order, so they are order-independent.
+1. `dotnet test cedar-dotnet.sln` passes with the new test included.
+2. The new test `JsonSerializeParentsInConsistentOrder` constructs an Entity with 5 parents in non-sorted order and asserts their positions in the JSON output are in `(Type, Id)` lexicographic order.
+3. No changes to `EntityJsonConverter.cs` are needed — the production code is already correct.
 
 ---
 
-## Files to touch (exhaustive list)
+## Go → C# Pattern Map
+
+| Go | C# |
+|---|---|
+| `slices.SortFunc(parents, func(a,b) int { ... })` | `.OrderBy(...).ThenBy(...)` (LINQ, already present) |
+| `strings.Compare(string(a.Type), string(b.Type))` | `StringComparer.Ordinal` |
+| `testutil.JSONMarshalsTo(t, e, ...)` | xUnit `Assert.True(indexA < indexB)` or string `Contains` assertions |
+| `types.NewEntityUID("BarType", "1")` | `new EntityUid(new EntityType("BarType"), new CedarString("1"))` |
+| `types.NewEntityUIDSet(...)` | `new EntityUidSet([...])` |
+| `types.Record{}` | `new CedarRecord()` |
+
+---
+
+## Files Modified
 
 | File | Change |
 |---|---|
-| `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs` | Lines 64–71: replace `foreach` write loop with sort-then-write-raw pattern |
-| `test/Cedar.Tests/Types/CedarSetTests.cs` | Append 4 new `[Fact]` tests for deterministic JSON output |
+| `test/Cedar.Tests/Types/EntityTests.cs` | Add `JsonSerializeParentsInConsistentOrder` test |
 
-No other files require changes. No schema, conformance, or batch tests reference set serialization order.
+**No production code changes needed.**

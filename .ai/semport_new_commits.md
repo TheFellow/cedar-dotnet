@@ -1,5 +1,5 @@
-b7a52e1	2024-09-26T10:47:38-07:00
+e796ce2	2024-09-26T11:25:41-07:00
 
-internal/mapset: give MarshalJSON a deterministic output
+types: ensure Entity marshals to JSON with a consistent ordering
 
 Signed-off-by: Patrick Jakubowski <patrick.jakubowski@strongdm.com>

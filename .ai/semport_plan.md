@@ -1,39 +1,33 @@
 PORT
 
 ## Commit
-b7a52e1 — 2024-09-26T10:47:38-07:00
-`internal/mapset: give MarshalJSON a deterministic output`
+e796ce2 — types: ensure Entity marshals to JSON with a consistent ordering
 
 ## Semantic Analysis
-The Go `MapSet[T].MarshalJSON()` previously serialized set elements in hash-map iteration order (non-deterministic). This commit changes the behavior to:
-1. Marshal each element to JSON individually.
-2. Sort the resulting byte slices lexicographically.
-3. Join them into a JSON array.
+The upstream Go change sorts an Entity's `parents` collection by `(Type, ID)` before JSON marshaling, ensuring deterministic output regardless of the underlying set's iteration order. This is a **behavioral contract change**: any consumer comparing or round-tripping Entity JSON can now rely on a stable ordering of the parents array.
 
-This is a **semantic, observable change** — the JSON output of any Cedar set value is now deterministic and sorted. This matters for:
-- Reproducible test assertions
-- Stable API responses / policy evaluation output
-- Conformance test compatibility
+The refactor also extracts a shared `JSONMarshalsTo` test helper (Go-specific, no C# action needed there).
 
-## Go Source References
-- `inspiration/cedar-go/internal/mapset/mapset.go` — `MapSet[T].MarshalJSON()` (line ~123): now sorts marshaled elements lexicographically before joining.
-- `inspiration/cedar-go/internal/mapset/immutable.go` — `ImmutableMapSet[T].MarshalJSON()` delegates to `MapSet[T].MarshalJSON()`.
+## What Needs Porting
+The C# `Entity` type serializes its parents collection to JSON. We must ensure that parents are emitted in a consistent `(Type, ID)` lexicographic order.
 
-## C# Target Analysis
-In cedar-dotnet, Cedar set values are represented somewhere in `src/Cedar.Types` (likely a `SetValue` or `CedarSet` sealed record). The JSON serialization of that type (via `System.Text.Json`) must be updated to sort elements by their JSON representation lexicographically before writing the array.
+### Go source reference
+- `inspiration/cedar-go/types/entity.go` lines ~21-28: `slices.SortFunc(parents, ...)` by `(Type, ID)` added inside `MarshalJSON`.
 
-## Concrete Port Tasks
+### C# target
+1. **Find the Entity JSON serialization path.**
+   - Likely in `src/Cedar.Types/` — look for `Entity` record/class and any `JsonConverter` or `MarshalJSON`-equivalent.
+   - Search for `parents` or `Parents` near JSON serialization logic.
 
-1. **Locate the Cedar set type** in `src/Cedar.Types` — find the class/record responsible for serializing a Cedar set (e.g., `SetValue`, `CedarSet`, or similar) and its `JsonConverter` or `WriteJson` method.
+2. **Sort parents before writing to JSON.**
+   - When serializing `Parents` (the `EntityUIDSet` / `ImmutableHashSet<EntityUID>`), order by `EntityUID.Type` then `EntityUID.Id` (both string, ordinal comparison) before emitting the array.
+   - Use `.OrderBy(p => p.Type).ThenBy(p => p.Id)` (or `StringComparer.Ordinal`) on the parents sequence inside the JSON write path.
 
-2. **Update set JSON serialization** to produce a deterministically sorted array:
-   - Serialize each element to a JSON string individually.
-   - Sort those strings lexicographically (ordinal byte comparison, matching Go's `slices.Compare` on `[]byte`).
-   - Write the sorted array to the output.
+3. **Add / update a test.**
+   - In `test/Cedar.Tests/` (or `test/Cedar.Types.Tests/` if it exists), add a test that constructs an `Entity` with parents added in non-alphabetical order and asserts the serialized JSON array is sorted `(Type, ID)`.
+   - Mirror the Go test: parents `BazType:1`, `BarType:2`, `BarType:1`, `QuuxType:30`, `QuuxType:3` → expect `BarType:1`, `BarType:2`, `BazType:1`, `QuuxType:3`, `QuuxType:30`.
 
-3. **Update or add xUnit tests** in `test/Cedar.Tests` (or `test/Cedar.Schema.Tests`) verifying that:
-   - A set `{3, 2, 1}` serializes as `[1,2,3]`.
-   - A set of strings serializes in lexicographic JSON order.
-   - An empty set serializes as `[]`.
-
-4. **Check conformance tests** in `test/Cedar.Conformance` — if any existing tests assert non-deterministic or different set serialization order, update them to expect the sorted form.
+## Files to Investigate (in order)
+1. `src/Cedar.Types/Entity.cs` (or wherever Entity is defined)
+2. Any `EntityJsonConverter` or `[JsonConverter]` referencing Entity
+3. `test/Cedar.Tests/` for existing Entity JSON tests to extend

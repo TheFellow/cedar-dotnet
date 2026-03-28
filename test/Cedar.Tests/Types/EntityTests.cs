@@ -142,6 +142,27 @@ public sealed class EntityTests
         Assert.NotEqual(entity.Attributes, entity.Tags);
     }
 
+    [Fact]
+    public void JsonSerializeParentsInConsistentOrder()
+    {
+        Entity entity = new(
+            new EntityUid(new EntityType("FooType"), new CedarString("1")),
+            new EntityUidSet(
+            [
+                new EntityUid(new EntityType("BazType"), new CedarString("1")),
+                new EntityUid(new EntityType("BarType"), new CedarString("2")),
+                new EntityUid(new EntityType("BarType"), new CedarString("1")),
+                new EntityUid(new EntityType("QuuxType"), new CedarString("30")),
+                new EntityUid(new EntityType("QuuxType"), new CedarString("3"))
+            ]),
+            new CedarRecord(),
+            new CedarRecord());
+
+        string json = CedarJson.SerializeEntity(entity);
+
+        Assert.Contains("\"parents\":[{\"type\":\"BarType\",\"id\":\"1\"},{\"type\":\"BarType\",\"id\":\"2\"},{\"type\":\"BazType\",\"id\":\"1\"},{\"type\":\"QuuxType\",\"id\":\"3\"},{\"type\":\"QuuxType\",\"id\":\"30\"}]", json);
+    }
+
     private static Entity CreateEntity()
     {
         return new(
