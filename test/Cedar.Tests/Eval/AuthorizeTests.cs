@@ -247,6 +247,32 @@ public sealed class AuthorizeTests
     }
 
     [Fact]
+    public void PrincipalInScope_MissingPrincipalEntity_DeniesWithoutThrow()
+    {
+        PolicySet policies = MakePolicySet(
+            ("p1", MakePolicy(Effect.Permit, principalScope: new ScopeIn(Group))));
+
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), MakeRequest());
+
+        Assert.Equal(Decision.Deny, decision);
+        Assert.Empty(diagnostic.Errors);
+    }
+
+    [Fact]
+    public void PrincipalInScope_MissingAncestorEntity_DeniesWithoutThrow()
+    {
+        EntityUid organization = new(new EntityType("Organization"), new CedarString("acme"));
+        Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+        PolicySet policies = MakePolicySet(
+            ("p1", MakePolicy(Effect.Permit, principalScope: new ScopeIn(organization))));
+
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(new[] { aliceEntity }), MakeRequest());
+
+        Assert.Equal(Decision.Deny, decision);
+        Assert.Empty(diagnostic.Errors);
+    }
+
+    [Fact]
     public void NullEntities_UsesEmptyEntityMap()
     {
         PolicySet policies = MakePolicySet(("p1", MakePolicy(Effect.Permit)));

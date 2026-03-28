@@ -1,51 +1,103 @@
-# Semport Finalized Plan: cae58f3 — internal/eval: add constant folding
+# Finalized Port Plan: d4f2002
 
-## Decision: ACKNOWLEDGE — Already Fully Implemented
+## Commit
+`d4f2002` — `internal/eval: fix handling of entity pointers` (2024-09-12)
 
-### Summary of Go Commit
-`cae58f3` adds compile-time constant folding to cedar-go's eval pipeline:
-- Renames `bake`→`fold`, extends folding from container-literal-only to all operator types
-- Introduces `tryFold`/`tryFoldBinary`/`tryFoldUnary` helpers that trial-evaluate a node and substitute a `NodeValue` if successful
-- Adds `newIsInEval` (dedicated `is ... in ...` evaluator, replacing 3-node and+is+in composition)
-- Widens constructor return types from concrete types to `Evaler` interface
+## Finding: C# Is Already Correct — Test Coverage Needed
 
-### C# Status: 100% Already Implemented
+After inspecting the C# codebase, the semantic bug being fixed in Go **does not exist** in the C# implementation. However, there is **no test** covering the scenario where an entity references a parent UID that is absent from the entity store. We must add that test to lock in the correct behavior.
 
-Every semantic change in this Go commit exists in our C# codebase. Evidence:
+---
 
-| Go Change | C# Implementation | File |
+## Key Files
+
+### Go (upstream, reference only)
+- `inspiration/cedar-go/internal/eval/evalers.go` — `entityInOne` (~line 933) and `entityInSet` (~line 966)
+  - Bug: `ctx.Entities[candidate]` and `ctx.Entities[k]` used Go's zero-value map semantics, silently treating missing entities as having empty parent lists.
+  - Fix: Added `if fe, ok := ctx.Entities[candidate]; ok { ... }` guard.
+
+### C# (implementation)
+- **`src/Cedar.Core/Internal/Eval/Evaluators/MembershipEvaluators.cs`** (lines 79–118)
+  - `EntityInEntity(IEntityGetter entities, EntityUid entity, EntityUid parent)` is the C# equivalent.
+  - **Lines 98–101**: Already uses `entities.TryGet(current, out Entity found)` with `continue` on miss — no bug exists.
+  - The `seen` HashSet also prevents cycles (equivalent to Go's `known` map).
+
+- **`src/Cedar.Types/IEntityGetter.cs`** — interface: `bool TryGet(EntityUid uid, out Entity entity);`
+- **`src/Cedar.Types/EntityMap.cs`** (line 36–38) — implementation: wraps `Dictionary.TryGetValue`.
+- **`src/Cedar.Types/Entity.cs`** (line 3) — `sealed record Entity(EntityUid Uid, EntityUidSet Parents, ...)`.
+
+### Tests
+- **`test/Cedar.Tests/Eval/AuthorizeTests.cs`** (line 240) — `PrincipalInScope_WithEntityHierarchy_Matches` tests a happy-path `in` with a known parent. **No test for missing parent.**
+
+---
+
+## Required Change: Add Regression Test
+
+**File:** `test/Cedar.Tests/Eval/AuthorizeTests.cs`
+
+**Where to insert:** After `PrincipalInScope_WithEntityHierarchy_Matches` (after line ~249), before `NullEntities_UsesEmptyEntityMap`.
+
+**Test to add:**
+
+```csharp
+[Fact]
+public void PrincipalIn_MissingParentInEntityStore_DoesNotThrow_ReturnsDeny()
+{
+    // Entity alice has Group::"admins" as a parent, but Group::"admins" is NOT in the entity store.
+    // The 'in' traversal must not throw and must correctly return Deny.
+    Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+    PolicySet policies = MakePolicySet(
+        ("p1", MakePolicy(Effect.Permit, principalScope: new ScopeIn(Group))));
+    // Intentionally omit Group entity from the entity map
+    (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), MakeRequest());
+    Assert.Equal(Decision.Deny, decision);
+}
+
+[Fact]
+public void PrincipalIn_DeepHierarchyWithMissingMiddleNode_DoesNotThrow()
+{
+    // alice -> Group::"admins" -> Org::"acme" (but Org::"acme" not in store)
+    // Policy: principal in Org::"acme" should Deny (can't traverse past the missing node)
+    EntityUid org = new(new EntityType(new Ident("Org")), new CedarString("acme"));
+    Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+    Entity groupEntity = new(Group, new EntityUidSet(new[] { org }), new CedarRecord(), new CedarRecord());
+    PolicySet policies = MakePolicySet(
+        ("p1", MakePolicy(Effect.Permit, principalScope: new ScopeIn(org))));
+    // Include alice and group, but NOT org
+    (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { aliceEntity, groupEntity }), MakeRequest());
+    Assert.Equal(Decision.Deny, decision);
+}
+```
+
+> **Note:** Check existing test helpers (e.g. `Alice`, `Group`, `MakePolicySet`, `MakePolicy`, `MakeRequest`) defined around lines 1–57 of `AuthorizeTests.cs` to confirm exact names and namespaces for `EntityType`, `Ident`, `CedarString`, `ScopeIn`, `EntityUidSet`.
+
+---
+
+## Acceptance Criteria
+
+1. `dotnet test cedar-dotnet.sln` passes with 0 errors and 0 warnings.
+2. Both new tests (`PrincipalIn_MissingParentInEntityStore_DoesNotThrow_ReturnsDeny` and `PrincipalIn_DeepHierarchyWithMissingMiddleNode_DoesNotThrow`) appear in the test output as **passed**.
+3. No modification to any `src/` file is required (the implementation is already correct).
+4. After tests pass, mark the commit in the ledger:
+   ```
+   python3 semport/ledger.py update d4f2002 implemented && python3 semport/ledger.py sort
+   git add semport/ledger.tsv test/Cedar.Tests/Eval/AuthorizeTests.cs
+   git commit -m "semport: d4f2002 - add regression tests for entity pointer fix (in operator with missing entities)"
+   ```
+
+---
+
+## Go → C# Pattern Mapping
+
+| Go Pattern | C# Equivalent | Status |
 |---|---|---|
-| `foldPolicy` / `fold` / `FoldNode` | `ConstantFolder.FoldPolicy` / `FoldNode` | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:14,32` |
-| `tryFold` with `CanEvaluate` guard + `ConstantEnv` trial-eval | `TryFold(INode)` using `ConstantEnv` + `CanEvaluate(INode)` | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:103,126` |
-| Folding all operators: Add, Sub, Mult, Negate, Equals, …, And, Or, Not, Contains, ContainsAll, ContainsAny | All node types handled in `FoldNode` switch + `CanEvaluate` switch | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:34–68,126–211` |
-| In/IsIn/Is/Has/NodeAccess blocked from folding (entity-runtime-dependent) | `CanEvaluate` returns `false` for `NodeIn`, `NodeIsIn`, `NodeIs`, `NodeAccess`, `NodeHas`, `NodeHasTag`, `NodeGetTag` | `src/Cedar.Core/Internal/Eval/ConstantFolder.cs:133–140` |
-| `newIsInEval` — dedicated `is ... in ...` evaluator | `IsInEvaluator` sealed class with `is`-check short-circuit before `in` | `src/Cedar.Core/Internal/Eval/Evaluators/MembershipEvaluators.cs:25–39` |
-| `Compile` calls `foldPolicy` | `Compiler.Compile` calls `ConstantFolder.FoldPolicy` | `src/Cedar.Core/Internal/Eval/Compiler.cs:12` |
-| `fold_test.go` test cases | `ConstantFolderTests` with 18 test methods covering all cases | `test/Cedar.Tests/Eval/ConstantFolderTests.cs` |
+| `fe, ok := ctx.Entities[candidate]; if ok { ... }` | `if (entities.TryGet(current, out Entity found)) { ... }` | ✅ Already correct (line 98) |
+| `p, ok := ctx.Entities[k]; if !ok \|\| len(p.Parents)==0` | Missing-entity guard for parent pruning | ✅ Handled by `seen` HashSet + `TryGet` combo |
+| `map[EntityUID]struct{}` (known set) | `HashSet<EntityUid> seen` | ✅ Already correct (line 86) |
+| Zero-value struct on map miss | `TryGet` returns `false` → `continue` | ✅ Never had the bug |
 
-### Key Architectural Notes (C# vs Go)
+---
 
-| Go Pattern | C# Equivalent | Notes |
-|---|---|---|
-| `Evaler` interface | `IEvaluator` interface | `src/Cedar.Core/Internal/Eval/IEvaluator.cs` |
-| `literalEval` / `NodeValue` | `NodeValue` (AST node) / `LiteralEvaluator` | C# uses `NodeValue` at fold-time, `LiteralEvaluator` at eval-time |
-| `EvalEnv` with dummy entity | `ConstantEnv` static field | `new EntityUid("__constant","__constant")` used as dummy PARC |
-| `tryFold` returns `NodeValue` on success | `TryFold` returns `new NodeValue(value)` | Identical semantics |
-| Error → return unfoldable node | `catch (EvalException) { return node; }` | Identical semantics |
-| `tryFoldBinary`/`tryFoldUnary` helpers | Inlined into `FoldNode` switch + `TryFold` call | C# approach is slightly simpler: fold children in switch, then call `TryFold(folded)` unconditionally |
-| Constructor return types widened to `Evaler` | N/A — C# never exposed concrete types | C# factory constructors already use primary constructors returning `IEvaluator` implicitly via interface |
+## Summary
 
-### Acceptance Criteria: ALL MET ✅
-
-- [x] `ConstantFolder.FoldPolicy` exists and is called from `Compiler.Compile`
-- [x] All arithmetic/logical/comparison operators fold when all operands are constant
-- [x] `NodeIn`, `NodeIsIn`, `NodeIs`, `NodeAccess`, `NodeHas`, `NodeHasTag`, `NodeGetTag` do NOT fold
-- [x] `NodeVariable` does NOT fold
-- [x] `NodeSet` and `NodeRecord` with all-constant elements fold to `NodeValue`
-- [x] Partial folds (some children constant, some not) are preserved as partially-folded nodes
-- [x] Eval errors during trial evaluation return the unfolded node (no exception propagation)
-- [x] `IsInEvaluator` exists as a single dedicated evaluator (not 3-node composition)
-- [x] Tests cover record-bake, set-bake, record-fold, set-fold, blocked cases
-
-### Action
-Mark `cae58f3` as **acknowledged** — no code changes required.
+The Go commit was a **bug fix**. The C# implementation was written correctly from the start, using `TryGet` with proper existence checks. **No source changes are needed.** The only gap is test coverage for the missing-entity scenario, which this plan addresses.

@@ -1,100 +1,52 @@
 PORT
 
-## Commit: cae58f3 — internal/eval: add constant folding
+## Commit
+d4f2002 — internal/eval: fix handling of entity pointers (2024-09-12)
 
-### Summary
-Extends the compile-time optimization pass from "bake" (only pre-compute literal Sets, Records, and extension values) to full **constant folding**: recursively evaluate any sub-expression whose operands are all statically known values (no variables, no entity lookups). The result replaces the compound AST node with a single `literalEval` node. This is a meaningful runtime performance improvement — arithmetic, equality, comparisons, boolean logic, contains, etc. are all pre-computed once at policy compile time rather than on every authorization call.
+## Semantic Analysis
 
-### Semantic Changes
+This commit fixes a bug in entity hierarchy traversal used by the `in` operator. Two functions are affected:
 
-1. **Rename bake → fold** — `bakePolicy`/`bake` become `foldPolicy`/`fold`. Pure rename, but reflects the broader scope.
+### `entityInOne` and `entityInSet` (evalers.go lines ~933 and ~966)
 
-2. **Recursive constant folding for all operators** — `fold()` now handles every node type:
-   - Arithmetic: Add, Sub, Mult, Negate
-   - Comparison: Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual
-   - Logical: And, Or, Not
-   - Set membership: Contains, ContainsAll, ContainsAny
-   - Container literals: Record, Set (already existed in bake, now folds inner expressions too)
-   - Variables: returned as-is (cannot fold)
-   - In/IsIn: special-cased — cannot fold entity membership at compile time (runtime data needed)
+**Bug**: When looking up an entity in `ctx.Entities[candidate]`, if the entity key was missing, Go returned a zero-value struct (empty `Parents` slice). This silently treated missing entities as leaf nodes with no parents — but crucially, the inner loop `ctx.Entities[k]` also had the same silent zero-value behavior, causing incorrect traversal decisions for parent nodes not in the entity store.
 
-3. **`tryFold` / `tryFoldBinary` / `tryFoldUnary` helpers** — Generic helpers that:
-   - Recursively fold children
-   - Attempt to evaluate the result using the existing evaler
-   - If evaluation succeeds with a concrete value, return `NodeValue` (constant)
-   - If it errors or children are not fully constant, return the partially-folded node
+**Fix**: Both functions now use `if fe, ok := ctx.Entities[candidate]; ok { ... }` — if the candidate is not found in the entity store, the traversal block is skipped entirely. Similarly, for each parent `k`, the fix checks `p, ok := ctx.Entities[k]` and treats a missing parent as `!ok` (i.e., skip it) in the pruning condition.
 
-4. **`newIsInEval` introduced** — Consolidates the `IsIn` case (was: 3 eval nodes — `isEval`, `inEval`, `andEval`; now: 1 dedicated `isInEval` struct).
+**C# Semantic Impact**: In C#, dictionary lookups that miss a key throw `KeyNotFoundException` or return false from `TryGetValue`. The C# implementation likely already uses `TryGetValue`, but we must verify that:
+1. Missing candidates are skipped (not treated as having zero parents).
+2. Missing parent entries in the entity store short-circuit the traversal (treated same as "no parents"), rather than throwing or returning wrong results.
 
-5. **Constructor return types broadened** — `newOrEval`, `newAndEval`, `newNotEval`, `newAddEval`, `newSubtractEval`, etc. now return `Evaler` (interface) instead of concrete pointer types. This enables fold helpers to substitute a `literalEval` without a type mismatch.
+### `fold.go` — `string(pair.Key)` → `pair.Key`
+This is a Go-specific type alias fix (the key type was already a string alias; explicit cast was unnecessary/wrong). No C# analog.
 
-### Port Tasks
+## Port Tasks
 
-#### Task 1 — Rename Bake → Fold in C#
-- **Go source:** `inspiration/cedar-go/internal/eval/bake.go` (now `fold.go`)
-- **C# target:** `src/Cedar.Ast/Internal/Eval/` — find the file implementing `BakePolicy`/`Bake` (likely `Bake.cs` or similar)
-- Rename the class/method from `Bake`/`BakePolicy` to `Fold`/`FoldPolicy` (or keep both as aliases if needed for back-compat)
+### 1. Locate C# entity `in` traversal logic
+Find the C# equivalent of `entityInOne` and `entityInSet`:
+- Search `src/Cedar.Ast/` and `src/Cedar.Core/Internal/Eval/` for methods implementing `in` operator evaluation (likely named something like `EntityIn`, `IsInSet`, or similar, possibly in an `Evalers` or `Authorization` file).
+- Target files: likely `src/Cedar.Core/Internal/Eval/` linked files or `src/Cedar.Ast/Eval/`.
 
-#### Task 2 — Implement `TryFold` / `TryFoldBinary` / `TryFoldUnary` helpers
-- **Go source:** `inspiration/cedar-go/internal/eval/fold.go` — `tryFold`, `tryFoldBinary`, `tryFoldUnary`
-- **C# target:** `src/Cedar.Ast/Internal/Eval/Fold.cs` (new or renamed file)
-- Implement static helper methods:
-  ```csharp
-  // Attempt to fold a unary node: fold child, try to evaluate, return NodeValue or reconstructed node
-  static INode TryFoldUnary(INode child, Func<IEvaler, IEvaler> makeEvaler, Func<INode, INode> makeNode)
-  
-  // Attempt to fold a binary node: fold both children, try to evaluate, return NodeValue or reconstructed node
-  static INode TryFoldBinary(INode left, INode right, Func<IEvaler, IEvaler, IEvaler> makeEvaler, Func<INode, INode, INode> makeNode)
-  
-  // General fold: fold N children, if all are NodeValue run the evaler, else reconstruct
-  static INode TryFold(IReadOnlyList<INode> children, Func<IReadOnlyList<Value>, IEvaler> makeEvaler, Func<IReadOnlyList<INode>, INode> makeNode)
-  ```
-- Use a dummy `EvalContext` (empty env) for the compile-time trial evaluation
-- Catch any eval errors and return the unfolded node
+### 2. Verify missing-entity guard in candidate lookup
+In the C# traversal loop, confirm that when `candidate` is not found in the entities dictionary:
+- The traversal body is **skipped** (not executed with a default/empty entity).
+- The loop continues to the next `todo` item or returns `false`.
 
-#### Task 3 — Extend `Fold()` dispatch to all node types
-- **Go source:** `inspiration/cedar-go/internal/eval/fold.go` — the `fold()` switch statement
-- **C# target:** `src/Cedar.Ast/Internal/Eval/Fold.cs` — the `Fold(INode)` method
-- Add cases for every operator node type, wiring to `TryFoldBinary`/`TryFoldUnary`:
-  - `NodeTypeAdd`, `NodeTypeSub`, `NodeTypeMult`, `NodeTypeNegate`
-  - `NodeTypeEquals`, `NodeTypeNotEquals`
-  - `NodeTypeGreaterThan`, `NodeTypeGreaterThanOrEqual`, `NodeTypeLessThan`, `NodeTypeLessThanOrEqual`
-  - `NodeTypeAnd`, `NodeTypeOr`, `NodeTypeNot`
-  - `NodeTypeContains`, `NodeTypeContainsAll`, `NodeTypeContainsAny`
-  - `NodeTypeVariable` → return as-is
-  - `NodeTypeIn` → fold children but do NOT evaluate (entity membership needs runtime data); return partially-folded node
-  - `NodeTypeRecord` and `NodeTypeSet` → fold each element; if all yield `NodeValue`, collapse to single `NodeValue`
+If the code does `entities[candidate]` (indexer) without a guard, replace with `TryGetValue` and wrap the body in an `if (found)` block.
 
-#### Task 4 — Introduce `IsInEval` (dedicated evaluator for `is ... in ...`)
-- **Go source:** `inspiration/cedar-go/internal/eval/evalers.go` — `newIsInEval` (new struct combining is+in+and)
-- **C# target:** `src/Cedar.Ast/Internal/Eval/Evalers.cs` or `IsInEval.cs`
-- Add sealed class `IsInEval : IEvaler` with fields: `IEvaler Obj`, `EntityType EntityUid`, `IEvaler Entity`
-- Implement `Eval(EvalContext)`: evaluate obj, check type matches `EntityType`, evaluate entity target, check `in` membership — short-circuit appropriately
-- Wire `Convert.cs` (the `ToEval` switch) to use `new IsInEval(...)` for `NodeTypeIsIn`
+### 3. Verify missing-entity guard in parent lookup
+Inside the traversal body, when iterating `fe.Parents` and looking up each parent `k` in the entity store:
+- The pruning condition should treat a missing `k` entry the same as "has no parents" (i.e., skip adding `k` to `todo`).
+- In Go: `p, ok := ctx.Entities[k]; if !ok || len(p.Parents) == 0 || ...`
+- In C#: `if (!entities.TryGetValue(k, out var p) || p.Parents.Count == 0 || ...)`
 
-#### Task 5 — Widen constructor return types (C# equivalent)
-- **Go source:** `inspiration/cedar-go/internal/eval/evalers.go` — constructors now return `Evaler` interface
-- **C# target:** `src/Cedar.Ast/Internal/Eval/Evalers.cs` (or individual evaler files)
-- Change factory methods `NewOrEval`, `NewAndEval`, `NewNotEval`, `NewAddEval`, `NewSubtractEval`, etc. to return `IEvaler` instead of the concrete type
-- This is required so `TryFold*` helpers can substitute a `LiteralEval` transparently
+If the C# code uses `entities[k].Parents` directly (which would throw on missing key), or `entities.ContainsKey(k)` followed by indexer (two lookups), replace with `TryGetValue` and update the condition.
 
-#### Task 6 — Wire `FoldPolicy` into `Compile`
-- **Go source:** `inspiration/cedar-go/internal/eval/compile.go`
-- **C# target:** `src/Cedar.Ast/Internal/Eval/Compile.cs` (or wherever `Compile(Policy)` lives)
-- Replace call to `BakePolicy(p)` with `FoldPolicy(p)` in `Compile`
+### 4. Add regression test
+Add an xUnit test in `test/Cedar.Tests/` that evaluates a policy using the `in` operator where the entity store contains an entity referencing a parent UID that is **not itself present** in the store. The authorization should not throw and should return the correct result (deny, since the missing parent cannot match).
 
-#### Task 7 — Tests
-- **Go source:** `inspiration/cedar-go/internal/eval/fold_test.go`
-- **C# target:** `test/Cedar.Tests/` — add `FoldTests.cs`
-- Port the test cases:
-  - `record-bake`: `Record({"key": true})` → `Value(Record{"key": True})`
-  - `set-bake`: `Set(true)` → `Value(Set{True})`
-  - `record-fold`: `Record({"key": 6*7})` → `Value(Record{"key": Long(42)})` ← NEW: arithmetic folded
-  - `set-fold`: `Set(6*7)` → `Value(Set{Long(42)})` ← NEW
-  - `record-blocked`: `Record({"key": 6 * context})` → unchanged (variable blocks folding)
-  - `set-blocked`: `Set(6 * context)` → unchanged
-
-### Notes
-- The Go `In` case has commented-out code (fold attempted but reverted) — do not attempt to fold `In` in C# either; just fold children and reconstruct
-- The `tryFold` trial evaluation uses a no-entity, no-context eval environment; any error aborts the fold and returns the node unchanged — match this behavior exactly
-- This is a compile-time-only optimization; authorization semantics are unchanged
+Example scenario:
+- Entity `User::"alice"` with parent `Group::"admins"`
+- Entity store does NOT contain `Group::"admins"`
+- Policy: `permit(principal in Group::"admins", action, resource);`
+- Expected: Deny (alice's parent chain cannot be resolved to admins, but no crash)
