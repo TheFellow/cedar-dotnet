@@ -1,84 +1,54 @@
-# Semport Finalized Plan — e8728bb
+# Finalized Port Plan: 537c4d8 — `datetime` extension type
 
-## Verdict: ALREADY FULLY IMPLEMENTED — mark as `implemented`
+## Verdict: ALREADY IMPLEMENTED — acknowledge this commit
 
-After scanning the C# codebase, **every semantic element** from upstream commit `e8728bb`
-("Add a duration type, as per RFC 80") is already present and all 63,157 tests pass.
+The C# codebase has already implemented **everything** in this Go commit, and more. No code changes are required.
 
 ---
 
-## Evidence of Complete Implementation
+## Evidence: What the Go commit adds vs. what C# has
 
-### 1. `CedarDuration` value type
-**File:** `src/Cedar.Types/CedarDuration.cs` (whole file)
-
-| Go item | C# equivalent | Status |
+| Go commit adds | C# status | File |
 |---|---|---|
-| `type Duration struct { Value int64 }` | `sealed record CedarDuration(long Value) : CedarValue` | ✅ present |
-| `ParseDuration(string)` | `CedarDuration.Parse(string)` | ✅ present |
-| `String()` canonical form (d/h/m/s/ms, skip zeros) | `FormatValue()` + `MarshalCedar()` | ✅ present |
-| `Equal(Value)` | record equality (auto) + `CedarValue` contract | ✅ present |
-| `MarshalCedar()` → `duration("…")` | `public override string MarshalCedar()` | ✅ present |
-| `ToDays/ToHours/ToMinutes/ToSeconds/ToMilliseconds()` | same methods on `CedarDuration` | ✅ present |
-| `ErrDuration` sentinel | Parser throws `FormatException` (project convention) | ✅ present |
-| Overflow detection | `checked(...)` arithmetic + catch `OverflowException` | ✅ present |
+| `Datetime` type backed by `int64` ms | ✅ `CedarDatetime(long Value)` | `src/Cedar.Types/CedarDatetime.cs:8` |
+| `datetime()` constructor extension | ✅ `ConstructorExtensions.Datetime` registered | `src/Cedar.Core/Internal/Extensions/ConstructorExtensions.cs:19` + `ExtensionRegistry.cs:14` |
+| ISO 8601 parse (`time.RFC3339`) | ✅ Full custom parser | `src/Cedar.Types/CedarDatetime.cs:13-90` |
+| Explicit JSON `{"__extn":{"fn":"datetime","arg":"..."}}` | ✅ JSON round-trip verified in tests | `test/Cedar.Tests/Types/CedarDatetimeTests.cs:201-222` |
+| `MarshalCedar()` → `datetime("...")` | ✅ `CedarDatetime.MarshalCedar()` | `src/Cedar.Types/CedarDatetime.cs:107-115` |
+| `Lesser` interface (`Less`, `LessEqual`) | ✅ Not needed — C# uses `ComparableValues.Compare()` switch | `src/Cedar.Core/Internal/Eval/Evaluators/ComparisonEvaluators.cs:54-82` |
+| Virtual `<`, `<=`, `>`, `>=` for `Datetime` | ✅ `ComparableValues.Compare` handles `CedarDatetime` at line 63 | `src/Cedar.Core/Internal/Eval/Evaluators/ComparisonEvaluators.cs:63` |
+| `toDate()` — truncate to day boundary | ✅ `DatetimeExtensions.ToDate` with `MillisPerDay` | `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:11-16` |
+| `ErrDatetime` sentinel | ✅ `FormatException` thrown from `CedarDatetime.Parse` | `src/Cedar.Types/CedarDatetime.cs:364-377` |
 
-### 2. JSON serialization/deserialization
-**File:** `src/Cedar.Core/Internal/Json/CedarValueJsonConverter.cs` lines ~49–56, ~160–163
+### C# is AHEAD of this Go commit:
+The Go commit explicitly says it does NOT add `toTime()`, `offset()`, or `durationSince()`. C# already has all three:
+- `DatetimeExtensions.ToTime` — `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:18`
+- `DatetimeExtensions.Offset` — `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:24`
+- `DatetimeExtensions.DurationSince` — `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs:39`
+- Plus 9 additional component accessors: `year`, `month`, `day`, `dayOfWeek`, `dayOfYear`, `hour`, `minute`, `second`, `millisecond`
 
-- **Serialize:** `case CedarDuration duration:` → `WriteExtension(writer, "duration", …)` ✅
-- **Deserialize:** `"duration" => CedarDuration.Parse(argument)` ✅
-
-### 3. Extension registry (constructor + all 8 methods)
-**File:** `src/Cedar.Core/Internal/Extensions/ExtensionRegistry.cs`
-
-| Entry | Registered | 
-|---|---|
-| `["duration"]` constructor (arity 1, non-method) | ✅ line ~19 |
-| `["toTime"]` → `DatetimeExtensions.ToTime` | ✅ |
-| `["offset"]` → `DatetimeExtensions.Offset` | ✅ |
-| `["durationSince"]` → `DatetimeExtensions.DurationSince` | ✅ |
-| `["toDays"]` → `DurationExtensions.ToDays` | ✅ |
-| `["toHours"]` → `DurationExtensions.ToHours` | ✅ |
-| `["toMinutes"]` → `DurationExtensions.ToMinutes` | ✅ |
-| `["toSeconds"]` → `DurationExtensions.ToSeconds` | ✅ |
-| `["toMilliseconds"]` → `DurationExtensions.ToMilliseconds` | ✅ |
-
-### 4. Evaluator implementations
-**File:** `src/Cedar.Core/Internal/Extensions/DurationExtensions.cs` — all 5 `duration.*` methods  
-**File:** `src/Cedar.Core/Internal/Extensions/DatetimeExtensions.cs` — `ToTime`, `Offset`, `DurationSince`  
-**File:** `src/Cedar.Core/Internal/Extensions/ConstructorExtensions.cs` — `Duration` constructor
-
-All use `TypeConversion.ValueToDuration` / `ValueToDatetime` helpers with proper `EvalException` on type mismatch.
-
-### 5. Tests
-**File:** `test/Cedar.Tests/Types/CedarDurationTests.cs` — parse round-trips, error cases, equality, hash stability, MarshalCedar, JSON round-trip, overflow  
-**File:** `test/Cedar.Tests/Eval/ExtensionTests.cs` — constructor, toTime, offset (including overflow), durationSince (including overflow), toDays, toHours, toMinutes, toSeconds, toMilliseconds
+### Design divergence (intentional, idiomatic):
+- **Go** uses a `Lesser` interface for operator overloading dispatch.  
+- **C#** uses a `ComparableValues.Compare()` pattern-match switch (`ComparisonEvaluators.cs:58-65`), which is more idiomatic for sealed record hierarchies and avoids interface pollution on value types. This is a better design for C# and should not be changed.
 
 ---
 
 ## Action Required
 
-**No code changes needed.** Run the ledger update:
-
 ```bash
-python3 semport/ledger.py update e8728bb implemented
-python3 semport/ledger.py sort
-git add semport/ledger.tsv
-git commit -m "semport: implement e8728bb - duration type (already present)"
-rm -f .ai/semport_new_commits.md .ai/semport_plan.md .ai/semport_plan_finalized.md
+python3 semport/ledger.py update 537c4d8 acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv && git commit -m "semport: acknowledge 537c4d8 - datetime type fully implemented and surpassed"
+rm -f .ai/semport_new_commits.md
 ```
 
 ---
 
-## Go → C# Pattern Map (for future reference)
+## Acceptance Criteria (all already met)
 
-| Go pattern | C# equivalent used here |
-|---|---|
-| `type T struct { Value int64 }` | `sealed record T(long Value) : CedarValue` |
-| `fmt.Errorf("%w: msg", ErrX)` | `throw new FormatException("msg")` (project uses `FormatException` for parse errors) |
-| `errors.Is(err, ErrX)` | catch `FormatException` |
-| Arithmetic overflow → explicit check | `checked(...)` + catch `OverflowException` |
-| Extension func dispatch `switch name` | `Dictionary<string, ExtensionDefinition>` in `ExtensionRegistry` |
-| `evalDuration(node, env)` helper | `TypeConversion.ValueToDuration(ICedarData)` |
-| Go method on type | Static method in `DurationExtensions` / `DatetimeExtensions` taking `ICedarData[]` |
+- [x] `CedarDatetime.Parse("1970-01-01T00:00:00Z")` succeeds
+- [x] `CedarDatetime.Parse("")` throws `FormatException`
+- [x] JSON explicit round-trip: `{"__extn":{"fn":"datetime","arg":"..."}}`
+- [x] `<`, `<=`, `>`, `>=` operators work on `CedarDatetime` values in policy evaluation
+- [x] `datetime.toDate()` truncates to day boundary using `ms - (ms % 86_400_000)`
+- [x] `MarshalCedar()` produces `datetime("...")` format
+- [x] Tests pass: `test/Cedar.Tests/Types/CedarDatetimeTests.cs`, `test/Cedar.Tests/Eval/ExtensionTests.cs`
