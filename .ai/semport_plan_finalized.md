@@ -1,58 +1,58 @@
-# Finalized Port Plan: 378f896 — Trailing Comma After Resource
+# Semport Plan Finalized: c3c8479 — Add DOT graph export for EntityMap
 
-## Verdict: ALREADY IMPLEMENTED — acknowledge as 'implemented'
+## STATUS: ALREADY IMPLEMENTED — ACKNOWLEDGE
 
-The semantic change from upstream commit 378f896 is **fully present** in the C# codebase already.
-No code changes are needed. Mark the ledger entry as `implemented`.
+The upstream feature is **fully present** in the C# codebase. No code changes are needed.
 
 ---
 
 ## Evidence
 
-### Go change (4952185)
-`inspiration/cedar-go/internal/parser/cedar_unmarshal.go`
-```go
-// After parsing resource, before consuming ')'
-parser.skipAtMostOnce(",")   // optionally consume trailing comma
-```
+### Go source (upstream, c3c8479)
+`inspiration/cedar-go/x/exp/dot/dot.go` — new file, 76 lines  
+Introduces `Write(w io.Writer, entities iter.Seq[types.Entity]) error` that:
+1. Writes `strict digraph { ordering="out" node[shape=box] }`
+2. Groups entities into subgraph clusters by `EntityType`
+3. Renders each entity as a node with `label=<quoted ID>`
+4. Renders parent edges as `quoted_uid -> quoted_parent_uid`
+5. Quotes all DOT identifiers using `strconv.Quote` (double-quote wrapping with backslash escapes)
 
-### C# equivalent — already present
-**File:** `src/Cedar.Core/Internal/Parser/CedarParser.cs`
-**Line 78:**
-```csharp
-IScope resource = ScopeParser.ParseScopeConstraint(state, "resource");
-state.Match(TokenType.Comma);   // ← exact equivalent of skipAtMostOnce(",")
-state.Expect(TokenType.RParen, "Expected ')' after scope tuple.");
-```
+### C# implementation (existing)
+`src/Cedar.Experimental/EntityGraphDotWriter.cs` — **already exists**, full implementation:
+- `public static string ToDot(EntityMap entities)` → line 12
+- `public static void Write(TextWriter writer, EntityMap entities)` → line 22
+- Identical semantics: `strict digraph {` prelude (line 30), `SortedDictionary<string, List<Entity>>` grouping by type (line 34), subgraph clusters with `cluster_<type>` label (line 48–53), parent edges ordered by `ToString()` (line 57–61), `Quote()` helper with same backslash/double-quote escaping (line 64–79)
+- Uses `Cedar.Types.EntityMap`, `Cedar.Types.Entity`, `Cedar.Types.EntityUid`
 
-`ParserState.Match(TokenType)` (defined in `src/Cedar.Core/Internal/Parser/ParserState.cs:45`) peeks at the current token and advances only if it matches — identical semantics to Go's `skipAtMostOnce`.
+`test/Cedar.Experimental.Tests/DotWriterTests.cs` — **already exists**, full test coverage:
+- `EmptyGraph_WritesPrelude` (line 12) ✓
+- `WritesNodesAndEdges` (line 21) ✓  — mirrors Go `WritesNodesAndEdges`
+- `QuotesIdentifiersAndLabels` (line 41) ✓
+- `OrdersClustersByType` (line 51) ✓
+- `NoEdgesWhenNoParents` (line 64) ✓  — mirrors Go `NoEdgesWhenNoParents`
 
-### Tests — already present
-| File | Line | Test |
-|------|------|------|
-| `test/Cedar.Tests/Parser/ParserTests.cs` | 512–521 | `ParseTrailingCommaInScopeTuple` — parses `permit(principal, action, resource,);` and asserts all scopes are `ScopeAll` |
-| `test/Cedar.Tests/Parser/RoundTripTests.cs` | 45 | Round-trip test with `permit(principal, action, resource,) when { ((1 + 2) * 3) };` — confirms trailing comma is accepted but normalized away |
+---
+
+## Go → C# Mapping (for reference)
+
+| Go | C# |
+|---|---|
+| `iter.Seq[types.Entity]` | `IEnumerable<Entity>` (via `EntityMap : IReadOnlyCollection<Entity>`) |
+| `types.EntityMap` | `Cedar.Types.EntityMap` (`src/Cedar.Types/EntityMap.cs:8`) |
+| `entity.UID.Type` (`EntityType`) | `entity.Uid.Type` (`EntityType`, `src/Cedar.Types/EntityUid.cs:15`) |
+| `entity.UID.ID.String()` | `entity.Uid.Id.Value` (`CedarString`, `src/Cedar.Types/EntityUid.cs:17`) |
+| `entity.Parents.All()` | `entity.Parents` (iterable `EntityUidSet`, `src/Cedar.Types/EntityUidSet.cs:8`) |
+| `strconv.Quote(v)` | `Quote(v)` private helper — double-quote wrap + `\\` and `\"` escaping |
+| `io.Writer` error return | `TextWriter` (throws on failure; C# uses exceptions not error returns) |
+| `map[EntityType][]Entity` | `SortedDictionary<string, List<Entity>>` (adds deterministic ordering) |
 
 ---
 
 ## Action Required
 
-```bash
-python3 semport/ledger.py update 378f896 implemented
-python3 semport/ledger.py sort
-git add semport/ledger.tsv
-git commit -m "semport: implement 378f896 - trailing comma after resource (already present)"
+Run:
+```
+python3 semport/ledger.py update c3c8479 acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv && git commit -m "semport: acknowledge c3c8479 - DOT graph export already implemented in EntityGraphDotWriter"
 rm -f .ai/semport_new_commits.md
 ```
-
----
-
-## Go → C# Pattern Mapping (for future reference)
-
-| Go pattern | C# equivalent |
-|---|---|
-| `parser.skipAtMostOnce(tok)` | `state.Match(TokenType.X)` — advances iff current token matches, no error if not |
-| `parser.exact(tok)` | `state.Expect(TokenType.X, msg)` — must match or throws `ParseException` |
-| `parser.peek()` | `state.Current` — current token without advancing |
-| `parser.advance()` | `state.Advance()` — unconditionally consume current token |
-| Go `error` return | `throw new ParseException(position, message)` — collected into `AggregateException` |
