@@ -1,46 +1,58 @@
-# Semport Plan Finalized
+# Semport Finalized Plan — 7dde92c
+## `types: remove EntityLoader interface`
 
-## Commit
-**SHA:** 2a42834  
-**Date:** 2024-11-06T15:47:01-08:00  
-**Message:** cedar-go: change PolicySet.Delete() to return a bool indicating if a policy existed with the given ID
+---
 
-## Status: ALREADY IMPLEMENTED — ACKNOWLEDGE
+## Decision: ACKNOWLEDGE (no C# changes needed)
 
-### Finding
-The C# codebase already fully satisfies this semantic change. The Go commit changed `PolicySet.Delete() void` → `PolicySet.Delete() bool`. The C# equivalent is `PolicySet.Remove(PolicyId) bool`, which:
+### Rationale
 
-- **Location:** `src/Cedar.Core/PolicySet.cs` line 54–57
-  ```csharp
-  public bool Remove(PolicyId id)
-  {
-      return _policies.TryRemove(id, out _);
-  }
-  ```
-- Uses `ConcurrentDictionary<PolicyId, Policy>.TryRemove()` which returns `bool` — already correct.
+The Go change removes `EntityLoader` because it had **only one implementation** (`EntityMap`) and no external implementors needed the interface. The interface was an unnecessary abstraction.
 
-### Tests Already Present
-**File:** `test/Cedar.Tests/Policy/PolicySetTests.cs`
-- Line 38–43: `Remove_ReturnsFalseWhenMissing` — asserts `false` when ID not in set ✅
-- Line 46–51: `Remove_RemovesExistingPolicy` — asserts `true` when ID existed ✅
-- Line 87: `set.Remove(new PolicyId("p0"))` — additional usage ✅
+In our C# codebase, the equivalent is `IEntityGetter` (`src/Cedar.Types/IEntityGetter.cs`). However, **our situation is different**:
 
-### No Call Sites Need Updating
-The only internal `.Remove()` call sites found are unrelated types:
-- `src/Cedar.Schema/SchemaGuidedEntityParser.cs:313` — different collection
-- `src/Cedar.Core/Internal/Parser/ExpressionParser.cs:247` — `RemoveAt` on a list
-- `src/Cedar.Batch/BatchAuthorization.cs:152` — different collection
+- `CountingEntityGetter` in `test/Cedar.Tests/Eval/EvaluatorTests.cs:40` is a test-only implementation of `IEntityGetter` that instruments `TryGet` call counts. Three tests rely on it:
+  - `InEvaluator_InSet_ReevaluatesHierarchyWithoutCache` (line 445)
+  - `InEvaluator_DeepHierarchy_ReevaluatesWithoutCache` (line 469)
+  - `InEvaluator_Evaluations_AreIsolatedPerEnvironment` (line 486)
+- These tests **verify behavioral semantics** (entity lookup isolation, no caching) that require a custom implementation — they cannot be replaced by `EntityMap` alone.
 
-### Action Required
-**Mark as `acknowledged`** — the C# implementation already has the correct semantics (return bool from Remove/Delete), predating this upstream commit. No code changes needed.
+Therefore, keeping `IEntityGetter` is the correct C# design. Removing it would require restructuring these tests significantly with no behavioral benefit.
 
-## Go → C# Mapping Note
-- Go `PolicySet.Delete(PolicyID)` → C# `PolicySet.Remove(PolicyId)` (naming follows .NET `IDictionary` conventions)
-- Go `bool` return → C# `bool` return (identical semantics)
-- Go `map` delete + exists check → C# `ConcurrentDictionary.TryRemove()` (idiomatic .NET equivalent)
+---
 
-## Acceptance Criteria (already satisfied)
-- [x] `PolicySet.Remove(id)` returns `false` when `id` is not in the set
-- [x] `PolicySet.Remove(id)` returns `true` when `id` existed and is now removed
-- [x] Removed policy is no longer retrievable via `Get(id)`
-- [x] Tests exist for both cases in `test/Cedar.Tests/Policy/PolicySetTests.cs`
+## C# ↔ Go Mapping (for reference)
+
+| Go | C# | Location |
+|---|---|---|
+| `types.EntityLoader` interface | `IEntityGetter` interface | `src/Cedar.Types/IEntityGetter.cs:3` |
+| `types.EntityMap` | `EntityMap` | `src/Cedar.Types/EntityMap.cs:8` |
+| `authorize.go IsAuthorized(EntityLoader, ...)` | `Authorization.cs Authorize(IPolicyIterator, IEntityGetter, ...)` | `src/Cedar.Core/Authorization.cs:11` |
+| `eval/evalers.go Env.Entities EntityLoader` | `EvalEnv.Entities IEntityGetter` | `src/Cedar.Core/Internal/Eval/EvalEnv.cs:5` |
+| `batch.go Authorize(EntityLoader, ...)` | `BatchAuthorization.cs` (5 overloads, `IEntityGetter?`) | `src/Cedar.Batch/BatchAuthorization.cs:21,30,43,53,69` |
+
+---
+
+## Files Surveyed (no changes needed)
+
+- `src/Cedar.Types/IEntityGetter.cs` — interface with single `TryGet(EntityUid, out Entity)` method
+- `src/Cedar.Types/EntityMap.cs:8` — implements `IEntityGetter, IReadOnlyCollection<Entity>`
+- `src/Cedar.Core/Authorization.cs:11` — `Authorize(IPolicyIterator, IEntityGetter, Request)`
+- `src/Cedar.Core/Internal/Eval/EvalEnv.cs:5` — `EvalEnv(IEntityGetter Entities, ...)`
+- `src/Cedar.Batch/BatchAuthorization.cs:21,30,43,53,69` — 5 overloads accept `IEntityGetter?`
+- `src/Cedar.Experimental/EvalEnv.cs:9,22` — uses `IEntityGetter?`
+- `test/Cedar.Tests/Eval/EvaluatorTests.cs:40` — `CountingEntityGetter : IEntityGetter` (test instrumentation)
+- `test/Cedar.Tests/Types/EntityMapTests.cs:86` — typed as `IEntityGetter` (polymorphism check)
+- `test/Cedar.Batch.Tests/BatchAuthorizationTests.cs:674` — helper uses `IEntityGetter?`
+
+---
+
+## Action Required
+
+Run the following to acknowledge this commit:
+
+```bash
+python3 semport/ledger.py update 7dde92c acknowledged && python3 semport/ledger.py sort
+git add semport/ledger.tsv && git commit -m "semport: acknowledge 7dde92c - IEntityGetter kept for test instrumentation"
+rm -f .ai/semport_new_commits.md
+```

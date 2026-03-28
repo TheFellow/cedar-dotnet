@@ -1,37 +1,53 @@
 PORT
 
 ## Commit Summary
-**SHA:** 2a42834  
-**Date:** 2024-11-06T15:47:01-08:00  
-**Message:** cedar-go: change PolicySet.Delete() to return a bool indicating if a policy existed with the given ID
+**SHA:** 7dde92c  
+**Message:** `types: remove EntityLoader interface`
+
+The `EntityLoader` interface (with a single `Load(EntityUID) (Entity, bool)` method) is deleted from Go's `types` package. All call sites that previously accepted `EntityLoader` now accept the concrete `types.EntityMap` directly. This removes an abstraction layer and simplifies the API surface.
+
+Affected Go files:
+- `types/entities.go` — interface deleted
+- `authorize.go` — `IsAuthorized` signature changed from `EntityLoader` → `types.EntityMap`
+- `internal/eval/evalers.go` — `Env.Entities` field type changed
+- `types.go` — re-export alias `EntityLoader = types.EntityLoader` removed
+- `x/exp/batch/batch.go` — `Authorize` signature changed
 
 ## Semantic Analysis
-`PolicySet.Delete()` in cedar-go was changed from `void` to `bool`. The returned value indicates whether a policy with the given ID actually existed in the set prior to deletion. This is a meaningful API change — callers can now distinguish between "deleted an existing policy" and "tried to delete a non-existent policy." This is a semantic contract change, not a Go-specific idiom.
+The removal of `EntityLoader` is a deliberate simplification: the interface had only one implementation (`EntityMap`) and no external implementors needed. Removing it closes extension points that were never intended to be public.
 
-## Port Tasks
+In C#, if we have an `IEntityLoader` interface (or similar), the analogous change is:
+1. Delete the interface.
+2. Replace any parameter/field typed as `IEntityLoader` with `EntityMap` (our concrete dictionary type).
+3. Update `IsAuthorized` / `Authorize` signatures accordingly.
 
-### 1. Find the C# `PolicySet` class
-- Look in `src/Cedar.Ast/` or `src/Cedar.Core/` for a `PolicySet` type (likely `PolicySet.cs`).
-- Locate the `Delete` (or `Remove`) method that accepts a policy ID.
+## Concrete Port Tasks
 
-### 2. Change the return type from `void` to `bool`
-- Before deletion, check if the policy ID exists in the backing collection.
-- Return `true` if it existed (and was removed), `false` if it was not found.
-- Example pattern (using `ImmutableDictionary` or `Dictionary`):
-  ```csharp
-  public bool Delete(PolicyId policyId)
-  {
-      bool existed = _policies.ContainsKey(policyId);
-      _policies.Remove(policyId); // or rebuild immutable dict
-      return existed;
-  }
-  ```
+### 1. Locate and identify the C# EntityLoader interface
+- Search `src/` for any interface named `IEntityLoader` or `EntityLoader`.
+- Expected locations: `src/Cedar.Types/` or `src/Cedar.Core/`.
 
-### 3. Update any internal callers
-- Search for all call sites of `PolicySet.Delete(...)` / `.Remove(...)` in the C# codebase.
-- If callers previously ignored the return value, they remain valid (no breaking change to call sites that discard).
+### 2. Delete the interface
+- If `IEntityLoader` (or equivalent) exists as a file, delete the file.
+- If it is inline in another file, remove the interface declaration.
 
-### 4. Add/update xUnit tests in `test/Cedar.Tests/`
-- Test that `Delete` on a non-existent ID returns `false`.
-- Test that `Delete` on an existing ID returns `true` and the policy is gone (`.Get(id)` returns null/not-found).
-- Mirror the two test cases from `policy_set_test.go`.
+### 3. Update `IsAuthorized` signature
+- File: likely `src/Cedar.Ast/Authorization.cs` or similar.
+- Change parameter type from `IEntityLoader` → `EntityMap` (or our concrete entity collection type).
+
+### 4. Update internal `Env` / evaluator struct
+- File: likely `src/Cedar.Core/Internal/Eval/` (linked source).
+- Change `Entities` field/property type from `IEntityLoader` → concrete `EntityMap`.
+
+### 5. Update `Batch.Authorize` signature
+- File: `src/Cedar.Batch/` — change parameter from interface to concrete type.
+
+### 6. Update any re-export / type alias in public API surface
+- Remove any `EntityLoader` type alias or re-export.
+
+### 7. Fix all call sites (callers, tests)
+- Search for `IEntityLoader` in test projects and update to pass `EntityMap` directly.
+
+### 8. Verify build and tests pass
+- `dotnet build cedar-dotnet.sln`
+- `dotnet test cedar-dotnet.sln`
