@@ -116,7 +116,7 @@ internal sealed class ParserState
         return token.Text[1..^1];
     }
 
-    public EntityType ParseEntityTypePath()
+    public CedarPath ParseEntityTypePath()
     {
         Token first = ExpectIdentifier("Expected entity type identifier.");
         string value = first.Text;
@@ -127,7 +127,7 @@ internal sealed class ParserState
             value = value + "::" + segment.Text;
         }
 
-        return new EntityType(value);
+        return new CedarPath(value);
     }
 
     public EntityUid ParseEntityUid()

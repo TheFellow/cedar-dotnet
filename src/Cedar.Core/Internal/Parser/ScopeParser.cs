@@ -55,7 +55,7 @@ internal static class ScopeParser
 
         if (state.Match(TokenType.Is))
         {
-            EntityType type = state.ParseEntityTypePath();
+            CedarPath type = state.ParseEntityTypePath();
             if (state.Match(TokenType.In))
             {
                 EntityUid entity = state.ParseEntityUid();

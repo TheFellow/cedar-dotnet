@@ -223,7 +223,7 @@ internal static class NodeJsonModel
             args.Add(FromAst(arg));
         }
 
-        return new JsonObject { [node.Name] = args };
+        return new JsonObject { [node.Name.Value] = args };
     }
 
     private static INode ReadBinary(JsonNode node, Func<INode, INode, INode> create, params string[] rightNames)
@@ -286,7 +286,7 @@ internal static class NodeJsonModel
     {
         JsonObject payload = AsObject(node, "is");
         INode left = ToAst(ReadRequiredProperty(payload, "left"));
-        EntityType entityType = new(ReadRequiredString(payload, "entity_type"));
+        CedarPath entityType = new(ReadRequiredString(payload, "entity_type"));
 
         if (payload.TryGetPropertyValue("in", out JsonNode? inNode) && inNode is not null)
         {
@@ -372,7 +372,7 @@ internal static class NodeJsonModel
             args.Add(ToAst(arg ?? throw new JsonException("Extension call arguments cannot be null.")));
         }
 
-        return new NodeExtensionCall(name, args.ToImmutable());
+        return new NodeExtensionCall(new CedarPath(name), args.ToImmutable());
     }
 
     private static ICedarData ReadCedarValue(JsonNode node)

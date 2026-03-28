@@ -171,7 +171,7 @@ internal static class ConstantFolder
 
     private static bool CanEvaluateExtension(NodeExtensionCall call)
     {
-        if (!ExtensionRegistry.TryGet(call.Name, out ExtensionDefinition definition) || definition.IsMethod)
+        if (!ExtensionRegistry.TryGet(call.Name.Value, out ExtensionDefinition definition) || definition.IsMethod)
         {
             return false;
         }

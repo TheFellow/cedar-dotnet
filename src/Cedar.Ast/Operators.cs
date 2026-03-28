@@ -81,10 +81,10 @@ public static class Operators
 
     public static Node Is(this Node lhs, string entityType)
     {
-        return Is(lhs, new EntityType(entityType));
+        return Is(lhs, new CedarPath(entityType));
     }
 
-    public static Node Is(this Node lhs, EntityType entityType)
+    public static Node Is(this Node lhs, CedarPath entityType)
     {
         ArgumentNullException.ThrowIfNull(lhs);
         return new Node(new NodeIs(lhs.Inner, entityType));
@@ -92,10 +92,10 @@ public static class Operators
 
     public static Node IsIn(this Node lhs, string entityType, Node rhs)
     {
-        return IsIn(lhs, new EntityType(entityType), rhs);
+        return IsIn(lhs, new CedarPath(entityType), rhs);
     }
 
-    public static Node IsIn(this Node lhs, EntityType entityType, Node rhs)
+    public static Node IsIn(this Node lhs, CedarPath entityType, Node rhs)
     {
         ArgumentNullException.ThrowIfNull(lhs);
         ArgumentNullException.ThrowIfNull(rhs);
@@ -186,7 +186,7 @@ public static class Operators
             builder.Add(arg.Inner);
         }
 
-        return new Node(new NodeExtensionCall(name, builder.ToImmutable()));
+        return new Node(new NodeExtensionCall(new CedarPath(name), builder.ToImmutable()));
     }
 
     private static Node Binary(Node lhs, Node rhs, Func<INode, INode, INode> create)

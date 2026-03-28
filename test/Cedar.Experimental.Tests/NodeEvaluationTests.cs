@@ -60,7 +60,7 @@ public sealed class NodeEvaluationTests
         ]);
 
         ICedarData value = NodeEvaluation.Evaluate(
-            Values.EntityUid(Alice).IsIn(new EntityType("User"), Values.EntityUid(Group)),
+            Values.EntityUid(Alice).IsIn(new CedarPath("User"), Values.EntityUid(Group)),
             new EvalEnv(entities: entities));
 
         Assert.Equal(CedarBool.True, value);

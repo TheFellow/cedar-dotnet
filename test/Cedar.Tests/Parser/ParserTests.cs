@@ -425,7 +425,7 @@ public sealed class ParserTests
         PolicyAst policy = ParseSingle("permit(principal, action, resource) when { myFunc(1, true) };");
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
-        Assert.Equal("myFunc", call.Name);
+        Assert.Equal("myFunc", call.Name.Value);
         Assert.Equal(2, call.Args.Length);
     }
 

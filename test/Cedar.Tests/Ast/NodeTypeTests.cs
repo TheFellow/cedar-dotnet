@@ -176,7 +176,7 @@ public sealed class NodeTypeTests
     {
         INode left = ValueNode(1);
 
-        NodeIs node = new(left, new EntityType("User"));
+        NodeIs node = new(left, new CedarPath("User"));
 
         Assert.Same(left, node.Left);
         Assert.Equal("User", node.EntityType.Value);
@@ -188,7 +188,7 @@ public sealed class NodeTypeTests
         INode left = ValueNode(1);
         INode entity = ValueNode(2);
 
-        NodeIsIn node = new(left, new EntityType("User"), entity);
+        NodeIsIn node = new(left, new CedarPath("User"), entity);
 
         Assert.Same(left, node.Left);
         Assert.Same(entity, node.Entity);
@@ -320,9 +320,9 @@ public sealed class NodeTypeTests
     {
         ImmutableArray<INode> args = [ValueNode(1), ValueNode(2)];
 
-        NodeExtensionCall node = new("isInRange", args);
+        NodeExtensionCall node = new(new CedarPath("isInRange"), args);
 
-        Assert.Equal("isInRange", node.Name);
+        Assert.Equal("isInRange", node.Name.Value);
         Assert.Equal(args, node.Args);
     }
 

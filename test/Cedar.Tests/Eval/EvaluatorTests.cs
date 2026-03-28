@@ -408,14 +408,14 @@ public sealed class EvaluatorTests
     [Fact]
     public void IsEvaluator_MatchingType_ReturnsTrue()
     {
-        IEvaluator evaluator = new IsEvaluator(Lit(Alice), new EntityType("User"));
+        IEvaluator evaluator = new IsEvaluator(Lit(Alice), new CedarPath("User"));
         Assert.Equal(CedarBool.True, evaluator.Eval(MakeEnv()));
     }
 
     [Fact]
     public void IsEvaluator_DifferentType_ReturnsFalse()
     {
-        IEvaluator evaluator = new IsEvaluator(Lit(Alice), new EntityType("Admin"));
+        IEvaluator evaluator = new IsEvaluator(Lit(Alice), new CedarPath("Admin"));
         Assert.Equal(CedarBool.False, evaluator.Eval(MakeEnv()));
     }
 
@@ -423,14 +423,14 @@ public sealed class EvaluatorTests
     public void IsInEvaluator_TypeMatchAndIn_ReturnsTrue()
     {
         Entity aliceEntity = new(Alice, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
-        IEvaluator evaluator = new IsInEvaluator(Lit(Alice), new EntityType("User"), Lit(Group));
+        IEvaluator evaluator = new IsInEvaluator(Lit(Alice), new CedarPath("User"), Lit(Group));
         Assert.Equal(CedarBool.True, evaluator.Eval(MakeEnv(aliceEntity)));
     }
 
     [Fact]
     public void IsInEvaluator_TypeMismatch_ReturnsFalse()
     {
-        IEvaluator evaluator = new IsInEvaluator(Lit(Alice), new EntityType("Admin"), Lit(Group));
+        IEvaluator evaluator = new IsInEvaluator(Lit(Alice), new CedarPath("Admin"), Lit(Group));
         Assert.Equal(CedarBool.False, evaluator.Eval(MakeEnv()));
     }
 

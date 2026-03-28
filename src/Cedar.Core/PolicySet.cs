@@ -61,6 +61,15 @@ public sealed class PolicySet : IPolicyIterator
         return _policies;
     }
 
+    /// <summary>
+    /// Returns a snapshot copy of all policies in this <see cref="PolicySet" />,
+    /// keyed by their <see cref="PolicyId" />.
+    /// </summary>
+    public IReadOnlyDictionary<PolicyId, Policy> Map()
+    {
+        return new Dictionary<PolicyId, Policy>(_policies);
+    }
+
     public string MarshalCedar()
     {
         List<PolicyId> ids = [.. _policies.Keys];

@@ -67,6 +67,30 @@ public sealed class PolicySetTests
     }
 
     [Fact]
+    public void Map_ReturnsSnapshotOfAllPolicies()
+    {
+        PolicySet set = PolicySet.ParseCedar("permit(principal, action, resource);");
+
+        IReadOnlyDictionary<PolicyId, Policy> map = set.Map();
+
+        Assert.Single(map);
+    }
+
+    [Fact]
+    public void Map_IsIndependentCopy()
+    {
+        PolicySet set = new();
+        Policy policy = Policy.UnmarshalCedar("permit(principal, action, resource);");
+        set.Add(new PolicyId("p0"), policy);
+
+        IReadOnlyDictionary<PolicyId, Policy> map = set.Map();
+        set.Remove(new PolicyId("p0"));
+
+        Assert.Single(map);
+        Assert.Empty(set.Policies);
+    }
+
+    [Fact]
     public void MarshalCedar_SortsByPolicyId()
     {
         PolicySet set = new();

@@ -77,7 +77,7 @@ public sealed class CompilerTests
     [Fact]
     public void ToEval_NodeExtensionCall_InvokesExtension()
     {
-        INode node = new NodeExtensionCall("decimal", ImmutableArray.Create<INode>(new NodeValue(new CedarString("2.5"))));
+        INode node = new NodeExtensionCall(new CedarPath("decimal"), ImmutableArray.Create<INode>(new NodeValue(new CedarString("2.5"))));
         IEvaluator evaluator = Compiler.ToEval(node);
         ICedarData result = evaluator.Eval(MakeEnv());
         Assert.IsType<CedarDecimal>(result);

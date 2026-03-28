@@ -255,7 +255,7 @@ public sealed class OperatorTests
     private static void AssertExtensionCall(Node node, string expectedName, int expectedArgs)
     {
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(node.Inner);
-        Assert.Equal(expectedName, call.Name);
+        Assert.Equal(expectedName, call.Name.Value);
         Assert.Equal(expectedArgs, call.Args.Length);
     }
 }

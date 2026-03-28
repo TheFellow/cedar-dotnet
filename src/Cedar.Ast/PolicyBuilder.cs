@@ -17,10 +17,10 @@ public sealed class PolicyBuilder
 
     public PolicyBuilder PrincipalIs(string entityType)
     {
-        return PrincipalIs(new EntityType(entityType));
+        return PrincipalIs(new CedarPath(entityType));
     }
 
-    public PolicyBuilder PrincipalIs(EntityType entityType)
+    public PolicyBuilder PrincipalIs(CedarPath entityType)
     {
         return WithPrincipalScope(new ScopeIs(entityType));
     }
@@ -33,10 +33,10 @@ public sealed class PolicyBuilder
 
     public PolicyBuilder PrincipalIsIn(string entityType, EntityUid entity)
     {
-        return PrincipalIsIn(new EntityType(entityType), entity);
+        return PrincipalIsIn(new CedarPath(entityType), entity);
     }
 
-    public PolicyBuilder PrincipalIsIn(EntityType entityType, EntityUid entity)
+    public PolicyBuilder PrincipalIsIn(CedarPath entityType, EntityUid entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
         return WithPrincipalScope(new ScopeIsIn(entityType, entity));
@@ -68,10 +68,10 @@ public sealed class PolicyBuilder
 
     public PolicyBuilder ResourceIs(string entityType)
     {
-        return ResourceIs(new EntityType(entityType));
+        return ResourceIs(new CedarPath(entityType));
     }
 
-    public PolicyBuilder ResourceIs(EntityType entityType)
+    public PolicyBuilder ResourceIs(CedarPath entityType)
     {
         return WithResourceScope(new ScopeIs(entityType));
     }
@@ -84,10 +84,10 @@ public sealed class PolicyBuilder
 
     public PolicyBuilder ResourceIsIn(string entityType, EntityUid entity)
     {
-        return ResourceIsIn(new EntityType(entityType), entity);
+        return ResourceIsIn(new CedarPath(entityType), entity);
     }
 
-    public PolicyBuilder ResourceIsIn(EntityType entityType, EntityUid entity)
+    public PolicyBuilder ResourceIsIn(CedarPath entityType, EntityUid entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
         return WithResourceScope(new ScopeIsIn(entityType, entity));
@@ -123,18 +123,18 @@ public sealed class PolicyBuilder
         return new PolicyBuilder(Ast with { Annotations = annotations });
     }
 
-    private PolicyBuilder WithPrincipalScope(IScope scope)
+    private PolicyBuilder WithPrincipalScope(IPrincipalScopeNode scope)
     {
-        return new PolicyBuilder(Ast with { PrincipalScope = scope });
+        return new PolicyBuilder(Ast with { PrincipalScope = (IScope)scope });
     }
 
-    private PolicyBuilder WithActionScope(IScope scope)
+    private PolicyBuilder WithActionScope(IActionScopeNode scope)
     {
-        return new PolicyBuilder(Ast with { ActionScope = scope });
+        return new PolicyBuilder(Ast with { ActionScope = (IScope)scope });
     }
 
-    private PolicyBuilder WithResourceScope(IScope scope)
+    private PolicyBuilder WithResourceScope(IResourceScopeNode scope)
     {
-        return new PolicyBuilder(Ast with { ResourceScope = scope });
+        return new PolicyBuilder(Ast with { ResourceScope = (IScope)scope });
     }
 }

@@ -53,7 +53,7 @@ public sealed class ScopeTests
     [Fact]
     public void ScopeIsStoresType()
     {
-        ScopeIs scope = new(new EntityType("Document"));
+        ScopeIs scope = new(new CedarPath("Document"));
 
         Assert.Equal("Document", scope.Type.Value);
     }
@@ -63,7 +63,7 @@ public sealed class ScopeTests
     {
         EntityUid container = new(new EntityType("Folder"), new CedarString("prod"));
 
-        ScopeIsIn scope = new(new EntityType("Document"), container);
+        ScopeIsIn scope = new(new CedarPath("Document"), container);
 
         Assert.Equal("Document", scope.Type.Value);
         Assert.Equal(container, scope.Entity);

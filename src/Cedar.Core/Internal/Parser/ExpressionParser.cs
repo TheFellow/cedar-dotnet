@@ -167,7 +167,7 @@ internal sealed class ExpressionParser
 
     private INode ParseIs(INode lhs)
     {
-        EntityType entityType = _state.ParseEntityTypePath();
+        CedarPath entityType = _state.ParseEntityTypePath();
         if (_state.Match(TokenType.In))
         {
             INode entity = ParseAdd();
@@ -345,7 +345,7 @@ internal sealed class ExpressionParser
                 }
 
                 ImmutableArray<INode> args = ParseExpressionList(TokenType.RParen, "Expected ')' after function arguments.");
-                return new NodeExtensionCall(token.Text, args);
+                return new NodeExtensionCall(new CedarPath(token.Text), args);
             }
 
             if (token.Text is "principal" or "action" or "resource" or "context")
@@ -409,7 +409,7 @@ internal sealed class ExpressionParser
             callArgs.Add(arg);
         }
 
-        return new NodeExtensionCall(method.Text, callArgs.ToImmutable());
+        return new NodeExtensionCall(new CedarPath(method.Text), callArgs.ToImmutable());
     }
 
     private INode ParseSetLiteral()

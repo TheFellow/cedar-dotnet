@@ -31,9 +31,9 @@ public sealed record NodeMult(INode Left, INode Right) : INode;
 
 public sealed record NodeIn(INode Left, INode Right) : INode;
 
-public sealed record NodeIs(INode Left, EntityType EntityType) : INode;
+public sealed record NodeIs(INode Left, CedarPath EntityType) : INode;
 
-public sealed record NodeIsIn(INode Left, EntityType EntityType, INode Entity) : INode;
+public sealed record NodeIsIn(INode Left, CedarPath EntityType, INode Entity) : INode;
 
 public sealed record NodeHas(INode Arg, CedarString Attribute) : INode;
 
@@ -55,7 +55,7 @@ public sealed record NodeContainsAny(INode Left, INode Right) : INode;
 
 public sealed record NodeIsEmpty(INode Arg) : INode;
 
-public sealed record NodeExtensionCall(string Name, ImmutableArray<INode> Args) : INode;
+public sealed record NodeExtensionCall(CedarPath Name, ImmutableArray<INode> Args) : INode;
 
 public sealed record NodeValue(ICedarData Value) : INode;
 

@@ -127,9 +127,9 @@ internal sealed record PolicyJsonModel
 
         return new PolicyAst(
             effect,
-            Principal.ToAst(),
-            Action.ToAst(),
-            Resource.ToAst(),
+            Principal.ToPrincipalResourceScope(),
+            Action.ToActionScope(),
+            Resource.ToPrincipalResourceScope(),
             [.. conditions],
             [.. annotations],
             new Position(string.Empty, 0, 0, 0));

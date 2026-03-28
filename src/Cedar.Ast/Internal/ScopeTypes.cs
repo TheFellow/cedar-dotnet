@@ -4,14 +4,26 @@ namespace Cedar.Ast.Internal;
 
 public abstract record IScope;
 
-public sealed record ScopeAll : IScope;
+public interface IPrincipalScopeNode
+{
+}
 
-public sealed record ScopeEq(EntityUid Entity) : IScope;
+public interface IActionScopeNode
+{
+}
 
-public sealed record ScopeIn(EntityUid Entity) : IScope;
+public interface IResourceScopeNode
+{
+}
 
-public sealed record ScopeInSet(EntityUid[] Entities) : IScope;
+public sealed record ScopeAll : IScope, IPrincipalScopeNode, IActionScopeNode, IResourceScopeNode;
 
-public sealed record ScopeIs(EntityType Type) : IScope;
+public sealed record ScopeEq(EntityUid Entity) : IScope, IPrincipalScopeNode, IActionScopeNode, IResourceScopeNode;
 
-public sealed record ScopeIsIn(EntityType Type, EntityUid Entity) : IScope;
+public sealed record ScopeIn(EntityUid Entity) : IScope, IPrincipalScopeNode, IActionScopeNode, IResourceScopeNode;
+
+public sealed record ScopeInSet(EntityUid[] Entities) : IScope, IActionScopeNode;
+
+public sealed record ScopeIs(CedarPath Type) : IScope, IPrincipalScopeNode, IResourceScopeNode;
+
+public sealed record ScopeIsIn(CedarPath Type, EntityUid Entity) : IScope, IPrincipalScopeNode, IResourceScopeNode;

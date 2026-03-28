@@ -104,7 +104,7 @@ public sealed class ConstantFolderTests
     [Fact]
     public void Folds_ExtensionConstructors_WithLiteralArguments()
     {
-        INode folded = FoldSingle(new NodeExtensionCall("decimal", ImmutableArray.Create<INode>(new NodeValue(new CedarString("3.14")))));
+        INode folded = FoldSingle(new NodeExtensionCall(new CedarPath("decimal"), ImmutableArray.Create<INode>(new NodeValue(new CedarString("3.14")))));
         CedarDecimal value = Assert.IsType<CedarDecimal>(Assert.IsType<NodeValue>(folded).Value);
         Assert.Equal(CedarDecimal.Parse("3.14"), value);
     }
@@ -112,18 +112,18 @@ public sealed class ConstantFolderTests
     [Fact]
     public void DoesNotFold_ExtensionMethods()
     {
-        INode folded = FoldSingle(new NodeExtensionCall("isIpv4", ImmutableArray.Create<INode>(
-            new NodeExtensionCall("ip", ImmutableArray.Create<INode>(new NodeValue(new CedarString("1.2.3.4")))))));
+        INode folded = FoldSingle(new NodeExtensionCall(new CedarPath("isIpv4"), ImmutableArray.Create<INode>(
+            new NodeExtensionCall(new CedarPath("ip"), ImmutableArray.Create<INode>(new NodeValue(new CedarString("1.2.3.4")))))));
 
         NodeExtensionCall methodCall = Assert.IsType<NodeExtensionCall>(folded);
-        Assert.Equal("isIpv4", methodCall.Name);
+        Assert.Equal("isIpv4", methodCall.Name.Value);
         Assert.IsType<NodeValue>(methodCall.Args[0]);
     }
 
     [Fact]
     public void DoesNotFold_UnknownExtension()
     {
-        INode folded = FoldSingle(new NodeExtensionCall("unknownExt", ImmutableArray.Create<INode>(new NodeValue(new CedarString("x")))));
+        INode folded = FoldSingle(new NodeExtensionCall(new CedarPath("unknownExt"), ImmutableArray.Create<INode>(new NodeValue(new CedarString("x")))));
         Assert.IsType<NodeExtensionCall>(folded);
     }
 
@@ -151,14 +151,14 @@ public sealed class ConstantFolderTests
     [Fact]
     public void DoesNotFold_EntityDependentNodeIs()
     {
-        INode folded = FoldSingle(new NodeIs(new NodeValue(Alice), new EntityType("User")));
+        INode folded = FoldSingle(new NodeIs(new NodeValue(Alice), new CedarPath("User")));
         Assert.IsType<NodeIs>(folded);
     }
 
     [Fact]
     public void DoesNotFold_EntityDependentNodeIsIn()
     {
-        INode folded = FoldSingle(new NodeIsIn(new NodeValue(Alice), new EntityType("User"), new NodeValue(Alice)));
+        INode folded = FoldSingle(new NodeIsIn(new NodeValue(Alice), new CedarPath("User"), new NodeValue(Alice)));
         Assert.IsType<NodeIsIn>(folded);
     }
 

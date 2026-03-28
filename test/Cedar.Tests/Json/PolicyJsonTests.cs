@@ -59,6 +59,84 @@ public sealed class PolicyJsonTests
     }
 
     [Fact]
+    public void UnmarshalJson_PrincipalScopeInWithoutEntityThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "in" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        JsonException exception = Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+
+        Assert.Contains("Scope with op 'in' must include 'entity'.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_PrincipalScopeInWithEntitiesListThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": {
+                "op": "in",
+                "entities": [
+                  { "type": "Group", "id": "admins" }
+                ]
+              },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        JsonException exception = Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+
+        Assert.Contains("Scope with op 'in' must include 'entity'.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ActionScopeEqWithoutEntityThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": { "op": "==" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        JsonException exception = Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+
+        Assert.Contains("Scope with op '==' must include 'entity'.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ActionScopeInWithEntitiesListSucceeds()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": {
+                "op": "in",
+                "entities": [
+                  { "type": "Action", "id": "view" }
+                ]
+              },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        Policy policy = Policy.UnmarshalJson(json);
+
+        Assert.NotNull(policy);
+    }
+
+    [Fact]
     public void UnmarshalJson_UnknownExtensionFunction_ThrowsJsonException()
     {
         JsonException exception = Assert.Throws<JsonException>(
@@ -122,7 +200,7 @@ public sealed class PolicyJsonTests
         Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-        Assert.Equal("decimal", call.Name);
+        Assert.Equal("decimal", call.Name.Value);
 
         NodeValue arg = Assert.IsType<NodeValue>(Assert.Single(call.Args));
         Assert.Equal(new CedarString("1.0"), Assert.IsType<CedarString>(arg.Value));
@@ -141,7 +219,7 @@ public sealed class PolicyJsonTests
         Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-        Assert.Equal("ip", call.Name);
+        Assert.Equal("ip", call.Name.Value);
 
         NodeValue arg = Assert.IsType<NodeValue>(Assert.Single(call.Args));
         Assert.Equal(new CedarString("127.0.0.1"), Assert.IsType<CedarString>(arg.Value));
@@ -165,14 +243,14 @@ public sealed class PolicyJsonTests
         Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-        Assert.Equal("lessThan", call.Name);
+        Assert.Equal("lessThan", call.Name.Value);
         Assert.Equal(2, call.Args.Length);
 
         NodeExtensionCall left = Assert.IsType<NodeExtensionCall>(call.Args[0]);
         NodeExtensionCall right = Assert.IsType<NodeExtensionCall>(call.Args[1]);
 
-        Assert.Equal("decimal", left.Name);
-        Assert.Equal("decimal", right.Name);
+        Assert.Equal("decimal", left.Name.Value);
+        Assert.Equal("decimal", right.Name.Value);
         Assert.Equal(new CedarString("1.0"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(left.Args)).Value));
         Assert.Equal(new CedarString("2.0"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(right.Args)).Value));
 
@@ -194,10 +272,10 @@ public sealed class PolicyJsonTests
         Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-        Assert.Equal("isIpv4", call.Name);
+        Assert.Equal("isIpv4", call.Name.Value);
 
         NodeExtensionCall arg = Assert.IsType<NodeExtensionCall>(Assert.Single(call.Args));
-        Assert.Equal("ip", arg.Name);
+        Assert.Equal("ip", arg.Name.Value);
         Assert.Equal(new CedarString("127.0.0.1"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(arg.Args)).Value));
 
         string remarshaled = policy.MarshalJson();
@@ -219,14 +297,14 @@ public sealed class PolicyJsonTests
         Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
 
         NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Ast.Conditions));
-        Assert.Equal("isInRange", call.Name);
+        Assert.Equal("isInRange", call.Name.Value);
         Assert.Equal(2, call.Args.Length);
 
         NodeExtensionCall left = Assert.IsType<NodeExtensionCall>(call.Args[0]);
         NodeExtensionCall right = Assert.IsType<NodeExtensionCall>(call.Args[1]);
 
-        Assert.Equal("ip", left.Name);
-        Assert.Equal("ip", right.Name);
+        Assert.Equal("ip", left.Name.Value);
+        Assert.Equal("ip", right.Name.Value);
         Assert.Equal(new CedarString("192.168.1.10"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(left.Args)).Value));
         Assert.Equal(new CedarString("192.168.1.0/24"), Assert.IsType<CedarString>(Assert.IsType<NodeValue>(Assert.Single(right.Args)).Value));
 

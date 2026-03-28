@@ -310,11 +310,11 @@ public static class CedarWriter
                 builder.Append(".isEmpty()");
                 break;
             case NodeExtensionCall call:
-                if (ExtensionRegistry.TryGet(call.Name, out ExtensionDefinition definition) && definition.IsMethod && call.Args.Length > 0)
+                if (ExtensionRegistry.TryGet(call.Name.Value, out ExtensionDefinition definition) && definition.IsMethod && call.Args.Length > 0)
                 {
                     WriteNode(builder, call.Args[0], PrecAccess);
                     builder.Append('.');
-                    builder.Append(call.Name);
+                    builder.Append(call.Name.Value);
                     builder.Append('(');
                     for (int i = 1; i < call.Args.Length; i++)
                     {
@@ -330,7 +330,7 @@ public static class CedarWriter
                 }
                 else
                 {
-                    builder.Append(call.Name);
+                    builder.Append(call.Name.Value);
                     builder.Append('(');
                     for (int i = 0; i < call.Args.Length; i++)
                     {

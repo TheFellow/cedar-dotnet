@@ -13,21 +13,21 @@ internal sealed class InEvaluator(IEvaluator left, IEvaluator right) : IEvaluato
     }
 }
 
-internal sealed class IsEvaluator(IEvaluator left, EntityType entityType) : IEvaluator
+internal sealed class IsEvaluator(IEvaluator left, CedarPath entityType) : IEvaluator
 {
     public ICedarData Eval(EvalEnv env)
     {
         EntityUid leftValue = TypeConversion.ValueToEntity(left.Eval(env));
-        return new CedarBool(leftValue.Type == entityType);
+        return new CedarBool(string.Equals(leftValue.Type.Value, entityType.Value, System.StringComparison.Ordinal));
     }
 }
 
-internal sealed class IsInEvaluator(IEvaluator left, EntityType entityType, IEvaluator right) : IEvaluator
+internal sealed class IsInEvaluator(IEvaluator left, CedarPath entityType, IEvaluator right) : IEvaluator
 {
     public ICedarData Eval(EvalEnv env)
     {
         EntityUid leftValue = TypeConversion.ValueToEntity(left.Eval(env));
-        if (leftValue.Type != entityType)
+        if (!string.Equals(leftValue.Type.Value, entityType.Value, System.StringComparison.Ordinal))
         {
             return CedarBool.False;
         }

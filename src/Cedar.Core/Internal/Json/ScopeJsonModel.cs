@@ -67,14 +67,25 @@ internal sealed record ScopeJsonModel
         };
     }
 
-    internal IScope ToAst()
+    internal IScope ToPrincipalResourceScope()
+    {
+        return Op switch
+        {
+            "All" => new ScopeAll(),
+            "==" => new ScopeEq(RequireEntity(Entity, Op).ToEntity()),
+            "in" => new ScopeIn(RequireEntity(Entity, Op).ToEntity()),
+            "is" => ToIsScope(),
+            _ => throw new JsonException($"Unsupported scope op '{Op}'.")
+        };
+    }
+
+    internal IScope ToActionScope()
     {
         return Op switch
         {
             "All" => new ScopeAll(),
             "==" => new ScopeEq(RequireEntity(Entity, Op).ToEntity()),
             "in" => ToInScope(),
-            "is" => ToIsScope(),
             _ => throw new JsonException($"Unsupported scope op '{Op}'.")
         };
     }
@@ -101,7 +112,7 @@ internal sealed record ScopeJsonModel
             throw new JsonException("Scope with op 'is' must include 'entity_type'.");
         }
 
-        EntityType entityType = new(EntityType);
+        CedarPath entityType = new(EntityType);
         if (In is null)
         {
             return new ScopeIs(entityType);

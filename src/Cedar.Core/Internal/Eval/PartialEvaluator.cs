@@ -145,14 +145,14 @@ internal static class PartialEvaluator
     public static NodeExtensionCall PartialError(string message)
     {
         ArgumentException.ThrowIfNullOrEmpty(message);
-        return new NodeExtensionCall(PartialErrorExtensionName, ImmutableArray.Create<INode>(new NodeValue(new CedarString(message))));
+        return new NodeExtensionCall(new CedarPath(PartialErrorExtensionName), ImmutableArray.Create<INode>(new NodeValue(new CedarString(message))));
     }
 
     public static bool TryGetPartialError(INode node, out string message)
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        if (node is not NodeExtensionCall extensionCall || extensionCall.Name != PartialErrorExtensionName || extensionCall.Args.Length != 1)
+        if (node is not NodeExtensionCall extensionCall || extensionCall.Name.Value != PartialErrorExtensionName || extensionCall.Args.Length != 1)
         {
             message = string.Empty;
             return false;
@@ -229,8 +229,8 @@ internal static class PartialEvaluator
             ScopeEq equals => (true, entity.Equals(equals.Entity)),
             ScopeIn contains => (true, InOperator.Contains(env.Entities, entity, contains.Entity)),
             ScopeInSet set => (true, EntityInSet(env.Entities, entity, set.Entities)),
-            ScopeIs isScope => (true, entity.Type == isScope.Type),
-            ScopeIsIn isIn => (true, entity.Type == isIn.Type && InOperator.Contains(env.Entities, entity, isIn.Entity)),
+            ScopeIs isScope => (true, string.Equals(entity.Type.Value, isScope.Type.Value, System.StringComparison.Ordinal)),
+            ScopeIsIn isIn => (true, string.Equals(entity.Type.Value, isIn.Type.Value, System.StringComparison.Ordinal) && InOperator.Contains(env.Entities, entity, isIn.Entity)),
             _ => throw new EvalException($"unsupported scope type `{scope.GetType().Name}`")
         };
     }
@@ -294,7 +294,7 @@ internal static class PartialEvaluator
             NodeExtensionCall call => TryPartial(
                 env,
                 [.. call.Args],
-                values => new ExtensionEvaluator(call.Name, ToLiteralEvaluators(values)),
+                values => new ExtensionEvaluator(call.Name.Value, ToLiteralEvaluators(values)),
                 nodes => new NodeExtensionCall(call.Name, [.. nodes])),
             NodeValue => node,
             NodeRecord record => PartialRecord(env, record),
