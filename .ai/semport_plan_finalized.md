@@ -1,99 +1,174 @@
-# Finalized Port Plan: e796ce2
+# Finalized Port Plan: 8a95a23 — Remove `InCache` from `EvalEnv`
 
-## Status: ALREADY IMPLEMENTED (partially)
-
-### Upstream Change
-`inspiration/cedar-go/types/entity.go` — sort Entity parents by `(Type, ID)` before JSON marshaling.
-
-### C# Implementation Status
-
-**The sort is already present** in `src/Cedar.Core/Internal/Json/EntityJsonConverter.cs` at **line 48**:
-```csharp
-foreach (EntityUid parent in value.Parents
-    .OrderBy(static item => item.Type.Value, StringComparer.Ordinal)
-    .ThenBy(static item => item.Id.Value, StringComparer.Ordinal))
-```
-This directly mirrors the Go `slices.SortFunc` by `(Type, ID)`.
-
-### Gap: Missing Deterministic-Ordering Test
-
-The existing test at `test/Cedar.Tests/Types/EntityTests.cs:69` (`JsonSerializeUsesImplicitUidForms`) only checks two parents that happen to already be in sorted order. There is **no test that verifies sorted output when parents are added in non-alphabetical order**.
+## Summary
+Remove the per-evaluation `InCache` dictionary from `EvalEnv` and collapse the now-trivial `EntityInOne` helper, exactly mirroring the upstream cedar-go commit 8a95a23.
 
 ---
 
-## Single Required Task
+## File 1: `src/Cedar.Core/Internal/Eval/EvalEnv.cs`
 
-### Add test to `test/Cedar.Tests/Types/EntityTests.cs`
+### Change: Remove `InCache` property and its `using`
 
-**File:** `test/Cedar.Tests/Types/EntityTests.cs`
-**Insert after:** the last `[Fact]` method in the class (currently ends around line 145)
-
-**Test to add** (mirrors upstream `TestEntityMarshalJSON` exactly):
+**Current file (14 lines):**
 ```csharp
-[Fact]
-public void JsonSerializeParentsInConsistentOrder()
+using System.Collections.Generic;   // line 1 — remove (only used for Dictionary<>)
+using Cedar.Types;                  // line 2 — keep
+
+namespace Cedar.Core.Internal.Eval;
+
+internal sealed record EvalEnv(IEntityGetter Entities, ICedarData Principal, ICedarData Action, ICedarData Resource, ICedarData? Context)
 {
-    // Parents added in non-alphabetical order — serialized output must be sorted (Type, Id) lexicographically
-    Entity entity = new(
-        Uid: new EntityUid(new EntityType("FooType"), new CedarString("1")),
-        Parents: new EntityUidSet([
-            new EntityUid(new EntityType("BazType"), new CedarString("1")),
-            new EntityUid(new EntityType("BarType"), new CedarString("2")),
-            new EntityUid(new EntityType("BarType"), new CedarString("1")),
-            new EntityUid(new EntityType("QuuxType"), new CedarString("30")),
-            new EntityUid(new EntityType("QuuxType"), new CedarString("3")),
-        ]),
-        Attributes: new CedarRecord(),
-        Tags: new CedarRecord()
-    );
+    internal Dictionary<(EntityUid Lhs, EntityUid Rhs), bool> InCache { get; } = [];   // line 8 — remove entire line
 
-    string json = CedarJson.SerializeEntity(entity);
-
-    // Parents array must appear in (Type, Id) lexicographic order
-    int bar1 = json.IndexOf("\"BarType\",\"id\":\"1\"", StringComparison.Ordinal);
-    int bar2 = json.IndexOf("\"BarType\",\"id\":\"2\"", StringComparison.Ordinal);
-    int baz1 = json.IndexOf("\"BazType\",\"id\":\"1\"", StringComparison.Ordinal);
-    int quux3 = json.IndexOf("\"QuuxType\",\"id\":\"3\"", StringComparison.Ordinal);
-    int quux30 = json.IndexOf("\"QuuxType\",\"id\":\"30\"", StringComparison.Ordinal);
-
-    Assert.True(bar1 < bar2, "BarType:1 must precede BarType:2");
-    Assert.True(bar2 < baz1, "BarType:2 must precede BazType:1");
-    Assert.True(baz1 < quux3, "BazType:1 must precede QuuxType:3");
-    Assert.True(quux3 < quux30, "QuuxType:3 must precede QuuxType:30");
+    public static EvalEnv FromRequest(IEntityGetter entities, Request request)
+    {
+        return new EvalEnv(entities, request.Principal, request.Action, request.Resource, request.Context);
+    }
 }
 ```
 
-**Note on `quux3` vs `quux30`:** The `IndexOf` for `"id\":\"3\""` will match before `"id\":\"30\""` in the JSON string (since `3"` appears at a lower position than `30"`), so the ordering assertions are unambiguous as long as the full JSON contains both. If needed, use `"\"id\":\"3\","` (with trailing comma) to avoid substring collision — but since these are different elements in the array, the positions will differ.
+**Target file after edit:**
+```csharp
+using Cedar.Types;
 
-**Alternatively**, use `Contains` + index ordering on the full serialized JSON, or serialize with `JsonSerializerOptions` with indentation (using `CedarJson` or directly) and do a more robust regex-based check.
+namespace Cedar.Core.Internal.Eval;
+
+internal sealed record EvalEnv(IEntityGetter Entities, ICedarData Principal, ICedarData Action, ICedarData Resource, ICedarData? Context)
+{
+    public static EvalEnv FromRequest(IEntityGetter entities, Request request)
+    {
+        return new EvalEnv(entities, request.Principal, request.Action, request.Resource, request.Context);
+    }
+}
+```
+
+**edit_file calls needed:**
+1. Replace `"using System.Collections.Generic;\nusing Cedar.Types;"` → `"using Cedar.Types;"`
+2. Replace the `InCache` property line + blank line → empty (remove them)
+
+---
+
+## File 2: `src/Cedar.Core/Internal/Eval/Evaluators/MembershipEvaluators.cs`
+
+### Change A: `InOperator.Contains` — update call sites to pass `env.Entities`
+
+**Lines 42–50 (current):**
+```csharp
+public static bool Contains(EvalEnv env, EntityUid entity, ICedarData query)
+{
+    return query switch
+    {
+        EntityUid parent => EntityInOne(env, entity, parent),       // pass env.Entities instead
+        CedarSet set => EntityInSet(env, entity, set),              // pass env.Entities instead
+        _ => throw new EvalException($"expected set or entity, got {EvalErrors.TypeName(query)}")
+    };
+}
+```
+
+**Lines 42–50 (target):**
+```csharp
+public static bool Contains(EvalEnv env, EntityUid entity, ICedarData query)
+{
+    return query switch
+    {
+        EntityUid parent => EntityInOne(env.Entities, entity, parent),
+        CedarSet set => EntityInSet(env.Entities, entity, set),
+        _ => throw new EvalException($"expected set or entity, got {EvalErrors.TypeName(query)}")
+    };
+}
+```
+
+### Change B: Replace `EntityInOne` — drop cache, change signature to `IEntityGetter`
+
+**Lines 52–63 (current):**
+```csharp
+private static bool EntityInOne(EvalEnv env, EntityUid entity, EntityUid parent)
+{
+    (EntityUid Lhs, EntityUid Rhs) key = (entity, parent);
+    if (env.InCache.TryGetValue(key, out bool cached))
+    {
+        return cached;
+    }
+
+    bool result = EntityInEntity(env.Entities, entity, parent);
+    env.InCache[key] = result;
+    return result;
+}
+```
+
+**Lines 52–63 (target):**
+```csharp
+private static bool EntityInOne(IEntityGetter entities, EntityUid entity, EntityUid parent)
+{
+    return EntityInEntity(entities, entity, parent);
+}
+```
+
+### Change C: `EntityInSet` — update signature to `IEntityGetter`
+
+**Lines 65–77 (current):**
+```csharp
+private static bool EntityInSet(EvalEnv env, EntityUid entity, CedarSet set)
+{
+    foreach (ICedarData candidate in set)
+    {
+        EntityUid parent = TypeConversion.ValueToEntity(candidate);
+        if (EntityInOne(env, entity, parent))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+```
+
+**Lines 65–77 (target):**
+```csharp
+private static bool EntityInSet(IEntityGetter entities, EntityUid entity, CedarSet set)
+{
+    foreach (ICedarData candidate in set)
+    {
+        EntityUid parent = TypeConversion.ValueToEntity(candidate);
+        if (EntityInOne(entities, entity, parent))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+```
+
+**Note:** `using System.Collections.Generic;` at line 1 of this file must **stay** — `HashSet<EntityUid>` and `Stack<EntityUid>` in `EntityInEntity` (lines 86–87) still require it.
+
+---
+
+## No Other Files Need Changes
+
+- `InEvaluator.Eval` (line 12): calls `InOperator.Contains(env, ...)` — signature unchanged, no edit needed.
+- `IsInEvaluator.Eval` (line 36): same — no edit needed.
+- `PartialEvaluator.cs`: uses `EvalEnv` but never touches `InCache` directly — no edit needed.
+- `ConstantFolder.cs`: constructs `EvalEnv` via positional constructor — no edit needed (property initializer was auto-init, no ctor arg).
 
 ---
 
 ## Acceptance Criteria
 
-1. `dotnet test cedar-dotnet.sln` passes with the new test included.
-2. The new test `JsonSerializeParentsInConsistentOrder` constructs an Entity with 5 parents in non-sorted order and asserts their positions in the JSON output are in `(Type, Id)` lexicographic order.
-3. No changes to `EntityJsonConverter.cs` are needed — the production code is already correct.
+1. **`EvalEnv.cs`** has no `InCache` property and no `using System.Collections.Generic`.
+2. **`MembershipEvaluators.cs`** `EntityInOne` and `EntityInSet` accept `IEntityGetter` instead of `EvalEnv`; no `InCache` references remain anywhere in `src/`.
+3. `grep -r "InCache" src/` returns no results.
+4. `dotnet build cedar-dotnet.sln` succeeds with zero errors/warnings.
+5. `dotnet test cedar-dotnet.sln` passes — all `in` expression tests (conformance corpus + unit) remain green.
+6. No new tests required: this is a pure performance/allocation removal with identical observable behavior.
 
 ---
 
-## Go → C# Pattern Map
+## Go → C# Pattern Map (for reference)
 
 | Go | C# |
 |---|---|
-| `slices.SortFunc(parents, func(a,b) int { ... })` | `.OrderBy(...).ThenBy(...)` (LINQ, already present) |
-| `strings.Compare(string(a.Type), string(b.Type))` | `StringComparer.Ordinal` |
-| `testutil.JSONMarshalsTo(t, e, ...)` | xUnit `Assert.True(indexA < indexB)` or string `Contains` assertions |
-| `types.NewEntityUID("BarType", "1")` | `new EntityUid(new EntityType("BarType"), new CedarString("1"))` |
-| `types.NewEntityUIDSet(...)` | `new EntityUidSet([...])` |
-| `types.Record{}` | `new CedarRecord()` |
-
----
-
-## Files Modified
-
-| File | Change |
-|---|---|
-| `test/Cedar.Tests/Types/EntityTests.cs` | Add `JsonSerializeParentsInConsistentOrder` test |
-
-**No production code changes needed.**
+| `map[(EntityUID, EntityUID)]bool` | `Dictionary<(EntityUid, EntityUid), bool>` |
+| `Env` struct (value type) | `EvalEnv` sealed record (reference type, but immutable) |
+| Remove field from struct → zero alloc | Remove auto-property init `= []` → no `Dictionary` heap alloc per `EvalEnv` |
+| `entityInSet(env *Env, ...)` | `EntityInSet(EvalEnv env, ...)` → `EntityInSet(IEntityGetter entities, ...)` |
