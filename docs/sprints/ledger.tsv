@@ -1,10 +1,11 @@
 sprint_id	title	status	created_at	updated_at
-001	Bootstrap, Build Infrastructure, and Primitive Values	completed	2026-03-26T18:19:39Z	2026-03-26T18:34:25Z
-002	Extended Types, Collection Types, Entity System, and Serialization	completed	2026-03-26T18:19:39Z	2026-03-26T19:00:00Z
-003	Internal AST Node Hierarchy and Public Fluent Builder	completed	2026-03-26T18:19:39Z	2026-03-26T19:30:00Z
-004	Tokenizer, Recursive Descent Parser, and Cedar Text Serialization	completed	2026-03-26T18:19:39Z	2026-03-26T20:00:00Z
-005	Cedar JSON Serialization and Policy Container APIs	completed	2026-03-26T18:19:39Z	2026-03-26T20:30:00Z
-006	Evaluation Engine, Extension Functions, and Authorization	completed	2026-03-26T18:19:39Z	2026-03-26T15:16:28.081201
-007	Constant Folding, Conformance Corpus, and Parser Hardening	planned	2026-03-26T18:19:39Z	2026-03-26T18:19:39Z
-008	Schema Package	planned	2026-03-26T18:19:39Z	2026-03-26T18:19:39Z
-009	Batch Authorization, Experimental Surface, Benchmarks, and Packaging	planned	2026-03-26T18:19:39Z	2026-03-26T18:19:39Z
+001	001: Bootstrap, Build Infrastructure, and Primitive Values	completed	2026-03-26T18:19:39Z	2026-03-29T10:21:35.739440
+002	002: Extended Types, Collection Types, Entity System, and Serialization	completed	2026-03-26T18:19:39Z	2026-03-29T10:21:35.739686
+003	003: Internal AST Node Hierarchy and Public Fluent Builder	completed	2026-03-26T18:19:39Z	2026-03-29T10:21:35.740016
+004	004: Tokenizer, Recursive Descent Parser, and Cedar Text Serialization	completed	2026-03-26T18:19:39Z	2026-03-29T10:21:35.740230
+005	005: Cedar JSON Serialization and Policy Container APIs	completed	2026-03-26T18:19:39Z	2026-03-29T10:21:35.740571
+006	006: Evaluation Engine, Extension Functions, and Authorization	completed	2026-03-26T18:19:39Z	2026-03-29T10:21:35.740983
+007	007: Constant Folding, Conformance Corpus, and Parser Hardening	planned	2026-03-26T18:19:39Z	2026-03-29T10:21:35.741254
+008	008: Schema Package	planned	2026-03-26T18:19:39Z	2026-03-29T10:21:35.741418
+009	009: Batch Authorization, Experimental Surface, Benchmarks, and Packaging	planned	2026-03-26T18:19:39Z	2026-03-29T10:21:35.741649
+010	010: Schema Validation	planned	2026-03-29T10:21:35.741715	2026-03-29T10:21:35.741715
