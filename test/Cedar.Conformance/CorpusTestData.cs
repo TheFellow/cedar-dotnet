@@ -7,6 +7,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Cedar.Ast.Internal;
 using Cedar.Core;
 using Cedar.Core.Internal.Parser;
@@ -14,6 +15,37 @@ using Cedar.Schema;
 using Cedar.Types;
 
 namespace Cedar.Conformance;
+
+public sealed record CorpusScenarioRequest(
+    int RequestIndex,
+    Request Request,
+    Decision ExpectedDecision,
+    ImmutableArray<string> ExpectedReasons,
+    ImmutableArray<string> ExpectedErrors)
+{
+    public override string ToString()
+    {
+        return $"#{RequestIndex}";
+    }
+}
+
+public sealed record CorpusScenarioCase(
+    string ScenarioFile,
+    PolicySet Policies,
+    EntityMap Entities,
+    ImmutableArray<CorpusScenarioRequest> Requests,
+    string? SchemaPath,
+    string? SchemaText,
+    string? RustSchemaJsonPath,
+    string? RustSchemaJson,
+    string? ValidationPath,
+    CorpusValidationDocument? Validation)
+{
+    public override string ToString()
+    {
+        return ScenarioFile;
+    }
+}
 
 public sealed record CorpusRequestCase(
     string ScenarioFile,
@@ -31,11 +63,75 @@ public sealed record CorpusRequestCase(
     }
 }
 
+public sealed class CorpusValidationDocument
+{
+    [JsonPropertyName("policyValidation")]
+    public CorpusPolicyValidationResult PolicyValidation { get; init; } = new();
+
+    [JsonPropertyName("entityValidation")]
+    public CorpusEntityValidationResult EntityValidation { get; init; } = new();
+
+    [JsonPropertyName("requestValidation")]
+    public List<CorpusRequestValidationResult> RequestValidation { get; init; } = [];
+}
+
+public sealed class CorpusPolicyValidationResult
+{
+    [JsonPropertyName("strict")]
+    public bool Strict { get; init; }
+
+    [JsonPropertyName("permissive")]
+    public bool Permissive { get; init; }
+
+    [JsonPropertyName("strictErrors")]
+    public List<string> StrictErrors { get; init; } = [];
+
+    [JsonPropertyName("permissiveErrors")]
+    public List<string> PermissiveErrors { get; init; } = [];
+
+    [JsonPropertyName("perPolicy")]
+    public Dictionary<string, CorpusPolicyValidationResult> PerPolicy { get; init; }
+        = new(StringComparer.Ordinal);
+}
+
+public sealed class CorpusEntityValidationResult
+{
+    [JsonPropertyName("perEntity")]
+    public Dictionary<string, CorpusValidationEntityResult> PerEntity { get; init; }
+        = new(StringComparer.Ordinal);
+}
+
+public sealed class CorpusValidationEntityResult
+{
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement> AdditionalData { get; init; }
+        = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+}
+
+public sealed class CorpusRequestValidationResult
+{
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = string.Empty;
+
+    [JsonPropertyName("strict")]
+    public bool Strict { get; init; }
+
+    [JsonPropertyName("permissive")]
+    public bool Permissive { get; init; }
+}
+
 public static class CorpusTestData
 {
     private const long MaxArchiveBytes = 512L * 1024L * 1024L;
     private const long MaxEntryBytes = 16L * 1024L * 1024L;
+    private const string CorpusArchiveName = "corpus-tests.tar.gz";
+    private const string CorpusArchiveRoot = "corpus-tests/";
+    private const string JsonSchemaArchiveName = "corpus-tests-json-schemas.tar.gz";
+    private const string JsonSchemaArchiveRoot = "corpus-tests-json-schemas/";
+    private const string ValidationArchiveName = "corpus-tests-validation.tar.gz";
+    private const string ValidationArchiveRoot = "corpus-tests-validation/";
 
+    private static readonly Lazy<IReadOnlyList<CorpusScenarioCase>> CachedScenarios = new(LoadScenarios);
     private static readonly Lazy<IReadOnlyList<CorpusRequestCase>> CachedCases = new(LoadCases);
 
     public static IEnumerable<object[]> Requests
@@ -44,89 +140,62 @@ public static class CorpusTestData
         {
             foreach (CorpusRequestCase request in CachedCases.Value)
             {
-                yield return new object[] { request };
+                yield return [request];
             }
         }
     }
 
-    private static IReadOnlyList<CorpusRequestCase> LoadCases()
+    public static IEnumerable<object[]> Scenarios
     {
-        string archivePath = LocateCorpusArchive();
-        Dictionary<string, byte[]> files = ExtractArchive(archivePath);
-
-        List<string> scenarioFiles = files.Keys
-            .Where(static file => file.StartsWith("corpus-tests/", StringComparison.Ordinal))
-            .Where(static file => file.EndsWith(".json", StringComparison.Ordinal))
-            .Where(static file => !file.EndsWith(".entities.json", StringComparison.Ordinal))
-            .OrderBy(static file => file, StringComparer.Ordinal)
-            .ToList();
-
-        List<CorpusRequestCase> requests = [];
-        foreach (string scenarioFile in scenarioFiles)
+        get
         {
-            using JsonDocument scenarioDocument = JsonDocument.Parse(ReadRequiredFile(files, scenarioFile));
-            JsonElement scenarioRoot = scenarioDocument.RootElement;
-            if (scenarioRoot.ValueKind != JsonValueKind.Object)
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
             {
-                throw new InvalidDataException($"Scenario '{scenarioFile}' must be a JSON object.");
-            }
-
-            string policiesPath = GetRequiredString(scenarioRoot, "policies");
-            string entitiesPath = GetRequiredString(scenarioRoot, "entities");
-            string policyText = ReadRequiredTextFile(files, policiesPath);
-            byte[] entitiesBytes = ReadRequiredFile(files, entitiesPath);
-
-            PolicySet policySet = BuildPolicySet(policyText);
-            EntityMap entityMap;
-            if (scenarioRoot.TryGetProperty("schema", out JsonElement schemaElement))
-            {
-                try
-                {
-                    entityMap = ParseEntityMapWithSchema(entitiesBytes, ReadRequiredTextFile(files, GetSchemaPath(schemaElement)), GetSchemaPath(schemaElement));
-                }
-                catch
-                {
-                    // Fall back to non-schema parsing if schema-guided parsing fails
-                    // (e.g. unrecognized extension types like __cedar::datetime)
-                    entityMap = ParseEntityMap(entitiesBytes);
-                }
-            }
-            else
-            {
-                entityMap = ParseEntityMap(entitiesBytes);
-            }
-
-            JsonElement requestsElement = GetRequiredProperty(scenarioRoot, "requests", JsonValueKind.Array);
-            int requestIndex = 0;
-            foreach (JsonElement requestElement in requestsElement.EnumerateArray())
-            {
-                Request request = ParseRequest(requestElement);
-                Decision decision = ParseDecision(GetRequiredString(requestElement, "decision"));
-                ImmutableArray<string> reasons = ReadStringArray(requestElement, "reason");
-                ImmutableArray<string> errors = ReadStringArray(requestElement, "errors");
-
-                requests.Add(new CorpusRequestCase(
-                    scenarioFile,
-                    requestIndex,
-                    policySet,
-                    entityMap,
-                    request,
-                    decision,
-                    reasons,
-                    errors));
-                requestIndex++;
+                yield return [scenario];
             }
         }
-
-        return requests;
     }
 
-    private static string LocateCorpusArchive()
+    public static IEnumerable<object[]> SchemaScenarios
     {
+        get
+        {
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value.Where(static scenario => scenario.SchemaText is not null))
+            {
+                yield return [scenario];
+            }
+        }
+    }
+
+    public static IEnumerable<object[]> ValidationScenarios
+    {
+        get
+        {
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value.Where(static scenario => scenario.Validation is not null))
+            {
+                yield return [scenario];
+            }
+        }
+    }
+
+    public static IReadOnlyList<CorpusScenarioCase> GetAllScenarios()
+    {
+        return CachedScenarios.Value;
+    }
+
+    public static IReadOnlyList<CorpusScenarioCase> GetSchemaScenarios()
+    {
+        return CachedScenarios.Value.Where(static scenario => scenario.SchemaText is not null).ToList();
+    }
+
+    public static string LocateTestDataArchive(string archiveName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(archiveName);
+
         string? directory = AppContext.BaseDirectory;
         while (directory is not null)
         {
-            string candidate = Path.Combine(directory, "testdata", "corpus-tests.tar.gz");
+            string candidate = Path.Combine(directory, "testdata", archiveName);
             if (File.Exists(candidate))
             {
                 return candidate;
@@ -136,11 +205,14 @@ public static class CorpusTestData
             directory = parent?.FullName;
         }
 
-        throw new FileNotFoundException("Unable to locate testdata/corpus-tests.tar.gz from AppContext.BaseDirectory.");
+        throw new FileNotFoundException($"Unable to locate testdata/{archiveName} from AppContext.BaseDirectory.");
     }
 
-    private static Dictionary<string, byte[]> ExtractArchive(string archivePath)
+    public static Dictionary<string, byte[]> ExtractArchive(string archivePath, string requiredRootPrefix)
     {
+        ArgumentException.ThrowIfNullOrEmpty(archivePath);
+        ArgumentException.ThrowIfNullOrEmpty(requiredRootPrefix);
+
         using FileStream fileStream = File.OpenRead(archivePath);
         using GZipStream gzip = new(fileStream, CompressionMode.Decompress, leaveOpen: false);
         using TarReader tarReader = new(gzip, leaveOpen: false);
@@ -161,7 +233,9 @@ public static class CorpusTestData
             }
 
             string normalizedPath = NormalizePath(entry.Name);
-            if (normalizedPath.Length == 0 || !normalizedPath.StartsWith("corpus-tests/", StringComparison.Ordinal))
+            if (normalizedPath.Length == 0
+                || !normalizedPath.StartsWith(requiredRootPrefix, StringComparison.Ordinal)
+                || IsAppleDoubleEntry(normalizedPath))
             {
                 continue;
             }
@@ -177,6 +251,128 @@ public static class CorpusTestData
         }
 
         return files;
+    }
+
+    private static IReadOnlyList<CorpusScenarioCase> LoadScenarios()
+    {
+        Dictionary<string, byte[]> files = ExtractArchive(LocateTestDataArchive(CorpusArchiveName), CorpusArchiveRoot);
+        Dictionary<string, byte[]> rustSchemaFiles = ExtractArchive(LocateTestDataArchive(JsonSchemaArchiveName), JsonSchemaArchiveRoot);
+        Dictionary<string, byte[]> validationFiles = ExtractArchive(LocateTestDataArchive(ValidationArchiveName), ValidationArchiveRoot);
+
+        List<string> scenarioFiles = files.Keys
+            .Where(static file => file.StartsWith(CorpusArchiveRoot, StringComparison.Ordinal))
+            .Where(static file => file.EndsWith(".json", StringComparison.Ordinal))
+            .Where(static file => !file.EndsWith(".entities.json", StringComparison.Ordinal))
+            .OrderBy(static file => file, StringComparer.Ordinal)
+            .ToList();
+
+        List<CorpusScenarioCase> scenarios = [];
+        foreach (string scenarioFile in scenarioFiles)
+        {
+            using JsonDocument scenarioDocument = JsonDocument.Parse(ReadRequiredFile(files, scenarioFile));
+            JsonElement scenarioRoot = scenarioDocument.RootElement;
+            if (scenarioRoot.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidDataException($"Scenario '{scenarioFile}' must be a JSON object.");
+            }
+
+            string policiesPath = GetRequiredString(scenarioRoot, "policies");
+            string entitiesPath = GetRequiredString(scenarioRoot, "entities");
+            string policyText = ReadRequiredTextFile(files, policiesPath);
+            byte[] entitiesBytes = ReadRequiredFile(files, entitiesPath);
+
+            string? schemaPath = null;
+            string? schemaText = null;
+            string? rustSchemaJsonPath = null;
+            string? rustSchemaJson = null;
+            CorpusValidationDocument? validation = null;
+            string? validationPath = null;
+
+            if (scenarioRoot.TryGetProperty("schema", out JsonElement schemaElement))
+            {
+                schemaPath = GetSchemaPath(schemaElement);
+                schemaText = ReadRequiredTextFile(files, schemaPath);
+                rustSchemaJsonPath = GetRustSchemaJsonPath(schemaPath);
+                rustSchemaJson = ReadRequiredTextFile(rustSchemaFiles, rustSchemaJsonPath);
+                validationPath = GetValidationPath(scenarioFile);
+                validation = ParseValidation(ReadRequiredTextFile(validationFiles, validationPath));
+            }
+
+            PolicySet policySet = BuildPolicySet(policyText);
+            EntityMap entityMap;
+            if (schemaText is not null && schemaPath is not null)
+            {
+                try
+                {
+                    entityMap = ParseEntityMapWithSchema(entitiesBytes, schemaText, schemaPath);
+                }
+                catch
+                {
+                    // Fall back to non-schema parsing if schema-guided parsing fails
+                    // (e.g. unrecognized extension types like __cedar::datetime).
+                    entityMap = ParseEntityMap(entitiesBytes);
+                }
+            }
+            else
+            {
+                entityMap = ParseEntityMap(entitiesBytes);
+            }
+
+            JsonElement requestsElement = GetRequiredProperty(scenarioRoot, "requests", JsonValueKind.Array);
+            ImmutableArray<CorpusScenarioRequest>.Builder requestBuilder = ImmutableArray.CreateBuilder<CorpusScenarioRequest>();
+            int requestIndex = 0;
+            foreach (JsonElement requestElement in requestsElement.EnumerateArray())
+            {
+                Request request = ParseRequest(requestElement);
+                Decision decision = ParseDecision(GetRequiredString(requestElement, "decision"));
+                ImmutableArray<string> reasons = ReadStringArray(requestElement, "reason");
+                ImmutableArray<string> errors = ReadStringArray(requestElement, "errors");
+
+                requestBuilder.Add(new CorpusScenarioRequest(
+                    requestIndex,
+                    request,
+                    decision,
+                    reasons,
+                    errors));
+                requestIndex++;
+            }
+
+            scenarios.Add(new CorpusScenarioCase(
+                scenarioFile,
+                policySet,
+                entityMap,
+                requestBuilder.ToImmutable(),
+                schemaPath,
+                schemaText,
+                rustSchemaJsonPath,
+                rustSchemaJson,
+                validationPath,
+                validation));
+        }
+
+        return scenarios;
+    }
+
+    private static IReadOnlyList<CorpusRequestCase> LoadCases()
+    {
+        List<CorpusRequestCase> requests = [];
+        foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
+        {
+            foreach (CorpusScenarioRequest request in scenario.Requests)
+            {
+                requests.Add(new CorpusRequestCase(
+                    scenario.ScenarioFile,
+                    request.RequestIndex,
+                    scenario.Policies,
+                    scenario.Entities,
+                    request.Request,
+                    request.ExpectedDecision,
+                    request.ExpectedReasons,
+                    request.ExpectedErrors));
+            }
+        }
+
+        return requests;
     }
 
     private static byte[] ReadAllBytesBounded(Stream stream, long maxBytes)
@@ -203,6 +399,33 @@ public static class CorpusTestData
         }
 
         return output.ToArray();
+    }
+
+    private static bool IsAppleDoubleEntry(string normalizedPath)
+    {
+        string fileName = Path.GetFileName(normalizedPath);
+        return fileName.StartsWith("._", StringComparison.Ordinal);
+    }
+
+    private static string GetRustSchemaJsonPath(string schemaPath)
+    {
+        return $"{JsonSchemaArchiveRoot}{Path.GetFileName(schemaPath)}.json";
+    }
+
+    private static string GetValidationPath(string scenarioFile)
+    {
+        return $"{ValidationArchiveRoot}{Path.GetFileNameWithoutExtension(scenarioFile)}.validation.json";
+    }
+
+    private static CorpusValidationDocument ParseValidation(string json)
+    {
+        JsonSerializerOptions options = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        return JsonSerializer.Deserialize<CorpusValidationDocument>(json, options)
+            ?? throw new InvalidDataException("Validation JSON deserialized to null.");
     }
 
     private static PolicySet BuildPolicySet(string policyText)

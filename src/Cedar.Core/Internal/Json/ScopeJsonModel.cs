@@ -97,9 +97,9 @@ internal sealed record ScopeJsonModel
             return new ScopeIn(Entity.ToEntity());
         }
 
-        if (Entities is null || Entities.Count == 0)
+        if (Entities is null)
         {
-            throw new JsonException("Scope with op 'in' must include 'entity' or non-empty 'entities'.");
+            throw new JsonException("Scope with op 'in' must include 'entity' or 'entities'.");
         }
 
         return new ScopeInSet(Entities.Select(static model => model.ToEntity()).ToArray());

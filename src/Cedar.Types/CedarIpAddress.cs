@@ -1,7 +1,8 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Linq;
+using System.Text;
 
 namespace Cedar.Types;
 
@@ -201,7 +202,84 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
     private string FormatValue()
     {
         int bitLength = GetBitLength(Address);
-        string addressText = Address.ToString();
+        string addressText = Address.AddressFamily == AddressFamily.InterNetworkV6 && CountOccurrences(Address.ToString(), '.') > 0
+            ? FormatCanonicalIpv6(Address)
+            : Address.ToString();
         return PrefixLength == bitLength ? addressText : addressText + "/" + PrefixLength;
+    }
+
+    private static string FormatCanonicalIpv6(IPAddress address)
+    {
+        byte[] bytes = address.GetAddressBytes();
+        ushort[] groups = new ushort[8];
+        for (int index = 0; index < groups.Length; index++)
+        {
+            groups[index] = (ushort)((bytes[index * 2] << 8) | bytes[(index * 2) + 1]);
+        }
+
+        (int bestStart, int bestLength) = FindBestZeroRun(groups);
+
+        StringBuilder builder = new();
+        bool needsSeparator = false;
+
+        for (int index = 0; index < groups.Length; index++)
+        {
+            if (bestLength > 0 && index == bestStart)
+            {
+                builder.Append("::");
+                needsSeparator = false;
+                index += bestLength - 1;
+                continue;
+            }
+
+            if (needsSeparator)
+            {
+                builder.Append(':');
+            }
+
+            builder.Append(groups[index].ToString("x"));
+            needsSeparator = true;
+        }
+
+        return builder.Length == 0 ? "::" : builder.ToString();
+    }
+
+    private static (int Start, int Length) FindBestZeroRun(ushort[] groups)
+    {
+        int bestStart = -1;
+        int bestLength = 0;
+        int currentStart = -1;
+        int currentLength = 0;
+
+        for (int index = 0; index < groups.Length; index++)
+        {
+            if (groups[index] == 0)
+            {
+                if (currentStart < 0)
+                {
+                    currentStart = index;
+                }
+
+                currentLength++;
+                continue;
+            }
+
+            if (currentLength > bestLength)
+            {
+                bestStart = currentStart;
+                bestLength = currentLength;
+            }
+
+            currentStart = -1;
+            currentLength = 0;
+        }
+
+        if (currentLength > bestLength)
+        {
+            bestStart = currentStart;
+            bestLength = currentLength;
+        }
+
+        return bestLength >= 2 ? (bestStart, bestLength) : (-1, 0);
     }
 }

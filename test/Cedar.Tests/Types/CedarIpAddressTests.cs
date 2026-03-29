@@ -115,4 +115,12 @@ public sealed class CedarIpAddressTests
         Assert.Equal("{\"__extn\":{\"fn\":\"ip\",\"arg\":\"12.34.56.78\"}}", json);
         CedarAssert.Equal(expected, Assert.IsType<CedarIpAddress>(actual));
     }
+
+    [Fact]
+    public void MarshalCedar_FormatsIpv6WithoutEmbeddedIpv4DottedNotation()
+    {
+        CedarIpAddress value = new(IPAddress.Parse("::255.58.0.255"));
+
+        CedarAssert.CedarText(value, "ip(\"::ff3a:ff\")");
+    }
 }

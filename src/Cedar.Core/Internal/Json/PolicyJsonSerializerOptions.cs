@@ -20,6 +20,9 @@ internal static class PolicyJsonSerializerOptions
         };
 
         options.Converters.Add(new CedarValueJsonConverter());
+        options.Converters.Add(new EntityUidJsonConverter());
+        options.Converters.Add(new EntityJsonConverter());
+        options.Converters.Add(new EntityMapJsonConverter());
         return options;
     }
 }
