@@ -119,6 +119,34 @@ BatchAuthorization.Authorize(
 
 Supports `CancellationToken` for aborting long-running batches.
 
+## Schema Validation
+
+Validate policies, entities, and requests against a Cedar schema before deployment:
+
+```csharp
+using Cedar.Schema;
+
+SchemaDocument schema = SchemaDocument.UnmarshalCedar("""
+    entity User;
+    entity Photo in Album { name: String };
+    entity Album;
+    action view appliesTo { principal: User, resource: Photo };
+    """);
+
+ResolvedSchema resolved = schema.Resolve();
+SchemaValidator validator = new(resolved, ValidationMode.Strict);
+
+// Validate a policy
+ValidationResult result = validator.ValidatePolicy("policy0", policy);
+// result.IsValid, result.Errors
+
+// Validate entities conform to the schema
+ValidationResult entityResult = validator.ValidateEntities(entities);
+
+// Validate a request is well-typed for the action
+ValidationResult requestResult = validator.ValidateRequest(request);
+```
+
 ## Packages
 
 | Package | Description |
@@ -126,13 +154,13 @@ Supports `CancellationToken` for aborting long-running batches.
 | `Cedar.Types` | Value types, entities, collections |
 | `Cedar.Ast` | AST nodes and fluent policy builder |
 | `Cedar.Core` | Authorize, Policy, PolicySet, parser, evaluator |
-| `Cedar.Schema` | Schema parsing (Cedar text + JSON), formatting, round-trip |
+| `Cedar.Schema` | Schema parsing, validation, resolution, formatting, round-trip |
 | `Cedar.Batch` | Batch authorization with variable substitution |
 | `Cedar.Experimental` | Node evaluation, partial evaluation, DOT export |
 
 ## Conformance
 
-cedar-dotnet passes 62,000/62,000 tests from the official Cedar conformance corpus (the same suite used by cedar-go and the Rust reference implementation).
+cedar-dotnet passes 108,501 tests from the official Cedar conformance corpus (the same suite used by cedar-go and the Rust reference implementation), covering authorization, parsing, and schema validation parity.
 
 ## Benchmarks
 
