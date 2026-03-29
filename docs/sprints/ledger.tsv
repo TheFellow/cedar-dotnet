@@ -8,4 +8,4 @@ sprint_id	title	status	created_at	updated_at
 007	007: Constant Folding, Conformance Corpus, and Parser Hardening	planned	2026-03-26T18:19:39Z	2026-03-29T10:21:35.741254
 008	008: Schema Package	planned	2026-03-26T18:19:39Z	2026-03-29T10:21:35.741418
 009	009: Batch Authorization, Experimental Surface, Benchmarks, and Packaging	planned	2026-03-26T18:19:39Z	2026-03-29T10:21:35.741649
-010	010: Schema Validation	planned	2026-03-29T10:21:35.741715	2026-03-29T10:21:35.741715
+010	010: Schema Validation	completed	2026-03-29T10:21:35.741715	2026-03-29T12:42:12.597744
