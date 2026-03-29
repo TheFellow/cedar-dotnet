@@ -1,0 +1,9 @@
+cedar-dotnet
+Copyright 2026 Ryan Harris
+
+This project is a semantic port of cedar-go, which is licensed under the
+Apache License, Version 2.0.
+
+cedar-go
+Copyright Cedar Contributors
+https://github.com/cedar-policy/cedar-go

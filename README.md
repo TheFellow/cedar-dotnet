@@ -156,6 +156,10 @@ Requires .NET 10.0 SDK. TreatWarningsAsErrors is enabled.
 
 cedar-dotnet tracks upstream cedar-go changes via an automated [semport pipeline](semport/semport.dot) that analyzes each upstream commit and ports semantic changes while respecting C# idioms. The pipeline runs daily via [Attractor](https://github.com/TheFellow/fkyeah).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards, and [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
 ## License
 
 This project is licensed under the Apache-2.0 License.
