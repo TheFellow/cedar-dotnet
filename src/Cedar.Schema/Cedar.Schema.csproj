@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cedar.Types\Cedar.Types.csproj" />
+    <ProjectReference Include="..\Cedar.Ast\Cedar.Ast.csproj" />
   </ItemGroup>
 </Project>

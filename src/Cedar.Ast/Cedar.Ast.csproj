@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cedar.Tests" />
+    <InternalsVisibleTo Include="Cedar.Schema" />
   </ItemGroup>
 
   <ItemGroup>
