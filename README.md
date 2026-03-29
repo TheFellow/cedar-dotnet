@@ -45,6 +45,45 @@ Request request = new(
 // decision == Decision.Allow
 ```
 
+## Building Policies with the AST
+
+Instead of parsing Cedar text, you can build policies programmatically:
+
+```csharp
+using Cedar.Ast;
+using Cedar.Core;
+using static Cedar.Ast.Values;
+using static Cedar.Ast.Variables;
+using static Cedar.Ast.Operators;
+
+Policy policy = Policy.FromAst(
+    CedarAst.Permit()
+        .PrincipalIs("User")
+        .ActionEq(new EntityUid(new EntityType("Action"), new CedarString("view")))
+        .ResourceIn(new EntityUid(new EntityType("Album"), new CedarString("jane_vacation")))
+        .When(Context().Access("authenticated").Equal(Boolean(true))));
+```
+
+## Building the Entity Graph
+
+Construct entities directly instead of parsing JSON:
+
+```csharp
+EntityUid alice = new(new EntityType("User"), new CedarString("alice"));
+EntityUid photo = new(new EntityType("Photo"), new CedarString("VacationPhoto94.jpg"));
+EntityUid album = new(new EntityType("Album"), new CedarString("jane_vacation"));
+
+EntityMap entities = new(new[]
+{
+    new Entity(alice, new EntityUidSet(), new CedarRecord(new Dictionary<CedarString, ICedarData>
+    {
+        [new CedarString("age")] = new CedarLong(18)
+    }), new CedarRecord()),
+    new Entity(photo, new EntityUidSet(album), new CedarRecord(), new CedarRecord()),
+    new Entity(album, new EntityUidSet(), new CedarRecord(), new CedarRecord()),
+});
+```
+
 ## Batch Authorization
 
 Authorize multiple variable combinations in a single call. The batch engine uses partial evaluation to prune irrelevant policies, then iterates over the cartesian product of variable domains.
