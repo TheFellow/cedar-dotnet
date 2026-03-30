@@ -186,7 +186,7 @@ cedar-dotnet tracks upstream cedar-go changes via an automated [semport pipeline
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards, and [SECURITY.md](SECURITY.md) for vulnerability reporting.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines and [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 ## License
 

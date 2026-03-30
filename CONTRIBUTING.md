@@ -32,10 +32,6 @@ To send us a pull request, please:
 5. Send us a pull request, answering any default questions in the pull request interface.
 6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
 
-## Code of Conduct
-
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
-
 ## Licensing
 
 See the [LICENSE](LICENSE) file for our project's licensing. By submitting a pull request, you agree that your contribution is licensed under the same Apache-2.0 license.
