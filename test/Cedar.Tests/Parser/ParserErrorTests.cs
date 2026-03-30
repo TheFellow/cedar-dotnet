@@ -178,6 +178,37 @@ public sealed class ParserErrorTests
         Assert.Contains("identifier after '.'", parse.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void MultiplePolicies_FirstInvalid_SecondStillParsed()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() =>
+            CedarParser.ParsePolicies("invalid_stuff; permit(principal, action, resource);"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.NotNull(parse);
+    }
+
+    [Fact]
+    public void MultiplePolicies_TwoInvalid_BothErrorsReported()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() =>
+            CedarParser.ParsePolicies("broken1; broken2; permit(principal, action, resource);"));
+
+        Assert.True(ex.InnerExceptions.Count >= 2);
+    }
+
+    [Fact]
+    public void MaxDepthExceeded_ThrowsParseException()
+    {
+        string nested = new string('(', 300) + "1" + new string(')', 300);
+        string input = $"permit(principal, action, resource) when {{ {nested} == 1 }};";
+
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies(input));
+
+        ParseException parse = Assert.IsType<ParseException>(Assert.Single(ex.InnerExceptions));
+        Assert.Contains("depth", parse.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("permit(principal, action, resource) when { {false: 43} };", "identifier or string")]
     [InlineData("permit(principal, action, resource) when { {} has false };", "identifier or string")]

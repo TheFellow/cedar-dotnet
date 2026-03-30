@@ -169,6 +169,56 @@ public sealed class SchemaGuidedEntityParserTests
     }
 
     [Fact]
+    public void ParseEntityMap_ExtensionIpAddr_ParsesGuidedExtension()
+    {
+        Entity entity = ParseSingleEntity(
+            "\"10.0.0.1\"",
+            "{ \"type\": \"Extension\", \"name\": \"ipaddr\" }");
+
+        Assert.Equal(CedarIpAddress.Parse("10.0.0.1"), entity.Attributes[new CedarString("v")]);
+    }
+
+    [Fact]
+    public void ParseEntityMap_ExtensionDecimal_ParsesGuidedExtension()
+    {
+        Entity entity = ParseSingleEntity(
+            "\"12.34\"",
+            "{ \"type\": \"Extension\", \"name\": \"decimal\" }");
+
+        Assert.Equal(CedarDecimal.Parse("12.34"), entity.Attributes[new CedarString("v")]);
+    }
+
+    [Fact]
+    public void ParseEntityMap_ExtensionDatetime_ParsesGuidedExtension()
+    {
+        Entity entity = ParseSingleEntity(
+            "\"2024-01-15T10:30:00Z\"",
+            "{ \"type\": \"Extension\", \"name\": \"datetime\" }");
+
+        Assert.Equal(CedarDatetime.Parse("2024-01-15T10:30:00Z"), entity.Attributes[new CedarString("v")]);
+    }
+
+    [Fact]
+    public void ParseEntityMap_ExtensionIpAddr_ExtnObject_ParsesGuidedExtension()
+    {
+        Entity entity = ParseSingleEntity(
+            "{\"__extn\":{\"fn\":\"ip\",\"arg\":\"10.0.0.1/24\"}}",
+            "{ \"type\": \"Extension\", \"name\": \"ipaddr\" }");
+
+        Assert.Equal(CedarIpAddress.Parse("10.0.0.1/24"), entity.Attributes[new CedarString("v")]);
+    }
+
+    [Fact]
+    public void ParseEntityMap_ExtensionMismatchedFunction_Throws()
+    {
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() => ParseSingleEntity(
+            "{\"__extn\":{\"fn\":\"decimal\",\"arg\":\"1.0\"}}",
+            "{ \"type\": \"Extension\", \"name\": \"ipaddr\" }"));
+
+        Assert.Contains("Expected extension function 'ip'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ParseEntityMap_IdenticalDuplicateEntity_SkipsDuplicate()
     {
         SchemaDocument schema = BuildSchema("{ \"type\": \"EntityOrCommon\", \"name\": \"String\" }");

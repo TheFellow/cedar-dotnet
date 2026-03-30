@@ -809,6 +809,245 @@ public sealed class PartialEvaluationTests
         Assert.Null(result.Policy);
     }
 
+    [Fact]
+    public void NodeLike_WithVariable_PreservesLikePattern()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.name like "alice*" };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("like \"alice*\"", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeIs_WithVariable_PreservesIsCheck()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { resource is Document };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(resource: PartialEvaluation.Variable("resource")));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("is Document", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeIs_WithKnownEntity_FoldsToTrue()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { resource is Document };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv(resource: Doc1));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void NodeIsIn_WithVariable_PreservesIsInCheck()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { resource is Document in Document::"folder1" };
+            """);
+        Entity folder1 = new(
+            new EntityUid(new EntityType("Document"), new CedarString("folder1")),
+            new EntityUidSet(),
+            new CedarRecord(),
+            new CedarRecord());
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(
+                entities: new EntityMap([folder1]),
+                resource: PartialEvaluation.Variable("resource")));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("is Document", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeNegate_WithVariable_PreservesNegation()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { -context.level > 0 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("-context.level", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeNegate_WithKnownValue_Folds()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { -(5) == -5 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void NodeNot_WithVariable_PreservesNot()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { !context.flag };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("unless { context.flag }", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeNot_WithKnownTrue_FoldsToFalse()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { !true };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.False(result.Keep);
+        Assert.Null(result.Policy);
+    }
+
+    [Fact]
+    public void NodeSet_WithVariable_PreservesSetLiteral()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { [1, 2, context.x].contains(1) };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("contains", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeSet_AllKnown_FoldsCompletely()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { [1, 2, 3].contains(2) };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void NodeRecord_WithVariable_PreservesRecord()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { {"a": context.x} has a };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("has a", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeRecord_AllKnown_FoldsCompletely()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { {"a": 1, "b": 2} has a };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        AssertPolicyEquivalent("permit(principal, action, resource);", result.Policy!);
+    }
+
+    [Fact]
+    public void NodeVariable_WithVariable_PreservesVariable()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { context.x == 1 };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(policy, new EvalEnv());
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("context", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeGetTag_WithVariable_PreservesGetTag()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { principal.getTag("role") == "admin" };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(principal: PartialEvaluation.Variable("principal")));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("getTag", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NodeHasTag_WithVariable_PreservesHasTag()
+    {
+        Policy policy = Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when { principal.hasTag("role") };
+            """);
+
+        PartialPolicyResult result = PartialEvaluation.Evaluate(
+            policy,
+            new EvalEnv(principal: PartialEvaluation.Variable("principal")));
+
+        Assert.True(result.Keep);
+        Assert.NotNull(result.Policy);
+        Assert.Contains("hasTag", result.Policy!.MarshalCedar(), StringComparison.Ordinal);
+    }
+
     private static void AssertPolicyEquivalent(string expectedCedar, Policy actual)
     {
         Policy expected = Policy.UnmarshalCedar(expectedCedar);

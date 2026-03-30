@@ -137,6 +137,87 @@ public sealed class PolicyJsonTests
     }
 
     [Fact]
+    public void UnmarshalJson_ActionScopeInWithEntitiesList_DeserializesInSet()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": {
+                "op": "in",
+                "entities": [
+                  { "type": "Action", "id": "read" },
+                  { "type": "Action", "id": "write" }
+                ]
+              },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        Policy policy = Policy.UnmarshalJson(json);
+        string remarshaled = policy.MarshalJson();
+
+        Assert.Contains("\"entities\"", remarshaled, StringComparison.Ordinal);
+        Assert.Contains("\"read\"", remarshaled, StringComparison.Ordinal);
+        Assert.Contains("\"write\"", remarshaled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_PrincipalScopeIs_DeserializesIsScope()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "is", "entity_type": "Admin" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        Policy policy = Policy.UnmarshalJson(json);
+
+        Assert.Contains("principal is Admin", policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_PrincipalScopeIsIn_DeserializesIsInScope()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": {
+                "op": "is",
+                "entity_type": "Admin",
+                "in": { "type": "Group", "id": "admins" }
+              },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        Policy policy = Policy.UnmarshalJson(json);
+
+        Assert.Contains("principal is Admin in Group::\"admins\"", policy.MarshalCedar(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ScopeIsWithoutEntityType_ThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "is" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        JsonException exception = Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+
+        Assert.Contains("must include 'entity_type'", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void UnmarshalJson_UnknownExtensionFunction_ThrowsJsonException()
     {
         JsonException exception = Assert.Throws<JsonException>(
