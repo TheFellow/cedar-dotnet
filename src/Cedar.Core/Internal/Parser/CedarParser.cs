@@ -120,10 +120,6 @@ internal static class CedarParser
             {
                 annotation = ParseCollapsedAnnotation(token);
             }
-            else if (state.Match(TokenType.At))
-            {
-                annotation = ParseInlineAnnotation(state);
-            }
             else
             {
                 break;
@@ -140,16 +136,6 @@ internal static class CedarParser
         return [.. annotations];
     }
 
-    private static Annotation ParseInlineAnnotation(ParserState state)
-    {
-        Token keyToken = state.ExpectAnnotationKey();
-        state.Expect(TokenType.LParen, "Expected '(' after annotation key.");
-        Token valueToken = state.Expect(TokenType.String, "Expected string annotation value.");
-        string value = state.ParseStringToken(valueToken);
-        state.Expect(TokenType.RParen, "Expected ')' after annotation value.");
-
-        return new Annotation(new Ident(keyToken.Text), new CedarString(value));
-    }
 
     private static Annotation ParseCollapsedAnnotation(Token token)
     {

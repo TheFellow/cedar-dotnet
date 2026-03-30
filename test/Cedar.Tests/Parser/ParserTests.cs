@@ -141,7 +141,7 @@ public sealed class ParserTests
     }
 
     [Fact]
-    public void ParseInlineAnnotationWithReservedKeywordKey()
+    public void ParseCollapsedAnnotationWithSpacesAndReservedKeywordKey()
     {
         PolicyAst policy = ParseSingle("@ if ( \"bar\" ) permit(principal, action, resource);");
 

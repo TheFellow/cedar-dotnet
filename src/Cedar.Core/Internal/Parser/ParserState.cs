@@ -73,16 +73,6 @@ internal sealed class ParserState
         return Advance();
     }
 
-    public Token ExpectAnnotationKey()
-    {
-        Token token = Current;
-        if (token.Type == TokenType.Ident || IsAnnotationKeywordToken(token.Type) || IsReservedKeywordToken(token.Type))
-        {
-            return Advance();
-        }
-
-        throw Error(token, "Expected annotation key.");
-    }
 
     public string ParseStringToken(Token token)
     {
@@ -203,26 +193,5 @@ internal sealed class ParserState
 
             Advance();
         }
-    }
-
-    internal static bool IsReservedKeywordToken(TokenType tokenType)
-    {
-        return tokenType is TokenType.True
-            or TokenType.False
-            or TokenType.If
-            or TokenType.Then
-            or TokenType.Else
-            or TokenType.In
-            or TokenType.Like
-            or TokenType.Has
-            or TokenType.Is;
-    }
-
-    private static bool IsAnnotationKeywordToken(TokenType tokenType)
-    {
-        return tokenType is TokenType.Permit
-            or TokenType.Forbid
-            or TokenType.When
-            or TokenType.Unless;
     }
 }
