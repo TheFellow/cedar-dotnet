@@ -9,7 +9,7 @@ using Cedar.Types;
 
 namespace Cedar.Core.Internal.Parser;
 
-public static class CedarWriter
+internal static class CedarWriter
 {
     private const int PrecIf = 1;
     private const int PrecOr = 2;

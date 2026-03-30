@@ -3,7 +3,7 @@ using Cedar.Core;
 
 namespace Cedar.Ast.Internal;
 
-public sealed record PolicyAst(
+internal sealed record PolicyAst(
     Effect Effect,
     IScope PrincipalScope,
     IScope ActionScope,

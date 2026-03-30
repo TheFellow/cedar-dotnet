@@ -6,7 +6,7 @@ namespace Cedar.Experimental;
 
 public static class AstInspect
 {
-    public static void Inspect(Node node, Func<INode, bool> fn)
+    internal static void Inspect(Node node, Func<INode, bool> fn)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(fn);

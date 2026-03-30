@@ -10,7 +10,7 @@ using Cedar.Types;
 
 namespace Cedar.Core.Internal.Parser;
 
-public static class CedarParser
+internal static class CedarParser
 {
     private const int MaxDepth = 256;
     private const int MaxErrors = 10;

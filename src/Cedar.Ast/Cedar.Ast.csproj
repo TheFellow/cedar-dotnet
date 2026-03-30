@@ -9,7 +9,13 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cedar.Tests" />
+    <InternalsVisibleTo Include="Cedar.Batch" />
+    <InternalsVisibleTo Include="Cedar.Batch.Tests" />
+    <InternalsVisibleTo Include="Cedar.Experimental" />
+    <InternalsVisibleTo Include="Cedar.Experimental.Tests" />
     <InternalsVisibleTo Include="Cedar.Schema" />
+    <InternalsVisibleTo Include="Cedar.Schema.Tests" />
+    <InternalsVisibleTo Include="Cedar.Conformance" />
   </ItemGroup>
 
   <ItemGroup>
