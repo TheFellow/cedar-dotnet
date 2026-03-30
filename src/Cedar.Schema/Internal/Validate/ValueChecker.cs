@@ -12,9 +12,9 @@ internal static class ValueChecker
     {
         return expected switch
         {
-            ResolvedStringType => value is Cedar.Types.CedarString ? (false, null) : (false, $"expected String, got {value.GetType().Name}"),
-            ResolvedLongType => value is Cedar.Types.CedarLong ? (false, null) : (false, $"expected Long, got {value.GetType().Name}"),
-            ResolvedBoolType => value is Cedar.Types.CedarBool ? (false, null) : (false, $"expected Boolean, got {value.GetType().Name}"),
+            ResolvedStringType => value is CedarString ? (false, null) : (false, $"expected String, got {value.GetType().Name}"),
+            ResolvedLongType => value is CedarLong ? (false, null) : (false, $"expected Long, got {value.GetType().Name}"),
+            ResolvedBoolType => value is CedarBool ? (false, null) : (false, $"expected Boolean, got {value.GetType().Name}"),
             ResolvedEntityType entityType => CheckEntityValue(value, entityType),
             ResolvedSetType setType => CheckSet(value, setType),
             ResolvedRecordType recordType => value is CedarRecord record
@@ -29,7 +29,7 @@ internal static class ValueChecker
     {
         foreach ((string name, ResolvedAttribute attribute) in expected.Attributes)
         {
-            if (!record.TryGetValue(new Cedar.Types.CedarString(name), out ICedarData? value))
+            if (!record.TryGetValue(new CedarString(name), out ICedarData? value))
             {
                 if (!attribute.Optional)
                 {
@@ -46,7 +46,7 @@ internal static class ValueChecker
             }
         }
 
-        foreach (KeyValuePair<Cedar.Types.CedarString, ICedarData> entry in record)
+        foreach (KeyValuePair<CedarString, ICedarData> entry in record)
         {
             if (!expected.Attributes.ContainsKey(entry.Key.Value))
             {
@@ -108,12 +108,12 @@ internal static class ValueChecker
     private static (bool IsDeserError, string? Error) CheckExtensionValue<TExtension>(string expectedName, ICedarData value)
         where TExtension : class, ICedarData
     {
-        string message = $"expected {expectedName}, got {value.GetType().Name}";
         if (value is TExtension)
         {
             return (false, null);
         }
 
+        string message = $"expected {expectedName}, got {value.GetType().Name}";
         return value is CedarIpAddress or CedarDecimal or CedarDatetime or CedarDuration
             ? (false, message)
             : (true, message);

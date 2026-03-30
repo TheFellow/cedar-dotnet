@@ -2,8 +2,6 @@ using System.Linq;
 using Cedar.Schema.Internal.Validate;
 using Cedar.Types;
 using Xunit;
-using SchemaLongType = Cedar.Schema.Internal.Validate.CedarLong;
-using SchemaStringType = Cedar.Schema.Internal.Validate.CedarString;
 
 namespace Cedar.Schema.Tests;
 
@@ -58,9 +56,9 @@ public sealed class RequestEnvironmentTests
     {
         RequestEnvironment viewUserPhoto = FindEnvironment("User", "view", "Photo");
 
-        Assert.Equal(new SchemaStringType(), viewUserPhoto.ContextType.Attrs["token"].Type);
+        Assert.Equal(CedarStringType.Instance, viewUserPhoto.ContextType.Attrs["token"].Type);
         Assert.False(viewUserPhoto.ContextType.Attrs["token"].Required);
-        Assert.Equal(new SchemaLongType(), viewUserPhoto.ContextType.Attrs["level"].Type);
+        Assert.Equal(CedarLongType.Instance, viewUserPhoto.ContextType.Attrs["level"].Type);
         Assert.True(viewUserPhoto.ContextType.Attrs["level"].Required);
     }
 

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Cedar.Types;
 
@@ -16,12 +18,19 @@ public static class SchemaResolver
         state.CheckShadowing(document);
         state.DetectCommonTypeCycles();
         state.ResolveAllDeclarations(document);
+        state.ValidateEntityParentCycles();
         state.ValidateActionMembership();
         return state.BuildResult();
     }
 
     private sealed class ResolverState
     {
+        private enum VisitState
+        {
+            InProgress = 1,
+            Complete = 2
+        }
+
         private readonly HashSet<EntityType> _entityTypes = [];
         private readonly HashSet<EntityType> _enumTypes = [];
         private readonly Dictionary<string, SchemaType> _commonTypes = new(StringComparer.Ordinal);
@@ -30,7 +39,7 @@ public static class SchemaResolver
         private readonly Dictionary<EntityType, ResolvedEnum> _enums = [];
         private readonly Dictionary<string, ResolvedNamespace> _namespaces = new(StringComparer.Ordinal);
 
-        public void RegisterDeclarations(SchemaDocument document)
+        internal void RegisterDeclarations(SchemaDocument document)
         {
             RegisterDeclarations(string.Empty, document.GlobalNamespace);
 
@@ -40,7 +49,7 @@ public static class SchemaResolver
             }
         }
 
-        public void CheckShadowing(SchemaDocument document)
+        internal void CheckShadowing(SchemaDocument document)
         {
             HashSet<string> bareTypes = new(StringComparer.Ordinal);
 
@@ -91,7 +100,7 @@ public static class SchemaResolver
             }
         }
 
-        public void DetectCommonTypeCycles()
+        internal void DetectCommonTypeCycles()
         {
             Dictionary<string, List<string>> dependencies = new(StringComparer.Ordinal);
             foreach ((string name, SchemaType schemaType) in _commonTypes)
@@ -156,7 +165,7 @@ public static class SchemaResolver
             }
         }
 
-        public void ResolveAllDeclarations(SchemaDocument document)
+        internal void ResolveAllDeclarations(SchemaDocument document)
         {
             ResolveNamespace(string.Empty, document.GlobalNamespace);
 
@@ -164,14 +173,50 @@ public static class SchemaResolver
             {
                 _namespaces[namespaceName] = new ResolvedNamespace(namespaceName)
                 {
-                    Annotations = declaration.Annotations
+                    Annotations = declaration.Annotations.ToImmutableArray()
                 };
 
                 ResolveNamespace(namespaceName, declaration);
             }
         }
 
-        public void ValidateActionMembership()
+        internal void ValidateEntityParentCycles()
+        {
+            Dictionary<EntityType, VisitState> visited = [];
+            foreach (EntityType entityType in _entities.Keys)
+            {
+                Visit(entityType);
+            }
+
+            void Visit(EntityType entityType)
+            {
+                if (visited.TryGetValue(entityType, out VisitState state))
+                {
+                    if (state == VisitState.InProgress)
+                    {
+                        throw new InvalidOperationException($"cycle detected in entity hierarchy involving `{entityType}`");
+                    }
+
+                    return;
+                }
+
+                visited[entityType] = VisitState.InProgress;
+                if (!_entities.TryGetValue(entityType, out ResolvedEntity? entity))
+                {
+                    visited[entityType] = VisitState.Complete;
+                    return;
+                }
+
+                foreach (EntityType parent in entity.ParentTypes)
+                {
+                    Visit(parent);
+                }
+
+                visited[entityType] = VisitState.Complete;
+            }
+        }
+
+        internal void ValidateActionMembership()
         {
             foreach ((EntityUid uid, ResolvedAction action) in _actions)
             {
@@ -184,7 +229,7 @@ public static class SchemaResolver
                 }
             }
 
-            Dictionary<EntityUid, int> visited = [];
+            Dictionary<EntityUid, VisitState> visited = [];
             foreach (EntityUid uid in _actions.Keys)
             {
                 Visit(uid);
@@ -192,37 +237,37 @@ public static class SchemaResolver
 
             void Visit(EntityUid uid)
             {
-                if (visited.TryGetValue(uid, out int state))
+                if (visited.TryGetValue(uid, out VisitState state))
                 {
-                    if (state == 1)
+                    if (state == VisitState.InProgress)
                     {
                         throw new InvalidOperationException($"cycle detected in action hierarchy involving {uid}");
                     }
 
-                    if (state == 2)
+                    if (state == VisitState.Complete)
                     {
                         return;
                     }
                 }
 
-                visited[uid] = 1;
+                visited[uid] = VisitState.InProgress;
                 foreach (EntityUid parent in _actions[uid].Entity.Parents)
                 {
                     Visit(parent);
                 }
 
-                visited[uid] = 2;
+                visited[uid] = VisitState.Complete;
             }
         }
 
-        public ResolvedSchema BuildResult()
+        internal ResolvedSchema BuildResult()
         {
             return new ResolvedSchema
             {
-                Actions = _actions,
-                Entities = _entities,
-                Enums = _enums,
-                Namespaces = _namespaces
+                Actions = _actions.ToFrozenDictionary(),
+                Entities = _entities.ToFrozenDictionary(),
+                Enums = _enums.ToFrozenDictionary(),
+                Namespaces = _namespaces.ToFrozenDictionary(StringComparer.Ordinal)
             };
         }
 
@@ -304,8 +349,8 @@ public static class SchemaResolver
                 _entities[qualifiedName] = new ResolvedEntity
                 {
                     Name = qualifiedName,
-                    Annotations = entity.Annotations,
-                    ParentTypes = parents,
+                    Annotations = entity.Annotations.ToImmutableArray(),
+                    ParentTypes = parents.ToImmutableArray(),
                     Shape = shape,
                     Tags = tags
                 };
@@ -327,8 +372,8 @@ public static class SchemaResolver
                 _enums[qualifiedName] = new ResolvedEnum
                 {
                     Name = qualifiedName,
-                    Annotations = @enum.Annotations,
-                    Values = values
+                    Annotations = @enum.Annotations.ToImmutableArray(),
+                    Values = values.ToImmutableArray()
                 };
             }
         }
@@ -355,7 +400,7 @@ public static class SchemaResolver
                 _actions[uid] = new ResolvedAction
                 {
                     Entity = new Entity(uid, new EntityUidSet(parents), new CedarRecord(), new CedarRecord()),
-                    Annotations = action.Annotations,
+                    Annotations = action.Annotations.ToImmutableArray(),
                     AppliesTo = appliesTo
                 };
             }
@@ -421,8 +466,8 @@ public static class SchemaResolver
 
             return new ResolvedAppliesTo
             {
-                Principals = principals,
-                Resources = resources,
+                Principals = principals.ToImmutableArray(),
+                Resources = resources.ToImmutableArray(),
                 Context = context
             };
         }
@@ -454,7 +499,7 @@ public static class SchemaResolver
                     {
                         Type = ResolveType(namespaceName, attribute.Type),
                         Optional = attribute.Optional,
-                        Annotations = attribute.Annotations
+                        Annotations = attribute.Annotations.ToImmutableArray()
                     };
                 }
                 catch (InvalidOperationException exception)
@@ -465,7 +510,7 @@ public static class SchemaResolver
 
             return new ResolvedRecordType
             {
-                Attributes = attributes
+                Attributes = attributes.ToFrozenDictionary(StringComparer.Ordinal)
             };
         }
 

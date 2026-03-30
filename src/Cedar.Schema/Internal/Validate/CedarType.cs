@@ -8,17 +8,35 @@ namespace Cedar.Schema.Internal.Validate;
 
 internal abstract record CedarType;
 
-internal sealed record CedarNever : CedarType;
+internal sealed record CedarNeverType : CedarType
+{
+    internal static readonly CedarNeverType Instance = new();
+}
 
-internal sealed record CedarTrue : CedarType;
+internal sealed record CedarTrueType : CedarType
+{
+    internal static readonly CedarTrueType Instance = new();
+}
 
-internal sealed record CedarFalse : CedarType;
+internal sealed record CedarFalseType : CedarType
+{
+    internal static readonly CedarFalseType Instance = new();
+}
 
-internal sealed record CedarBool : CedarType;
+internal sealed record CedarBoolType : CedarType
+{
+    internal static readonly CedarBoolType Instance = new();
+}
 
-internal sealed record CedarLong : CedarType;
+internal sealed record CedarLongType : CedarType
+{
+    internal static readonly CedarLongType Instance = new();
+}
 
-internal sealed record CedarString : CedarType;
+internal sealed record CedarStringType : CedarType
+{
+    internal static readonly CedarStringType Instance = new();
+}
 
 internal sealed record CedarSetType(CedarType Element) : CedarType;
 

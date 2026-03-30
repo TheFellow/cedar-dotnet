@@ -43,10 +43,11 @@ public sealed partial class SchemaValidator
             return ValidationResult.Failure($"resource type `{request.Resource.Type}` is not valid for `{request.Action}`");
         }
 
-        (bool _, string? error) = Internal.Validate.ValueChecker.CheckRecord(request.Context ?? new CedarRecord(), action.AppliesTo.Context);
+        CedarRecord context = request.Context ?? new CedarRecord();
+        (bool _, string? error) = Internal.Validate.ValueChecker.CheckRecord(context, action.AppliesTo.Context);
         if (error is not null)
         {
-            return ValidationResult.Failure($"context `{FormatContextRecord(request.Context ?? new CedarRecord())}` is not valid for `{request.Action}`");
+            return ValidationResult.Failure($"context `{FormatContextRecord(context)}` is not valid for `{request.Action}`");
         }
 
         return ValidationResult.Success;

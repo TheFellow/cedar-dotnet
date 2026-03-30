@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Cedar.Ast.Internal;
 using Cedar.Core;
 using Cedar.Schema.Internal.Validate;
@@ -31,6 +32,7 @@ public sealed record ValidationResult(bool IsValid, IReadOnlyList<string> Errors
 public sealed partial class SchemaValidator
 {
     private readonly ResolvedSchema _schema;
+    private readonly ImmutableArray<RequestEnvironment> _requestEnvironments;
     private readonly bool _strict;
 
     public SchemaValidator(ResolvedSchema schema, ValidationMode mode = ValidationMode.Strict)
@@ -38,6 +40,7 @@ public sealed partial class SchemaValidator
         ArgumentNullException.ThrowIfNull(schema);
 
         _schema = schema;
+        _requestEnvironments = [.. RequestEnvironment.Generate(schema)];
         _strict = mode == ValidationMode.Strict;
     }
 
@@ -54,6 +57,8 @@ public sealed partial class SchemaValidator
     }
 
     internal ResolvedSchema Schema => _schema;
+
+    internal ImmutableArray<RequestEnvironment> RequestEnvironments => _requestEnvironments;
 
     internal bool IsStrict => _strict;
 }

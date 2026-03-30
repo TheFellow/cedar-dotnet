@@ -39,7 +39,7 @@ internal static class PolicyValidator
         }
 
         List<RequestEnvironment> environments = RequestEnvironment.FilterForPolicy(
-            RequestEnvironment.Generate(validator.Schema),
+            validator.RequestEnvironments,
             principalTypes,
             resourceTypes,
             actionUids);

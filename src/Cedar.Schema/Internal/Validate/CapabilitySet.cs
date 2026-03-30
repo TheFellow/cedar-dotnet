@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Cedar.Schema.Internal.Validate;
 
@@ -6,28 +6,26 @@ internal readonly record struct Capability(string VarName, string Attr);
 
 internal sealed class CapabilitySet
 {
-    private readonly HashSet<Capability> _caps;
+    private readonly ImmutableHashSet<Capability> _caps;
 
-    private CapabilitySet(HashSet<Capability> caps)
+    private CapabilitySet(ImmutableHashSet<Capability> caps)
     {
         _caps = caps;
     }
 
     public static CapabilitySet Create()
     {
-        return new CapabilitySet([]);
+        return new CapabilitySet(ImmutableHashSet<Capability>.Empty);
     }
 
     public CapabilitySet Clone()
     {
-        return new CapabilitySet([.. _caps]);
+        return new CapabilitySet(_caps);
     }
 
     public CapabilitySet Add(Capability capability)
     {
-        CapabilitySet result = Clone();
-        result._caps.Add(capability);
-        return result;
+        return new CapabilitySet(_caps.Add(capability));
     }
 
     public bool Has(Capability capability)
@@ -37,15 +35,11 @@ internal sealed class CapabilitySet
 
     public CapabilitySet Merge(CapabilitySet other)
     {
-        CapabilitySet result = Clone();
-        result._caps.UnionWith(other._caps);
-        return result;
+        return new CapabilitySet(_caps.Union(other._caps));
     }
 
     public CapabilitySet Intersect(CapabilitySet other)
     {
-        HashSet<Capability> result = [.. _caps];
-        result.IntersectWith(other._caps);
-        return new CapabilitySet(result);
+        return new CapabilitySet(_caps.Intersect(other._caps));
     }
 }

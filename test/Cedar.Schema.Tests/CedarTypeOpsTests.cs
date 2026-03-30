@@ -21,17 +21,17 @@ public sealed class CedarTypeOpsTests
     [Fact]
     public void LeastUpperBound_MergesBooleanSingletons()
     {
-        (CedarType? type, string? error) = CedarTypeOps.LeastUpperBound(new CedarTrue(), new CedarFalse(), strict: true);
+        (CedarType? type, string? error) = CedarTypeOps.LeastUpperBound(CedarTrueType.Instance, CedarFalseType.Instance, strict: true);
 
         Assert.Null(error);
-        Assert.IsType<Cedar.Schema.Internal.Validate.CedarBool>(type);
+        Assert.IsType<CedarBoolType>(type);
     }
 
     [Fact]
     public void LeastUpperBound_StrictRecordMismatchFails()
     {
-        CedarRecordType left = new(new Dictionary<string, CedarAttr> { ["a"] = new(new Cedar.Schema.Internal.Validate.CedarLong(), true) });
-        CedarRecordType right = new(new Dictionary<string, CedarAttr> { ["b"] = new(new Cedar.Schema.Internal.Validate.CedarLong(), true) });
+        CedarRecordType left = new(new Dictionary<string, CedarAttr> { ["a"] = new(CedarLongType.Instance, true) });
+        CedarRecordType right = new(new Dictionary<string, CedarAttr> { ["b"] = new(CedarLongType.Instance, true) });
 
         (CedarType? _, string? error) = CedarTypeOps.LubRecord(left, right, strict: true);
 

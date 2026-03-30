@@ -164,9 +164,9 @@ internal sealed class TypeChecker
     {
         return value switch
         {
-            Cedar.Types.CedarBool boolean => (boolean.Value ? new CedarTrue() : new CedarFalse(), caps, []),
-            Cedar.Types.CedarLong => (new CedarLong(), caps, []),
-            Cedar.Types.CedarString => (new CedarString(), caps, []),
+            CedarBool boolean => (boolean.Value ? CedarTrueType.Instance : CedarFalseType.Instance, caps, []),
+            CedarLong => (CedarLongType.Instance, caps, []),
+            CedarString => (CedarStringType.Instance, caps, []),
             EntityUid entityUid => TypeOfEntityUid(entityUid, caps),
             CedarIpAddress => (new CedarExtType(new Ident("ipaddr")), caps, []),
             CedarDecimal => (new CedarExtType(new Ident("decimal")), caps, []),
@@ -202,7 +202,7 @@ internal sealed class TypeChecker
         return (null, caps, [new ValidationIssue($"unrecognized entity type `{entityType}`")]);
     }
 
-    private static CedarType TypeOfVariable(RequestEnvironment env, Cedar.Types.CedarString name)
+    private static CedarType TypeOfVariable(RequestEnvironment env, CedarString name)
     {
         return name.Value switch
         {
@@ -229,54 +229,54 @@ internal sealed class TypeChecker
                 errors.Add(UnexpectedType("Bool", leftType));
             }
 
-            if (leftType is CedarFalse)
+            if (leftType is CedarFalseType)
             {
                 errors.AddRange(ValidateEntityRefs(node.Right));
-                return (new CedarFalse(), caps, errors);
+                return (CedarFalseType.Instance, caps, errors);
             }
 
             (CedarType? rightTypeAfterError, _, List<ValidationIssue> rightErrors) = TypeOfExpr(env, node.Right, caps);
             errors.AddRange(rightErrors);
-            if (rightTypeAfterError is CedarFalse)
+            if (rightTypeAfterError is CedarFalseType)
             {
-                return (new CedarFalse(), caps, errors);
+                return (CedarFalseType.Instance, caps, errors);
             }
 
-            return (new CedarBool(), caps, errors);
+            return (CedarBoolType.Instance, caps, errors);
         }
 
         if (leftType is null || !IsBoolType(leftType))
         {
-            return (null, caps, [UnexpectedType("Bool", leftType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Bool", leftType ?? CedarNeverType.Instance)]);
         }
 
-        if (leftType is CedarFalse)
+        if (leftType is CedarFalseType)
         {
-            return (new CedarFalse(), caps, ValidateEntityRefs(node.Right));
+            return (CedarFalseType.Instance, caps, ValidateEntityRefs(node.Right));
         }
 
         (CedarType? rightType, CapabilitySet rightCaps, List<ValidationIssue> rightIssues) = TypeOfExpr(env, node.Right, caps.Merge(leftCaps));
         if (rightIssues.Count > 0)
         {
-            return (rightType is CedarFalse ? new CedarFalse() : new CedarBool(), caps, rightIssues);
+            return (rightType is CedarFalseType ? CedarFalseType.Instance : CedarBoolType.Instance, caps, rightIssues);
         }
 
         if (rightType is null || !IsBoolType(rightType))
         {
-            return (null, caps, [UnexpectedType("Bool", rightType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Bool", rightType ?? CedarNeverType.Instance)]);
         }
 
-        if (leftType is CedarTrue)
+        if (leftType is CedarTrueType)
         {
             return (rightType, rightCaps, []);
         }
 
-        if (rightType is CedarFalse)
+        if (rightType is CedarFalseType)
         {
-            return (new CedarFalse(), rightCaps, []);
+            return (CedarFalseType.Instance, rightCaps, []);
         }
 
-        return (new CedarBool(), rightCaps, []);
+        return (CedarBoolType.Instance, rightCaps, []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfOr(RequestEnvironment env, NodeOr node, CapabilitySet caps)
@@ -297,12 +297,12 @@ internal sealed class TypeChecker
 
         if (leftType is null || !IsBoolType(leftType))
         {
-            return (null, caps, [UnexpectedType("Bool", leftType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Bool", leftType ?? CedarNeverType.Instance)]);
         }
 
-        if (leftType is CedarTrue)
+        if (leftType is CedarTrueType)
         {
-            return (new CedarTrue(), leftCaps, ValidateEntityRefs(node.Right));
+            return (CedarTrueType.Instance, leftCaps, ValidateEntityRefs(node.Right));
         }
 
         (CedarType? rightType, CapabilitySet rightCaps, List<ValidationIssue> rightIssues) = TypeOfExpr(env, node.Right, caps);
@@ -313,25 +313,25 @@ internal sealed class TypeChecker
 
         if (rightType is null || !IsBoolType(rightType))
         {
-            return (null, caps, [UnexpectedType("Bool", rightType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Bool", rightType ?? CedarNeverType.Instance)]);
         }
 
-        if (leftType is CedarFalse)
+        if (leftType is CedarFalseType)
         {
             return (rightType, rightCaps, []);
         }
 
-        if (rightType is CedarTrue)
+        if (rightType is CedarTrueType)
         {
-            return (new CedarTrue(), rightCaps, []);
+            return (CedarTrueType.Instance, rightCaps, []);
         }
 
-        if (rightType is CedarFalse)
+        if (rightType is CedarFalseType)
         {
             return (leftType, leftCaps, []);
         }
 
-        return (new CedarBool(), leftCaps.Intersect(rightCaps), []);
+        return (CedarBoolType.Instance, leftCaps.Intersect(rightCaps), []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfNot(RequestEnvironment env, NodeNot node, CapabilitySet caps)
@@ -349,14 +349,14 @@ internal sealed class TypeChecker
 
         if (type is null || !IsBoolType(type))
         {
-            return (null, caps, [UnexpectedType("Bool", type ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Bool", type ?? CedarNeverType.Instance)]);
         }
 
         return type switch
         {
-            CedarTrue => (new CedarFalse(), caps, []),
-            CedarFalse => (new CedarTrue(), caps, []),
-            _ => (new CedarBool(), caps, [])
+            CedarTrueType => (CedarFalseType.Instance, caps, []),
+            CedarFalseType => (CedarTrueType.Instance, caps, []),
+            _ => (CedarBoolType.Instance, caps, [])
         };
     }
 
@@ -392,7 +392,7 @@ internal sealed class TypeChecker
 
         CapabilitySet thenCaps = caps.Merge(conditionCaps);
 
-        if (conditionType is CedarFalse)
+        if (conditionType is CedarFalseType)
         {
             List<ValidationIssue> skippedIssues = ValidateEntityRefs(node.Then);
             (CedarType? elseType, CapabilitySet elseCaps, List<ValidationIssue> elseIssues) = TypeOfExpr(env, node.Else, caps);
@@ -401,7 +401,7 @@ internal sealed class TypeChecker
             return (elseType, elseCaps, skippedIssues);
         }
 
-        if (conditionType is CedarTrue)
+        if (conditionType is CedarTrueType)
         {
             List<ValidationIssue> skippedIssues = ValidateEntityRefs(node.Else);
             (CedarType? thenType, CapabilitySet thenResultCaps, List<ValidationIssue> thenIssues) = TypeOfExpr(env, node.Then, thenCaps);
@@ -460,18 +460,18 @@ internal sealed class TypeChecker
         {
             if (left is NodeVariable leftVar && right is NodeVariable rightVar && leftVar.Name == rightVar.Name)
             {
-                return (negated ? new CedarFalse() : new CedarTrue(), caps, []);
+                return (negated ? CedarFalseType.Instance : CedarTrueType.Instance, caps, []);
             }
 
             if (EvalLiteralEquality(left, right) is bool literalResult)
             {
                 bool result = negated ? !literalResult : literalResult;
-                return (result ? new CedarTrue() : new CedarFalse(), caps, []);
+                return (result ? CedarTrueType.Instance : CedarFalseType.Instance, caps, []);
             }
 
             if (leftType is not null && rightType is not null && AreTypesDisjoint(leftType, rightType))
             {
-                return (negated ? new CedarTrue() : new CedarFalse(), caps, []);
+                return (negated ? CedarTrueType.Instance : CedarFalseType.Instance, caps, []);
             }
         }
 
@@ -484,14 +484,14 @@ internal sealed class TypeChecker
             }
         }
 
-        return (new CedarBool(), caps, issues);
+        return (CedarBoolType.Instance, caps, issues);
     }
 
     private delegate ValidationIssue? TypeExpectation(CedarType type);
 
     private static ValidationIssue? ExpectComparable(CedarType type)
     {
-        if (type is CedarLong)
+        if (type is CedarLongType)
         {
             return null;
         }
@@ -527,7 +527,7 @@ internal sealed class TypeChecker
             issues.Add(rightExpectation);
         }
 
-        return (new CedarBool(), caps, issues);
+        return (CedarBoolType.Instance, caps, issues);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfArith(RequestEnvironment env, INode left, INode right, CapabilitySet caps)
@@ -537,28 +537,28 @@ internal sealed class TypeChecker
         (CedarType? rightType, _, List<ValidationIssue> rightIssues) = TypeOfExpr(env, right, caps);
         issues.AddRange(leftIssues);
         issues.AddRange(rightIssues);
-        if (leftIssues.Count == 0 && leftType is not CedarLong)
+        if (leftIssues.Count == 0 && leftType is not CedarLongType)
         {
-            issues.Add(UnexpectedType("Long", leftType ?? new CedarNever()));
+            issues.Add(UnexpectedType("Long", leftType ?? CedarNeverType.Instance));
         }
 
-        if (rightIssues.Count == 0 && rightType is not CedarLong)
+        if (rightIssues.Count == 0 && rightType is not CedarLongType)
         {
-            issues.Add(UnexpectedType("Long", rightType ?? new CedarNever()));
+            issues.Add(UnexpectedType("Long", rightType ?? CedarNeverType.Instance));
         }
 
-        return (new CedarLong(), caps, issues);
+        return (CedarLongType.Instance, caps, issues);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfNegate(RequestEnvironment env, NodeNegate node, CapabilitySet caps)
     {
         (CedarType? type, _, List<ValidationIssue> issues) = TypeOfExpr(env, node.Arg, caps);
-        if (type is not null && type is not CedarLong)
+        if (type is not null && type is not CedarLongType)
         {
             issues.Add(UnexpectedType("Long", type));
         }
 
-        return (new CedarLong(), caps, issues);
+        return (CedarLongType.Instance, caps, issues);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfIn(RequestEnvironment env, NodeIn node, CapabilitySet caps)
@@ -571,17 +571,17 @@ internal sealed class TypeChecker
 
         if (leftIssues.Count == 0 && (leftType is null || !IsEntityType(leftType)))
         {
-            issues.Add(UnexpectedType("__cedar::internal::AnyEntity", leftType ?? new CedarNever()));
+            issues.Add(UnexpectedType("__cedar::internal::AnyEntity", leftType ?? CedarNeverType.Instance));
         }
 
         if (rightIssues.Count == 0 && (rightType is null || !IsEntityOrSetOfEntity(rightType)))
         {
-            issues.Add(UnexpectedType("Set<__cedar::internal::AnyEntity>, or __cedar::internal::AnyEntity", rightType ?? new CedarNever()));
+            issues.Add(UnexpectedType("Set<__cedar::internal::AnyEntity>, or __cedar::internal::AnyEntity", rightType ?? CedarNeverType.Instance));
         }
 
         if (issues.Count > 0)
         {
-            return (new CedarBool(), caps, issues);
+            return (CedarBoolType.Instance, caps, issues);
         }
 
         EntityUid? leftAction = ExprToActionUid(env, node.Left);
@@ -593,10 +593,10 @@ internal sealed class TypeChecker
                 EntityUid[] schemaActions = rightActions.Where(uid => _validator.Schema.Actions.ContainsKey(uid)).ToArray();
                 if (schemaActions.Length > 0)
                 {
-                    return (IsActionInSet(leftAction, schemaActions) ? new CedarTrue() : new CedarFalse(), caps, []);
+                    return (IsActionInSet(leftAction, schemaActions) ? CedarTrueType.Instance : CedarFalseType.Instance, caps, []);
                 }
 
-                return (new CedarFalse(), caps, []);
+                return (CedarFalseType.Instance, caps, []);
             }
         }
 
@@ -611,11 +611,11 @@ internal sealed class TypeChecker
 
             if (rightLub is not null && !CedarTypeOps.AnyEntityDescendantOf(leftEntity.Lub, rightLub, _validator.Schema))
             {
-                return (new CedarFalse(), caps, []);
+                return (CedarFalseType.Instance, caps, []);
             }
         }
 
-        return (new CedarBool(), caps, []);
+        return (CedarBoolType.Instance, caps, []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfContains(RequestEnvironment env, NodeContains node, CapabilitySet caps)
@@ -627,15 +627,15 @@ internal sealed class TypeChecker
         issues.AddRange(rightIssues);
         if (issues.Count > 0)
         {
-            return (new CedarBool(), caps, issues);
+            return (CedarBoolType.Instance, caps, issues);
         }
 
         if (leftType is not CedarSetType setType)
         {
-            return (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", leftType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", leftType ?? CedarNeverType.Instance)]);
         }
 
-        if (_validator.IsStrict && setType.Element is not CedarNever && rightType is not null)
+        if (_validator.IsStrict && setType.Element is not CedarNeverType && rightType is not null)
         {
             if (CedarTypeOps.CheckStrictEntityLUB(setType.Element, rightType) is not null)
             {
@@ -649,7 +649,7 @@ internal sealed class TypeChecker
             }
         }
 
-        return (new CedarBool(), caps, []);
+        return (CedarBoolType.Instance, caps, []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfContainsAllAny(
@@ -677,17 +677,17 @@ internal sealed class TypeChecker
                 }
             }
 
-            return (new CedarBool(), caps, issues);
+            return (CedarBoolType.Instance, caps, issues);
         }
 
         if (leftSet is null)
         {
-            return (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", leftType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", leftType ?? CedarNeverType.Instance)]);
         }
 
         if (rightSet is null)
         {
-            return (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", rightType ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", rightType ?? CedarNeverType.Instance)]);
         }
 
         if (_validator.IsStrict)
@@ -699,7 +699,7 @@ internal sealed class TypeChecker
             }
         }
 
-        return (new CedarBool(), caps, []);
+        return (CedarBoolType.Instance, caps, []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfIsEmpty(RequestEnvironment env, NodeIsEmpty node, CapabilitySet caps)
@@ -712,12 +712,12 @@ internal sealed class TypeChecker
                 issues.Add(UnexpectedType("Set<__cedar::internal::Any>", type));
             }
 
-            return (type is not null ? new CedarBool() : null, caps, issues);
+            return (type is not null ? CedarBoolType.Instance : null, caps, issues);
         }
 
         return type is CedarSetType
-            ? (new CedarBool(), caps, [])
-            : (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", type ?? new CedarNever())]);
+            ? (CedarBoolType.Instance, caps, [])
+            : (null, caps, [UnexpectedType("Set<__cedar::internal::Any>", type ?? CedarNeverType.Instance)]);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfLike(RequestEnvironment env, NodeLike node, CapabilitySet caps)
@@ -725,17 +725,17 @@ internal sealed class TypeChecker
         (CedarType? type, _, List<ValidationIssue> issues) = TypeOfExpr(env, node.Arg, caps);
         if (issues.Count > 0)
         {
-            if (type is not null && type is not CedarString)
+            if (type is not null && type is not CedarStringType)
             {
                 issues.Add(UnexpectedType("String", type));
             }
 
-            return (new CedarBool(), caps, issues);
+            return (CedarBoolType.Instance, caps, issues);
         }
 
-        return type is CedarString
-            ? (new CedarBool(), caps, [])
-            : (null, caps, [UnexpectedType("String", type ?? new CedarNever())]);
+        return type is CedarStringType
+            ? (CedarBoolType.Instance, caps, [])
+            : (null, caps, [UnexpectedType("String", type ?? CedarNeverType.Instance)]);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfIs(RequestEnvironment env, NodeIs node, CapabilitySet caps)
@@ -748,23 +748,23 @@ internal sealed class TypeChecker
                 issues.Add(UnexpectedType("__cedar::internal::AnyEntity", type));
             }
 
-            return (new CedarBool(), caps, issues);
+            return (CedarBoolType.Instance, caps, issues);
         }
 
         if (type is not CedarEntityType entityType)
         {
-            return (null, caps, [UnexpectedType("__cedar::internal::AnyEntity", type ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("__cedar::internal::AnyEntity", type ?? CedarNeverType.Instance)]);
         }
 
         EntityType expected = ScopeValidator.CedarPathToEntityType(node.EntityType);
         if (!entityType.Lub.Elements.Contains(expected))
         {
-            return (new CedarFalse(), caps, []);
+            return (CedarFalseType.Instance, caps, []);
         }
 
         return entityType.Lub.Elements.Length == 1 && entityType.Lub.Elements[0] == expected
-            ? (new CedarTrue(), caps, [])
-            : (new CedarBool(), caps, []);
+            ? (CedarTrueType.Instance, caps, [])
+            : (CedarBoolType.Instance, caps, []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfIsIn(RequestEnvironment env, NodeIsIn node, CapabilitySet caps)
@@ -785,7 +785,7 @@ internal sealed class TypeChecker
             issues.Add(UnexpectedType("Set<__cedar::internal::AnyEntity>, or __cedar::internal::AnyEntity", rightType));
         }
 
-        return (new CedarBool(), caps, issues);
+        return (CedarBoolType.Instance, caps, issues);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfHas(RequestEnvironment env, NodeHas node, CapabilitySet caps)
@@ -798,7 +798,7 @@ internal sealed class TypeChecker
 
         if (type is null || !IsEntityOrRecordType(type))
         {
-            return (null, caps, [UnexpectedType("__cedar::internal::AnyEntity, or __cedar::internal::OpenRecord{}", type ?? new CedarNever())]);
+            return (null, caps, [UnexpectedType("__cedar::internal::AnyEntity, or __cedar::internal::OpenRecord{}", type ?? CedarNeverType.Instance)]);
         }
 
         CedarType resultType = HasResultType(type, node.Attribute.Value);
@@ -806,9 +806,9 @@ internal sealed class TypeChecker
         string? varName = ExprVarName(node.Arg);
         if (varName is not null)
         {
-            if (resultType is CedarBool && caps.Has(new Capability(varName, node.Attribute.Value)))
+            if (resultType is CedarBoolType && caps.Has(new Capability(varName, node.Attribute.Value)))
             {
-                resultType = new CedarTrue();
+                resultType = CedarTrueType.Instance;
             }
 
             newCaps = caps.Add(new Capability(varName, node.Attribute.Value));
@@ -823,10 +823,10 @@ internal sealed class TypeChecker
         {
             if (!recordType.Attrs.TryGetValue(attr, out CedarAttr attribute))
             {
-                return new CedarFalse();
+                return CedarFalseType.Instance;
             }
 
-            return attribute.Required ? new CedarTrue() : new CedarBool();
+            return attribute.Required ? CedarTrueType.Instance : CedarBoolType.Instance;
         }
 
         return HasResultTypeEntity(((CedarEntityType)type).Lub, attr);
@@ -844,7 +844,7 @@ internal sealed class TypeChecker
             }
         }
 
-        return anyHas ? new CedarBool() : new CedarFalse();
+        return anyHas ? CedarBoolType.Instance : CedarFalseType.Instance;
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfAccess(RequestEnvironment env, NodeAccess node, CapabilitySet caps)
@@ -858,12 +858,12 @@ internal sealed class TypeChecker
         if (sourceType is null || !IsEntityOrRecordType(sourceType))
         {
             List<ValidationIssue> issues = [.. sourceIssues];
-            issues.Add(UnexpectedType("__cedar::internal::AnyEntity, or __cedar::internal::OpenRecord{}", sourceType ?? new CedarNever()));
+            issues.Add(UnexpectedType("__cedar::internal::AnyEntity, or __cedar::internal::OpenRecord{}", sourceType ?? CedarNeverType.Instance));
             return (null, caps, issues);
         }
 
         // Investigation note: the parser and Cedar JSON serializer only construct
-        // NodeAccess.Attribute as NodeValue(CedarString), but AccessNode and
+        // NodeAccess.Attribute as NodeValue(CedarStringType), but AccessNode and
         // evaluators still allow arbitrary expressions. Treat non-literal access
         // as a diagnostic case instead of assuming it is impossible.
         if (!TryGetLiteralAttributeName(node.Attribute, out string? attr))
@@ -871,13 +871,13 @@ internal sealed class TypeChecker
             List<ValidationIssue> issues = [.. sourceIssues];
             (CedarType? attrType, _, List<ValidationIssue> attrIssues) = TypeOfExpr(env, node.Attribute, caps);
             issues.AddRange(attrIssues);
-            if (attrType is not null && attrType is not CedarString)
+            if (attrType is not null && attrType is not CedarStringType)
             {
                 issues.Add(UnexpectedType("String", attrType));
             }
 
             issues.Add(new ValidationIssue("attribute access requires a string literal attribute name"));
-            return (new CedarNever(), caps, issues);
+            return (CedarNeverType.Instance, caps, issues);
         }
 
         List<ValidationIssue> accessIssues = [.. sourceIssues];
@@ -938,7 +938,9 @@ internal sealed class TypeChecker
         if (type is CedarRecordType)
         {
             string fullPath = attr;
-            if (!string.IsNullOrEmpty(varName) && !string.Equals(varName, "context", StringComparison.Ordinal))
+            if (!string.IsNullOrEmpty(varName)
+                && !string.Equals(varName, "context", StringComparison.Ordinal)
+                && varName.StartsWith("context.", StringComparison.Ordinal))
             {
                 fullPath = varName["context.".Length..] + "." + attr;
             }
@@ -965,22 +967,22 @@ internal sealed class TypeChecker
 
         if (leftIssues.Count == 0 && (leftType is null || !IsEntityType(leftType)))
         {
-            issues.Add(UnexpectedType("__cedar::internal::AnyEntity", leftType ?? new CedarNever()));
+            issues.Add(UnexpectedType("__cedar::internal::AnyEntity", leftType ?? CedarNeverType.Instance));
         }
 
-        if (rightIssues.Count == 0 && rightType is not CedarString)
+        if (rightIssues.Count == 0 && rightType is not CedarStringType)
         {
-            issues.Add(UnexpectedType("String", rightType ?? new CedarNever()));
+            issues.Add(UnexpectedType("String", rightType ?? CedarNeverType.Instance));
         }
 
         if (issues.Count > 0)
         {
-            return (new CedarBool(), caps, issues);
+            return (CedarBoolType.Instance, caps, issues);
         }
 
         if (leftType is CedarEntityType entityType && !CedarTypeOps.EntityHasTags(entityType.Lub, _validator.Schema))
         {
-            return (new CedarFalse(), caps, []);
+            return (CedarFalseType.Instance, caps, []);
         }
 
         CapabilitySet newCaps = caps;
@@ -991,7 +993,7 @@ internal sealed class TypeChecker
             newCaps = caps.Add(new Capability(varName, "__tag:" + tagKey));
         }
 
-        return (new CedarBool(), newCaps, []);
+        return (CedarBoolType.Instance, newCaps, []);
     }
 
     private (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfGetTag(RequestEnvironment env, NodeGetTag node, CapabilitySet caps)
@@ -1007,12 +1009,12 @@ internal sealed class TypeChecker
         if (leftType is not CedarEntityType entityType)
         {
             issues.Add(UnexpectedType("__cedar::internal::AnyEntity", leftType));
-            return (new CedarString(), caps, issues);
+            return (CedarStringType.Instance, caps, issues);
         }
 
         (CedarType? rightType, _, List<ValidationIssue> rightIssues) = TypeOfExpr(env, node.Right, caps);
         issues.AddRange(rightIssues);
-        if (rightType is not null && rightType is not CedarString)
+        if (rightType is not null && rightType is not CedarStringType)
         {
             issues.Add(UnexpectedType("String", rightType));
         }
@@ -1050,7 +1052,7 @@ internal sealed class TypeChecker
         INode condition = RewriteConstIte(ite.If);
         INode thenBranch = RewriteConstIte(ite.Then);
         INode elseBranch = RewriteConstIte(ite.Else);
-        if (condition is NodeValue { Value: Cedar.Types.CedarBool boolean })
+        if (condition is NodeValue { Value: CedarBool boolean })
         {
             return boolean.Value
                 ? new NodeIfThenElse(condition, thenBranch, thenBranch)
@@ -1114,7 +1116,7 @@ internal sealed class TypeChecker
                 return (null, caps, issues);
             }
 
-            CedarType elementType = new CedarNever();
+            CedarType elementType = CedarNeverType.Instance;
             foreach (CedarType current in elementTypes)
             {
                 if (_validator.IsStrict && CedarTypeOps.CheckStrictEntityLUB(elementType, current) is not null)
@@ -1136,7 +1138,7 @@ internal sealed class TypeChecker
             return (new CedarSetType(elementType), caps, issues);
         }
 
-        CedarType resultType = new CedarNever();
+        CedarType resultType = CedarNeverType.Instance;
         foreach (CedarType current in elementTypes)
         {
             if (_validator.IsStrict && CedarTypeOps.CheckStrictEntityLUB(resultType, current) is not null)
@@ -1201,7 +1203,7 @@ internal sealed class TypeChecker
             }
         }
 
-        if (signature.IsConstructor && node.Args.Length == 1 && node.Args[0] is NodeValue { Value: Cedar.Types.CedarString stringValue })
+        if (signature.IsConstructor && node.Args.Length == 1 && node.Args[0] is NodeValue { Value: CedarString stringValue })
         {
             ValidationIssue? validationError = ValidateExtensionValue(node.Name.Value, stringValue.Value);
             if (validationError is not null)
@@ -1233,10 +1235,10 @@ internal sealed class TypeChecker
         {
             return functionName switch
             {
-                "ip" => new ValidationIssue($"error during extension function argument validation: Failed to parse as IP address: `{new Cedar.Types.CedarString(value).MarshalCedar()}`"),
-                "decimal" => new ValidationIssue($"error during extension function argument validation: Failed to parse as a decimal value: `{new Cedar.Types.CedarString(value).MarshalCedar()}`"),
-                "datetime" => new ValidationIssue($"error during extension function argument validation: Failed to parse as a datetime value: `{new Cedar.Types.CedarString(value).MarshalCedar()}`"),
-                "duration" => new ValidationIssue($"error during extension function argument validation: Failed to parse as a duration value: `{new Cedar.Types.CedarString(value).MarshalCedar()}`"),
+                "ip" => new ValidationIssue($"error during extension function argument validation: Failed to parse as IP address: `{new CedarString(value).MarshalCedar()}`"),
+                "decimal" => new ValidationIssue($"error during extension function argument validation: Failed to parse as a decimal value: `{new CedarString(value).MarshalCedar()}`"),
+                "datetime" => new ValidationIssue($"error during extension function argument validation: Failed to parse as a datetime value: `{new CedarString(value).MarshalCedar()}`"),
+                "duration" => new ValidationIssue($"error during extension function argument validation: Failed to parse as a duration value: `{new CedarString(value).MarshalCedar()}`"),
                 _ => null
             };
         }
@@ -1244,7 +1246,7 @@ internal sealed class TypeChecker
 
     private static bool IsBoolType(CedarType type)
     {
-        return type is CedarBool or CedarTrue or CedarFalse;
+        return type is CedarBoolType or CedarTrueType or CedarFalseType;
     }
 
     private static bool IsEntityType(CedarType type)
@@ -1262,7 +1264,7 @@ internal sealed class TypeChecker
         return type switch
         {
             CedarEntityType => true,
-            CedarSetType { Element: CedarNever } => true,
+            CedarSetType { Element: CedarNeverType } => true,
             CedarSetType { Element: CedarEntityType } => true,
             _ => false
         };
@@ -1418,7 +1420,7 @@ internal sealed class TypeChecker
 
     private static string? TagCapabilityKey(INode node)
     {
-        return node is NodeValue { Value: Cedar.Types.CedarString value } ? value.Value : null;
+        return node is NodeValue { Value: CedarString value } ? value.Value : null;
     }
 
     private static bool AreTypesDisjoint(CedarType left, CedarType right)
@@ -1430,21 +1432,23 @@ internal sealed class TypeChecker
 
     private static (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfLiteralSet(CedarSet set, CapabilitySet caps)
     {
-        CedarType elementType = new CedarNever();
+        CedarType elementType = CedarNeverType.Instance;
+        List<CedarType> elementTypes = [];
         foreach (ICedarData element in set)
         {
-            elementType = element switch
+            CedarType currentType = LiteralTypeOfValue(element);
+            elementTypes.Add(currentType);
+
+            (CedarType? lub, string? error) = CedarTypeOps.LeastUpperBound(elementType, currentType, strict: false);
+            if (error is not null)
             {
-                Cedar.Types.CedarBool boolean => boolean.Value ? new CedarTrue() : new CedarFalse(),
-                Cedar.Types.CedarLong => new CedarLong(),
-                Cedar.Types.CedarString => new CedarString(),
-                EntityUid uid => new CedarEntityType(EntityLub.Single(uid.Type)),
-                CedarIpAddress => new CedarExtType(new Ident("ipaddr")),
-                CedarDecimal => new CedarExtType(new Ident("decimal")),
-                CedarDatetime => new CedarExtType(new Ident("datetime")),
-                CedarDuration => new CedarExtType(new Ident("duration")),
-                _ => elementType
-            };
+                return (null, caps, [new TypeIncompatIssue(
+                    elementTypes.Count > 2
+                        ? CedarTypeOps.TypeIncompatErrMulti(elementTypes)
+                        : CedarTypeOps.TypeIncompatErr(elementType, currentType))]);
+            }
+
+            elementType = lub!;
         }
 
         return (new CedarSetType(elementType), caps, []);
@@ -1453,30 +1457,33 @@ internal sealed class TypeChecker
     private static (CedarType? Type, CapabilitySet Caps, List<ValidationIssue> Errors) TypeOfLiteralRecord(CedarRecord record, CapabilitySet caps)
     {
         Dictionary<string, CedarAttr> attrs = new(StringComparer.Ordinal);
-        foreach (KeyValuePair<Cedar.Types.CedarString, ICedarData> entry in record)
+        foreach (KeyValuePair<CedarString, ICedarData> entry in record)
         {
-            CedarType valueType = entry.Value switch
-            {
-                Cedar.Types.CedarBool boolean => boolean.Value ? new CedarTrue() : new CedarFalse(),
-                Cedar.Types.CedarLong => new CedarLong(),
-                Cedar.Types.CedarString => new CedarString(),
-                EntityUid uid => new CedarEntityType(EntityLub.Single(uid.Type)),
-                CedarIpAddress => new CedarExtType(new Ident("ipaddr")),
-                CedarDecimal => new CedarExtType(new Ident("decimal")),
-                CedarDatetime => new CedarExtType(new Ident("datetime")),
-                CedarDuration => new CedarExtType(new Ident("duration")),
-                _ => new CedarNever()
-            };
-
-            attrs[entry.Key.Value] = new CedarAttr(valueType, true);
+            attrs[entry.Key.Value] = new CedarAttr(LiteralTypeOfValue(entry.Value), true);
         }
 
         return (new CedarRecordType(attrs), caps, []);
     }
 
+    private static CedarType LiteralTypeOfValue(ICedarData value)
+    {
+        return value switch
+        {
+            CedarBool boolean => boolean.Value ? CedarTrueType.Instance : CedarFalseType.Instance,
+            CedarLong => CedarLongType.Instance,
+            CedarString => CedarStringType.Instance,
+            EntityUid uid => new CedarEntityType(EntityLub.Single(uid.Type)),
+            CedarIpAddress => new CedarExtType(new Ident("ipaddr")),
+            CedarDecimal => new CedarExtType(new Ident("decimal")),
+            CedarDatetime => new CedarExtType(new Ident("datetime")),
+            CedarDuration => new CedarExtType(new Ident("duration")),
+            _ => CedarNeverType.Instance
+        };
+    }
+
     private static bool TryGetLiteralAttributeName(INode node, out string? attribute)
     {
-        if (node is NodeValue { Value: Cedar.Types.CedarString value })
+        if (node is NodeValue { Value: CedarString value })
         {
             attribute = value.Value;
             return true;
@@ -1490,10 +1497,10 @@ internal sealed class TypeChecker
     {
         string parentText = IsValidCedarIdent(parent)
             ? parent
-            : "[" + new Cedar.Types.CedarString(parent).MarshalCedar() + "]";
+            : "[" + new CedarString(parent).MarshalCedar() + "]";
         string childText = IsValidCedarIdent(child)
             ? "." + child
-            : "[" + new Cedar.Types.CedarString(child).MarshalCedar() + "]";
+            : "[" + new CedarString(child).MarshalCedar() + "]";
         return parentText + childText;
     }
 
@@ -1540,9 +1547,9 @@ internal sealed class TypeChecker
     {
         return node switch
         {
-            NodeValue { Value: Cedar.Types.CedarString value } => value.Value,
-            NodeValue { Value: Cedar.Types.CedarLong value } => value.Value.ToString(CultureInfo.InvariantCulture),
-            NodeValue { Value: Cedar.Types.CedarBool value } => value.Value ? "true" : "false",
+            NodeValue { Value: CedarString value } => value.Value,
+            NodeValue { Value: CedarLong value } => value.Value.ToString(CultureInfo.InvariantCulture),
+            NodeValue { Value: CedarBool value } => value.Value ? "true" : "false",
             NodeVariable variable => variable.Name.Value,
             NodeAccess access when TryGetLiteralAttributeName(access.Attribute, out string? attr) => FormatNodeForMessage(access.Arg) + "." + attr,
             NodeIfThenElse ite => $"if {FormatNodeForMessage(ite.If)} then {FormatNodeForMessage(ite.Then)} else {FormatNodeForMessage(ite.Else)}",

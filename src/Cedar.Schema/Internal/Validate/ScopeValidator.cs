@@ -124,10 +124,11 @@ internal static class ScopeValidator
 
     internal static EntityType[] GetEntityTypesIn(EntityType target, SchemaValidator validator)
     {
+        HashSet<EntityType> seen = [target];
         List<EntityType> result = [target];
         foreach ((EntityType name, ResolvedEntity entity) in validator.Schema.Entities)
         {
-            if (entity.ParentTypes.Contains(target))
+            if (entity.ParentTypes.Contains(target) && seen.Add(name))
             {
                 result.Add(name);
             }
@@ -139,15 +140,16 @@ internal static class ScopeValidator
             changed = false;
             foreach ((EntityType name, ResolvedEntity entity) in validator.Schema.Entities)
             {
-                if (result.Contains(name))
+                if (seen.Contains(name))
                 {
                     continue;
                 }
 
                 foreach (EntityType parent in entity.ParentTypes)
                 {
-                    if (result.Contains(parent))
+                    if (seen.Contains(parent))
                     {
+                        seen.Add(name);
                         result.Add(name);
                         changed = true;
                         break;

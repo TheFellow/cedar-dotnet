@@ -13,12 +13,12 @@ internal static class CedarTypeOps
     {
         return type switch
         {
-            CedarNever => "__cedar::internal::Never",
-            CedarTrue => "__cedar::internal::True",
-            CedarFalse => "__cedar::internal::False",
-            CedarBool => "Bool",
-            CedarLong => "Long",
-            CedarString => "String",
+            CedarNeverType => "__cedar::internal::Never",
+            CedarTrueType => "__cedar::internal::True",
+            CedarFalseType => "__cedar::internal::False",
+            CedarBoolType => "Bool",
+            CedarLongType => "Long",
+            CedarStringType => "String",
             CedarSetType setType => "Set<" + CedarTypeName(setType.Element) + ">",
             CedarRecordType recordType => CedarRecordTypeName(recordType),
             CedarEntityType entityType => CedarEntityTypeName(entityType.Lub),
@@ -31,12 +31,12 @@ internal static class CedarTypeOps
     {
         return type switch
         {
-            CedarTrue => 0,
-            CedarFalse => 1,
-            CedarBool => 2,
-            CedarNever => 3,
-            CedarLong => 4,
-            CedarString => 5,
+            CedarTrueType => 0,
+            CedarFalseType => 1,
+            CedarBoolType => 2,
+            CedarNeverType => 3,
+            CedarLongType => 4,
+            CedarStringType => 5,
             CedarSetType => 6,
             CedarRecordType => 7,
             CedarEntityType => 8,
@@ -65,21 +65,21 @@ internal static class CedarTypeOps
 
     internal static (CedarType? Type, string? Error) LeastUpperBound(CedarType left, CedarType right, bool strict)
     {
-        if (right is CedarNever)
+        if (right is CedarNeverType)
         {
             return (left, null);
         }
 
         return left switch
         {
-            CedarNever => (right, null),
-            CedarTrue when right is CedarTrue => (new CedarTrue(), null),
-            CedarTrue when right is CedarFalse or CedarBool => (new CedarBool(), null),
-            CedarFalse when right is CedarFalse => (new CedarFalse(), null),
-            CedarFalse when right is CedarTrue or CedarBool => (new CedarBool(), null),
-            CedarBool when right is CedarTrue or CedarFalse or CedarBool => (new CedarBool(), null),
-            CedarLong when right is CedarLong => (new CedarLong(), null),
-            CedarString when right is CedarString => (new CedarString(), null),
+            CedarNeverType => (right, null),
+            CedarTrueType when right is CedarTrueType => (CedarTrueType.Instance, null),
+            CedarTrueType when right is CedarFalseType or CedarBoolType => (CedarBoolType.Instance, null),
+            CedarFalseType when right is CedarFalseType => (CedarFalseType.Instance, null),
+            CedarFalseType when right is CedarTrueType or CedarBoolType => (CedarBoolType.Instance, null),
+            CedarBoolType when right is CedarTrueType or CedarFalseType or CedarBoolType => (CedarBoolType.Instance, null),
+            CedarLongType when right is CedarLongType => (CedarLongType.Instance, null),
+            CedarStringType when right is CedarStringType => (CedarStringType.Instance, null),
             CedarSetType leftSet when right is CedarSetType rightSet => LeastUpperBoundSet(leftSet, rightSet, strict),
             CedarRecordType leftRecord when right is CedarRecordType rightRecord => LubRecord(leftRecord, rightRecord, strict),
             CedarEntityType leftEntity when right is CedarEntityType rightEntity => (new CedarEntityType(leftEntity.Lub.Union(rightEntity.Lub)), null),
@@ -137,7 +137,7 @@ internal static class CedarTypeOps
     {
         return right switch
         {
-            CedarString => left is CedarString,
+            CedarStringType => left is CedarStringType,
             CedarExtType rightExt => left is CedarExtType leftExt && leftExt.Name == rightExt.Name,
             _ => false
         };
@@ -158,9 +158,9 @@ internal static class CedarTypeOps
     {
         return type switch
         {
-            ResolvedStringType => new CedarString(),
-            ResolvedLongType => new CedarLong(),
-            ResolvedBoolType => new CedarBool(),
+            ResolvedStringType => CedarStringType.Instance,
+            ResolvedLongType => CedarLongType.Instance,
+            ResolvedBoolType => CedarBoolType.Instance,
             ResolvedExtensionType extensionType => new CedarExtType(extensionType.Name),
             ResolvedSetType setType => new CedarSetType(ResolvedTypeToCedarType(setType.Element)),
             ResolvedRecordType recordType => SchemaRecordToCedarRecord(recordType),
@@ -228,19 +228,19 @@ internal static class CedarTypeOps
 
     internal static (CedarType Type, string? Error) EntityTagType(EntityLub lub, ResolvedSchema schema, bool strict)
     {
-        CedarType result = new CedarNever();
+        CedarType result = CedarNeverType.Instance;
         foreach (EntityType entityType in lub.Elements)
         {
             if (!schema.Entities.TryGetValue(entityType, out ResolvedEntity? entity) || entity.Tags is null)
             {
-                return (new CedarNever(), null);
+                return (CedarNeverType.Instance, null);
             }
 
             CedarType tagType = ResolvedTypeToCedarType(entity.Tags);
             (CedarType? lubType, string? error) = LeastUpperBound(result, tagType, strict);
             if (error is not null)
             {
-                return (new CedarNever(), TypeIncompatErr(result, tagType));
+                return (CedarNeverType.Instance, TypeIncompatErr(result, tagType));
             }
 
             result = lubType!;
@@ -251,6 +251,20 @@ internal static class CedarTypeOps
 
     internal static bool IsEntityDescendant(EntityType child, EntityType ancestor, ResolvedSchema schema)
     {
+        return IsEntityDescendant(child, ancestor, schema, []);
+    }
+
+    private static bool IsEntityDescendant(
+        EntityType child,
+        EntityType ancestor,
+        ResolvedSchema schema,
+        HashSet<EntityType> visited)
+    {
+        if (!visited.Add(child))
+        {
+            return false;
+        }
+
         if (!schema.Entities.TryGetValue(child, out ResolvedEntity? entity))
         {
             return false;
@@ -258,7 +272,7 @@ internal static class CedarTypeOps
 
         foreach (EntityType parent in entity.ParentTypes)
         {
-            if (parent == ancestor || IsEntityDescendant(parent, ancestor, schema))
+            if (parent == ancestor || IsEntityDescendant(parent, ancestor, schema, visited))
             {
                 return true;
             }
@@ -285,7 +299,7 @@ internal static class CedarTypeOps
 
     internal static string? CheckStrictEntityLUB(CedarType left, CedarType right)
     {
-        if (left is CedarNever || left is not CedarEntityType leftEntity || right is not CedarEntityType rightEntity)
+        if (left is CedarNeverType || left is not CedarEntityType leftEntity || right is not CedarEntityType rightEntity)
         {
             return null;
         }

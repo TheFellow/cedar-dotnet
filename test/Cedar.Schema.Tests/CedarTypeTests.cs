@@ -4,9 +4,6 @@ using System.Linq;
 using Cedar.Schema.Internal.Validate;
 using Cedar.Types;
 using Xunit;
-using SchemaBoolType = Cedar.Schema.Internal.Validate.CedarBool;
-using SchemaLongType = Cedar.Schema.Internal.Validate.CedarLong;
-using SchemaStringType = Cedar.Schema.Internal.Validate.CedarString;
 
 namespace Cedar.Schema.Tests;
 
@@ -14,13 +11,13 @@ public sealed class CedarTypeTests
 {
     public static IEnumerable<object[]> CedarTypeNameCases()
     {
-        yield return [new CedarNever(), "__cedar::internal::Never"];
-        yield return [new CedarTrue(), "__cedar::internal::True"];
-        yield return [new CedarFalse(), "__cedar::internal::False"];
-        yield return [new SchemaBoolType(), "Bool"];
-        yield return [new SchemaLongType(), "Long"];
-        yield return [new SchemaStringType(), "String"];
-        yield return [new CedarSetType(new SchemaLongType()), "Set<Long>"];
+        yield return [CedarNeverType.Instance, "__cedar::internal::Never"];
+        yield return [CedarTrueType.Instance, "__cedar::internal::True"];
+        yield return [CedarFalseType.Instance, "__cedar::internal::False"];
+        yield return [CedarBoolType.Instance, "Bool"];
+        yield return [CedarLongType.Instance, "Long"];
+        yield return [CedarStringType.Instance, "String"];
+        yield return [new CedarSetType(CedarLongType.Instance), "Set<Long>"];
         yield return [new CedarExtType(new Ident("ipaddr")), "ipaddr"];
         yield return [new CedarEntityType(EntityLub.Single(new EntityType("User"))), "User"];
         yield return
@@ -28,8 +25,8 @@ public sealed class CedarTypeTests
             new CedarRecordType(
                 new Dictionary<string, CedarAttr>
                 {
-                    ["name"] = new(new SchemaStringType(), false),
-                    ["age"] = new(new SchemaLongType(), true)
+                    ["name"] = new(CedarStringType.Instance, false),
+                    ["age"] = new(CedarLongType.Instance, true)
                 }),
             "{age: Long,name?: String,}"
         ];
@@ -94,13 +91,13 @@ public sealed class CedarTypeTests
     {
         CedarType[] types =
         [
-            new CedarTrue(),
-            new CedarFalse(),
-            new SchemaBoolType(),
-            new CedarNever(),
-            new SchemaLongType(),
-            new SchemaStringType(),
-            new CedarSetType(new SchemaLongType()),
+            CedarTrueType.Instance,
+            CedarFalseType.Instance,
+            CedarBoolType.Instance,
+            CedarNeverType.Instance,
+            CedarLongType.Instance,
+            CedarStringType.Instance,
+            new CedarSetType(CedarLongType.Instance),
             new CedarRecordType(new Dictionary<string, CedarAttr>()),
             new CedarEntityType(EntityLub.Single(new EntityType("User"))),
             new CedarExtType(new Ident("ipaddr"))
@@ -115,7 +112,7 @@ public sealed class CedarTypeTests
     [Fact]
     public void CompareCedarType_OrdersKindsBeforeStructure()
     {
-        int comparison = CedarTypeOps.CompareCedarType(new CedarTrue(), new SchemaLongType());
+        int comparison = CedarTypeOps.CompareCedarType(CedarTrueType.Instance, CedarLongType.Instance);
 
         Assert.True(comparison < 0);
     }
@@ -124,8 +121,8 @@ public sealed class CedarTypeTests
     public void CompareCedarType_OrdersSetTypesByElementType()
     {
         int comparison = CedarTypeOps.CompareCedarType(
-            new CedarSetType(new SchemaLongType()),
-            new CedarSetType(new SchemaStringType()));
+            new CedarSetType(CedarLongType.Instance),
+            new CedarSetType(CedarStringType.Instance));
 
         Assert.True(comparison < 0);
     }
@@ -136,12 +133,12 @@ public sealed class CedarTypeTests
         CedarRecordType left = new(
             new Dictionary<string, CedarAttr>
             {
-                ["a"] = new(new SchemaLongType(), true)
+                ["a"] = new(CedarLongType.Instance, true)
             });
         CedarRecordType right = new(
             new Dictionary<string, CedarAttr>
             {
-                ["b"] = new(new SchemaLongType(), true)
+                ["b"] = new(CedarLongType.Instance, true)
             });
 
         int comparison = CedarTypeOps.CompareCedarType(left, right);
