@@ -198,6 +198,15 @@ public sealed class ParserErrorTests
     }
 
     [Fact]
+    public void SynchronizeToNextPolicy_FindsKeywordWithoutSemicolon()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() =>
+            CedarParser.ParsePolicies("garbage_no_semicolon permit(principal, action, resource);"));
+
+        Assert.Single(ex.InnerExceptions);
+    }
+
+    [Fact]
     public void MaxDepthExceeded_ThrowsParseException()
     {
         string nested = new string('(', 300) + "1" + new string(')', 300);
