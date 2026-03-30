@@ -20,3 +20,6 @@ attractor-logs/
 
 # Drafts
 docs/**/drafts/
+
+# Sprint docs (internal planning artifacts)
+docs/sprints/
