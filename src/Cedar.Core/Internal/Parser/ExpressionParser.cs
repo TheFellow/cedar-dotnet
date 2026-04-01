@@ -137,7 +137,8 @@ internal sealed class ExpressionParser
             return new NodeHas(lhs, new CedarString(attribute));
         }
 
-        if (token.Type != TokenType.Ident)
+        if (token.Type != TokenType.Ident
+            && token.Type is not TokenType.Permit and not TokenType.Forbid and not TokenType.When and not TokenType.Unless)
         {
             throw _state.Error(token, "Expected identifier or string after 'has'.");
         }
@@ -322,6 +323,17 @@ internal sealed class ExpressionParser
         if (token.Type == TokenType.False)
         {
             return new NodeValue(CedarBool.False);
+        }
+
+        if (token.Type is TokenType.Permit or TokenType.Forbid or TokenType.When or TokenType.Unless)
+        {
+            if (_state.Check(TokenType.ColonColon))
+            {
+                EntityUid uid = _state.ParseEntityUidFromFirst(token);
+                return new NodeValue(uid);
+            }
+
+            throw _state.Error(token, "Invalid expression.");
         }
 
         if (token.Type == TokenType.Ident)

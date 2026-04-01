@@ -65,12 +65,17 @@ internal sealed class ParserState
 
     public Token ExpectIdentifier(string message)
     {
-        if (!Check(TokenType.Ident))
+        if (!Check(TokenType.Ident) && !CheckSoftKeyword())
         {
             throw Error(Current, message);
         }
 
         return Advance();
+    }
+
+    public bool CheckSoftKeyword()
+    {
+        return Current.Type is TokenType.Permit or TokenType.Forbid or TokenType.When or TokenType.Unless;
     }
 
 
@@ -132,7 +137,7 @@ internal sealed class ParserState
 
         while (Match(TokenType.ColonColon))
         {
-            if (Check(TokenType.Ident))
+            if (Check(TokenType.Ident) || CheckSoftKeyword())
             {
                 type = type + "::" + Advance().Text;
                 continue;
