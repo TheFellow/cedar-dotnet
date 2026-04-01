@@ -160,7 +160,7 @@ ValidationResult requestResult = validator.ValidateRequest(request);
 
 ## Conformance
 
-cedar-dotnet passes 108,501 tests from the official Cedar conformance corpus (the same suite used by cedar-go and the Rust reference implementation), covering authorization, parsing, and schema validation parity.
+cedar-dotnet passes 126,462 tests (124,000 from the official Cedar conformance corpus plus 2,462 unit tests) covering authorization, parsing, schema validation, batch evaluation, and round-trip fidelity -- the same corpus used by cedar-go and the Rust reference implementation.
 
 ## Benchmarks
 
