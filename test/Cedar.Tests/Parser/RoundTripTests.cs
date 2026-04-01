@@ -67,7 +67,7 @@ public sealed class RoundTripTests
         "permit(principal, action, resource) when { principal is User in Group::\"folkHeroes\" };"
     ];
 
-    [Theory(Skip = "Parser does not yet support reserved keywords as entity type paths")]
+    [Theory]
     [MemberData(nameof(ReservedNamesInEntityPath))]
     public void ReservedNameEntityPaths_ParseOrReject(string source, bool shouldSucceed)
     {
