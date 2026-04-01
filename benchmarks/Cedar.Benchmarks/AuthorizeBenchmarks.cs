@@ -8,7 +8,7 @@ using Cedar.Types;
 namespace Cedar.Benchmarks;
 
 [MemoryDiagnoser]
-public sealed class AuthorizeBenchmarks
+public class AuthorizeBenchmarks
 {
     private readonly PolicySet _simplePolicies;
     private readonly PolicySet _complexPolicies;

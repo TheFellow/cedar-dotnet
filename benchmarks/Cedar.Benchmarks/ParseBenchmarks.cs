@@ -4,7 +4,7 @@ using Cedar.Core;
 namespace Cedar.Benchmarks;
 
 [MemoryDiagnoser]
-public sealed class ParseBenchmarks
+public class ParseBenchmarks
 {
     private readonly string _cedarText = """
         permit(

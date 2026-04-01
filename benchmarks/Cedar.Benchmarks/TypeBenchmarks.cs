@@ -5,7 +5,7 @@ using Cedar.Types;
 namespace Cedar.Benchmarks;
 
 [MemoryDiagnoser]
-public sealed class TypeBenchmarks
+public class TypeBenchmarks
 {
     private readonly EntityMap _entities;
     private readonly EntityUid _targetUid;
