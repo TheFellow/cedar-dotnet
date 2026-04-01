@@ -182,7 +182,7 @@ internal static class SchemaJsonConverter
                     appliesTo.ResourceTypes.Add(action.AppliesTo.Resources[entityIndex].Value);
                 }
 
-                if (action.AppliesTo.ContextRecord is not null)
+                if (action.AppliesTo.ContextRecord is { Attributes.Count: > 0 })
                 {
                     appliesTo.Context = ToJsonType(action.AppliesTo.ContextRecord);
                 }
@@ -462,8 +462,72 @@ internal static class SchemaJsonConverter
     {
         return new JsonSerializerOptions
         {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters = { new OrdinalSortedDictionaryConverterFactory() }
         };
+    }
+
+    /// <summary>
+    /// Forces <see cref="SortedDictionary{TKey,TValue}"/> with string keys to use
+    /// <see cref="StringComparer.Ordinal"/> during deserialization. Without this,
+    /// System.Text.Json creates instances with the default culture-sensitive comparer,
+    /// which treats control characters and null bytes as ignorable under ICU globalization,
+    /// causing key collisions.
+    /// </summary>
+    private sealed class OrdinalSortedDictionaryConverterFactory : JsonConverterFactory
+    {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert.IsGenericType
+                && typeToConvert.GetGenericTypeDefinition() == typeof(SortedDictionary<,>)
+                && typeToConvert.GetGenericArguments()[0] == typeof(string);
+        }
+
+        public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+        {
+            Type valueType = typeToConvert.GetGenericArguments()[1];
+            Type converterType = typeof(OrdinalSortedDictionaryConverter<>).MakeGenericType(valueType);
+            return (JsonConverter)Activator.CreateInstance(converterType)!;
+        }
+    }
+
+    private sealed class OrdinalSortedDictionaryConverter<TValue> : JsonConverter<SortedDictionary<string, TValue>>
+    {
+        public override SortedDictionary<string, TValue> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException("Expected start of object.");
+            }
+
+            SortedDictionary<string, TValue> result = new(StringComparer.Ordinal);
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    return result;
+                }
+
+                string key = reader.GetString() ?? throw new JsonException("Dictionary key was null.");
+                reader.Read();
+                TValue value = JsonSerializer.Deserialize<TValue>(ref reader, options)!;
+                result[key] = value;
+            }
+
+            throw new JsonException("Unexpected end of JSON.");
+        }
+
+        public override void Write(Utf8JsonWriter writer, SortedDictionary<string, TValue> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            foreach (KeyValuePair<string, TValue> pair in value)
+            {
+                writer.WritePropertyName(pair.Key);
+                JsonSerializer.Serialize(writer, pair.Value, options);
+            }
+
+            writer.WriteEndObject();
+        }
     }
 
     private class JsonNamespaceModel
