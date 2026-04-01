@@ -222,4 +222,107 @@ public sealed class SchemaWriterTests
         Assert.DoesNotContain("= {", cedar);
         Assert.Contains("entity User in Manager {", cedar);
     }
+
+    // --- Ported from Go format_test.go: TestFormatEmpty ---
+
+    [Fact]
+    public void MarshalCedar_MinimalEntityOnlyProducesNonEmptyOutput()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("entity User;");
+
+        string cedar = document.MarshalCedar();
+
+        Assert.Contains("entity User;", cedar, System.StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go format_test.go: formatting round-trips preserve canonical form ---
+
+    [Fact]
+    public void MarshalCedar_BasicFixtureIsIdempotent()
+    {
+        string source = SchemaTestData.LoadFixture("basic.cedarschema");
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(source);
+        string first = document.MarshalCedar();
+        string second = SchemaDocument.UnmarshalCedar(first).MarshalCedar();
+
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public void MarshalCedar_RichFixtureIsIdempotent()
+    {
+        string source = SchemaTestData.LoadFixture("rich.cedarschema");
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(source);
+        string first = document.MarshalCedar();
+        string second = SchemaDocument.UnmarshalCedar(first).MarshalCedar();
+
+        Assert.Equal(first, second);
+    }
+
+    // --- Ported from Go format_test.go + convert_human_test.go: annotations preserved ---
+
+    [Fact]
+    public void MarshalCedar_PreservesAnnotationsOnEntitiesAndActions()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(
+            """
+            @doc("A user entity")
+            entity User;
+
+            @deprecated
+            action view;
+            """);
+
+        string cedar = document.MarshalCedar();
+
+        Assert.Contains("@doc(\"A user entity\")", cedar, System.StringComparison.Ordinal);
+        Assert.Contains("@deprecated", cedar, System.StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go format_test.go: common type formatting ---
+
+    [Fact]
+    public void MarshalCedar_FormatsCommonTypeAsTypeAlias()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("type Id = String;");
+
+        Assert.Equal("type Id = String;\n", document.MarshalCedar());
+    }
+
+    // --- Ported from Go format_test.go: enum entity formatting ---
+
+    [Fact]
+    public void MarshalCedar_FormatsEnumEntity()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("""entity Role enum ["admin", "user"];""");
+
+        Assert.Equal("entity Role enum [\"admin\", \"user\"];\n", document.MarshalCedar());
+    }
+
+    // --- Ported from Go format_test.go: optional attribute marker ---
+
+    [Fact]
+    public void MarshalCedar_PreservesOptionalMarkerOnAttributes()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(
+            """
+            entity User {
+            	nick?: String
+            };
+            """);
+
+        string cedar = document.MarshalCedar();
+
+        Assert.Contains("nick?: String", cedar, System.StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go format_test.go: entity with tags formatting ---
+
+    [Fact]
+    public void MarshalCedar_FormatsEntityWithTags()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("entity User tags String;");
+
+        Assert.Contains("tags String", document.MarshalCedar(), System.StringComparison.Ordinal);
+    }
 }

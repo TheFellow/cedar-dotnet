@@ -47,6 +47,59 @@ public sealed class CedarSetTests
     }
 
     [Fact]
+    public void ContainsFindsDecimalValues()
+    {
+        CedarSet set = new(CedarDecimal.NewDecimalFromInt(42));
+
+        Assert.True(set.Contains(CedarDecimal.NewDecimalFromInt(42)));
+        Assert.False(set.Contains(CedarDecimal.NewDecimalFromInt(1234)));
+    }
+
+    [Fact]
+    public void ContainsFindsDatetimeValues()
+    {
+        CedarSet set = new(new CedarDatetime(42));
+
+        Assert.True(set.Contains(new CedarDatetime(42)));
+        Assert.False(set.Contains(new CedarDatetime(1234)));
+    }
+
+    [Fact]
+    public void ContainsFindsDurationValues()
+    {
+        CedarSet set = new(new CedarDuration(42));
+
+        Assert.True(set.Contains(new CedarDuration(42)));
+        Assert.False(set.Contains(new CedarDuration(1234)));
+    }
+
+    [Fact]
+    public void ContainsReturnsFalseForMissingLong()
+    {
+        CedarSet set = new(new CedarLong(42));
+
+        Assert.False(set.Contains(new CedarLong(1234)));
+    }
+
+    [Fact]
+    public void MarshalCedarFormatsEmptySet()
+    {
+        CedarAssert.CedarText(new CedarSet(), "[]");
+    }
+
+    [Fact]
+    public void LenReturnsZeroForEmptySet()
+    {
+        Assert.Equal(0, new CedarSet().Count);
+    }
+
+    [Fact]
+    public void LenReturnsTwoForTwoElementSet()
+    {
+        Assert.Equal(2, new CedarSet(new CedarLong(1), new CedarLong(2)).Count);
+    }
+
+    [Fact]
     public void EqualityIsOrderIndependent()
     {
         CedarAssert.Equal(new CedarSet(new CedarLong(1), new CedarLong(2)), new CedarSet(new CedarLong(2), new CedarLong(1)));
@@ -56,6 +109,54 @@ public sealed class CedarSetTests
     public void DifferentMembersAreNotEqual()
     {
         CedarAssert.NotEqual(new CedarSet(new CedarLong(1)), new CedarSet(new CedarLong(2)));
+    }
+
+    [Fact]
+    public void SetNotEqualToNonSetType()
+    {
+        CedarSet set = new(new CedarLong(42));
+
+        Assert.False(set.Equals(new CedarLong(42)));
+    }
+
+    [Fact]
+    public void EqualityDeduplicatesDuplicateElements()
+    {
+        CedarSet oneTwoThree = new(new CedarLong(1), new CedarLong(2), new CedarLong(3));
+        CedarSet threeTwoTwoOne = new(new CedarLong(3), new CedarLong(2), new CedarLong(2), new CedarLong(1));
+
+        CedarAssert.Equal(oneTwoThree, threeTwoTwoOne);
+    }
+
+    [Fact]
+    public void SameHashDifferentTypesAreNotEqual()
+    {
+        CedarSet left = new(new CedarLong(0));
+        CedarSet right = new(CedarDecimal.NewDecimalFromInt(0));
+
+        Assert.False(left.Equals(right));
+    }
+
+    [Fact]
+    public void EmptySetsAreEqual()
+    {
+        CedarAssert.Equal(new CedarSet(), new CedarSet());
+    }
+
+    [Fact]
+    public void NestedSetEqualityMatchesGoUpstream()
+    {
+        CedarSet empty = new();
+        CedarSet oneTrue = new(new CedarBool(true));
+        CedarSet oneFalse = new(new CedarBool(false));
+        CedarSet nestedOnce = new(empty, oneTrue, oneFalse);
+        CedarSet nestedOnce2 = new(empty, oneTrue, oneFalse);
+        CedarSet nestedTwice = new(empty, oneTrue, oneFalse, nestedOnce);
+        CedarSet nestedTwice2 = new(empty, oneTrue, oneFalse, nestedOnce);
+
+        CedarAssert.Equal(nestedOnce, nestedOnce2);
+        CedarAssert.Equal(nestedTwice, nestedTwice2);
+        Assert.False(nestedOnce.Equals(nestedTwice));
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using Cedar.Ast;
 using Cedar.Core;
 using Xunit;
 
@@ -133,5 +134,30 @@ public sealed class PolicyTests
         string json = Policy.UnmarshalCedar("permit(principal, action, resource) unless { principal };").MarshalJson();
 
         Assert.Contains("\"kind\":\"unless\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_InvalidCedarText_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => Policy.UnmarshalCedar("!@#$"));
+    }
+
+    [Fact]
+    public void UnmarshalJson_InvalidJsonText_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => Policy.UnmarshalJson("!@#$"));
+    }
+
+    [Fact]
+    public void FromAst_CreatesUsablePolicy()
+    {
+        Cedar.Ast.PolicyBuilder builder = Cedar.Ast.CedarAst.Permit()
+            .ActionEq(new Cedar.Types.EntityUid(new Cedar.Types.EntityType("Action"), new Cedar.Types.CedarString("editPhoto")))
+            .When(Cedar.Ast.Variables.Resource().Access("owner").Equal(Cedar.Ast.Variables.Principal()));
+
+        Policy policy = Policy.FromAst(builder);
+
+        Assert.NotNull(policy);
+        Assert.Equal(Effect.Permit, policy.Effect);
     }
 }

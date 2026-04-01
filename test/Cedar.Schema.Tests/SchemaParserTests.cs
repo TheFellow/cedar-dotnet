@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Cedar.Types;
 using Xunit;
 
@@ -367,6 +368,232 @@ public sealed class SchemaParserTests
     public void UnmarshalCedar_RejectsAnnotationAndAppliesToErrors(string _, string cedar)
     {
         Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
+    }
+
+    // --- Ported from Go parser_error_test.go: parser error cases ---
+
+    public static TheoryData<string, string> ParserErrorCases =>
+        new()
+        {
+            { "reserved type name", "type String = { foo: String };" },
+            { "reserved type name Bool", "type Bool = { foo: String };" },
+            { "reserved type name Long", "type Long = { foo: String };" },
+            { "reserved type name Set", "type Set = { foo: String };" },
+            { "reserved type name Record", "type Record = { foo: String };" },
+            { "reserved type name Entity", "type Entity = { foo: String };" },
+            { "reserved type name Extension", "type Extension = { foo: String };" },
+            { "reserved type name Boolean", "type Boolean = { foo: String };" },
+            { "invalid token at schema level", "foo bar;" },
+            { "missing closing bracket", "namespace PhotoFlash {" },
+            { "missing entity name", "namespace PhotoFlash { entity { \"department\": String }; }" },
+            { "missing semicolon after type declaration", "type Foo = String\ntype Bar = Bool;" },
+            { "missing closing bracket in entity parent list", "entity User in [Group;" },
+            { "duplicate attribute in record", "entity User { name: String, name: Long };" },
+        };
+
+    [Theory]
+    [MemberData(nameof(ParserErrorCases))]
+    public void UnmarshalCedar_RejectsParserErrors(string _, string cedar)
+    {
+        Assert.ThrowsAny<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
+    }
+
+    // --- Ported from Go parser_test.go: TestParseSimple round-trips ---
+
+    [Fact]
+    public void UnmarshalCedar_RoundTrips_EmptyNamespace()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("namespace Demo {\n}\n");
+
+        Assert.Contains("Demo", document.Namespaces.Keys);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_RoundTrips_EntityWithTypeRefAndStringAttribute()
+    {
+        const string cedar =
+            """
+            namespace Demo {
+                entity User in UserGroup {
+                    name: Demo::id,
+                    "department": UserGroup,
+                };
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(cedar);
+        NamespaceDecl demo = SchemaAssert.SingleNamespace(document, "Demo");
+        EntityDecl user = demo.Entities[new Types.Ident("User")];
+
+        Assert.NotNull(user.Shape);
+        Assert.Contains("name", user.Shape!.Attributes.Keys);
+        Assert.Contains("department", user.Shape.Attributes.Keys);
+    }
+
+    // --- Ported from Go parser_test.go: TestParserHasErrors ---
+
+    [Fact]
+    public void UnmarshalCedar_MissingClosingBrace_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("namespace PhotoFlash {"));
+
+        Assert.Contains("EOF", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_MissingEntityName_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("namespace PhotoFlash { entity { \"department\": String }; }"));
+
+        Assert.Contains("expected identifier", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go parser_error_test.go: specific error message checks ---
+
+    [Fact]
+    public void UnmarshalCedar_ReservedTypeName_MentionsReserved()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("type String = { foo: String };"));
+
+        Assert.Contains("reserved type name", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_InvalidAppliesToField_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("action DoSomething appliesTo { foo: [User]; };"));
+
+        Assert.Contains("principal", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_MissingSemicolonAfterDeclaration_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("type Foo = String\ntype Bar = Bool;"));
+
+        Assert.Contains("expected ';'", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_InvalidDeclarationKeyword_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("foo bar;"));
+
+        Assert.Contains("expected declaration", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnmarshalCedar_TooManyErrorsCausesBailout()
+    {
+        // 17 lines with errors should trigger the max-errors bailout
+        string cedar = string.Join("\n", Enumerable.Range(0, 17).Select(static index => $"type T{index} ~ Other;"));
+
+        AggregateException exception = Assert.Throws<AggregateException>(() => SchemaDocument.UnmarshalCedar(cedar));
+
+        // The parser should bail out before processing all errors (MaxErrors = 10)
+        Assert.True(exception.InnerExceptions.Count <= 10,
+            $"Expected at most 10 errors, got {exception.InnerExceptions.Count}");
+    }
+
+    // --- Ported from Go schema_test.go (x/exp): cross-format marshaling ---
+
+    [Fact]
+    public void UnmarshalJson_InvalidJson_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => SchemaDocument.UnmarshalJson("{invalid json"));
+    }
+
+    [Fact]
+    public void MarshalCedar_AfterUnmarshalJson_Succeeds()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalJson("{}");
+
+        // Empty JSON schema should still be marshalable to Cedar when empty
+        // (MarshalCedar throws for empty, but MarshalJson should work)
+        Assert.Equal("{}", document.MarshalJson());
+    }
+
+    [Fact]
+    public void MarshalJson_AfterUnmarshalCedar_Succeeds()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("namespace test {}");
+
+        string json = document.MarshalJson();
+
+        Assert.Contains("test", json, StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go schema_test.go: Cedar unmarshal/marshal double pass ---
+
+    [Fact]
+    public void CedarMarshalCycle_ProducesSameResultTwice()
+    {
+        const string cedar =
+            """
+            namespace foo {
+                action Bar appliesTo {
+                    principal: String,
+                    resource: String
+                };
+            }
+            """;
+
+        SchemaDocument first = SchemaDocument.UnmarshalCedar(cedar);
+        string pass1 = first.MarshalCedar();
+        SchemaDocument second = SchemaDocument.UnmarshalCedar(pass1);
+        string pass2 = second.MarshalCedar();
+
+        Assert.Equal(pass1, pass2);
+    }
+
+    // --- Ported from Go convert_json_test.go: empty schema and invalid type ---
+
+    [Fact]
+    public void ConvertJsonToHuman_EmptySchema_ProducesEmptyOutput()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalJson("{}");
+
+        Assert.Equal("{}", document.MarshalJson());
+    }
+
+    // --- Ported from Go parser_error_test.go: enum list missing comma ---
+
+    [Fact]
+    public void UnmarshalCedar_EnumMissingComma_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("""entity Foo enum ["Bar" "Baz"];"""));
+
+        Assert.Contains("expected ',' or ']'", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go parser_error_test.go: duplicate attribute in record ---
+
+    [Fact]
+    public void UnmarshalCedar_DuplicateAttributeInRecord_ReportsError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("entity User { name: String, name: Long };"));
+
+        Assert.Contains("declared twice", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go parser_error_test.go: namespace with __cedar in name ---
+
+    [Fact]
+    public void UnmarshalCedar_NamespaceWithCedarInPath_ReportsReservedError()
+    {
+        AggregateException exception = Assert.Throws<AggregateException>(() =>
+            SchemaDocument.UnmarshalCedar("namespace __cedar {}"));
+
+        Assert.Contains("__cedar", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
+        Assert.Contains("reserved", exception.InnerExceptions[0].Message, StringComparison.Ordinal);
     }
 
     private static SchemaDocument ParseEntityWithStringAttributeName(string literal)

@@ -601,6 +601,620 @@ public sealed class ParserTests
         Assert.IsType<NodeAdd>(Assert.Single(policy.Conditions));
     }
 
+    [Fact]
+    public void ParseEmptyPolicySetReturnsEmptyArray()
+    {
+        PolicyAst[] policies = CedarParser.ParsePolicies(string.Empty);
+
+        Assert.Empty(policies);
+    }
+
+    [Fact]
+    public void ParseMultiSegmentEntityType()
+    {
+        PolicyAst policy = ParseSingle("permit(principal == Org::Team::User::\"alice\", action, resource);");
+
+        ScopeEq scope = Assert.IsType<ScopeEq>(policy.PrincipalScope);
+        Assert.Equal("Org::Team::User", scope.Entity.Type.Value);
+        Assert.Equal("alice", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParseHasTagExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { resource.hasTag(\"blue\") };");
+
+        NodeHasTag hasTag = Assert.IsType<NodeHasTag>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(hasTag.Left);
+        NodeValue tagValue = Assert.IsType<NodeValue>(hasTag.Right);
+        Assert.Equal(new CedarString("blue"), tagValue.Value);
+    }
+
+    [Fact]
+    public void ParseGetTagExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { resource.getTag(\"blue\") };");
+
+        NodeGetTag getTag = Assert.IsType<NodeGetTag>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(getTag.Left);
+        NodeValue tagValue = Assert.IsType<NodeValue>(getTag.Right);
+        Assert.Equal(new CedarString("blue"), tagValue.Value);
+    }
+
+    [Fact]
+    public void ParseHasTagFromContextExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal.hasTag(context.color) };");
+
+        NodeHasTag hasTag = Assert.IsType<NodeHasTag>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(hasTag.Left);
+        NodeAccess access = Assert.IsType<NodeAccess>(hasTag.Right);
+        Assert.IsType<NodeVariable>(access.Arg);
+    }
+
+    [Fact]
+    public void ParseMultipleWhenUnlessClauses()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal } unless { action } when { resource } unless { context };");
+
+        Assert.Equal(4, policy.Conditions.Length);
+    }
+
+    [Fact]
+    public void ParseComparisonOperators()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 1 < 2 };");
+        Assert.IsType<NodeLessThan>(Assert.Single(policy.Conditions));
+
+        policy = ParseSingle("permit(principal, action, resource) when { 1 <= 2 };");
+        Assert.IsType<NodeLessThanOrEqual>(Assert.Single(policy.Conditions));
+
+        policy = ParseSingle("permit(principal, action, resource) when { 2 > 1 };");
+        Assert.IsType<NodeGreaterThan>(Assert.Single(policy.Conditions));
+
+        policy = ParseSingle("permit(principal, action, resource) when { 2 >= 1 };");
+        Assert.IsType<NodeGreaterThanOrEqual>(Assert.Single(policy.Conditions));
+
+        policy = ParseSingle("permit(principal, action, resource) when { 1 != 2 };");
+        Assert.IsType<NodeNotEquals>(Assert.Single(policy.Conditions));
+
+        policy = ParseSingle("permit(principal, action, resource) when { 1 == 1 };");
+        Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+    }
+
+    [Fact]
+    public void ParseInExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal in Team::\"eng\" };");
+
+        NodeIn node = Assert.IsType<NodeIn>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(node.Left);
+        Assert.IsType<NodeValue>(node.Right);
+    }
+
+    [Fact]
+    public void ParseHasExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal has firstName };");
+
+        NodeHas node = Assert.IsType<NodeHas>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(node.Arg);
+        Assert.Equal(new CedarString("firstName"), node.Attribute);
+    }
+
+    [Fact]
+    public void ParseHasWithQuotedString()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal has \"1stName\" };");
+
+        NodeHas node = Assert.IsType<NodeHas>(Assert.Single(policy.Conditions));
+        Assert.Equal(new CedarString("1stName"), node.Attribute);
+    }
+
+    [Fact]
+    public void ParseIsExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal is User };");
+
+        NodeIs node = Assert.IsType<NodeIs>(Assert.Single(policy.Conditions));
+        Assert.Equal("User", node.EntityType.Value);
+    }
+
+    [Fact]
+    public void ParseIsWithLongPath()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal is X::Y };");
+
+        NodeIs node = Assert.IsType<NodeIs>(Assert.Single(policy.Conditions));
+        Assert.Equal("X::Y", node.EntityType.Value);
+    }
+
+    [Fact]
+    public void ParseLikeNoWildcards()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal.firstName like \"johnny\" };");
+
+        NodeLike node = Assert.IsType<NodeLike>(Assert.Single(policy.Conditions));
+        Assert.True(node.Pattern.Match(new CedarString("johnny")));
+        Assert.False(node.Pattern.Match(new CedarString("john")));
+    }
+
+    [Fact]
+    public void ParseLikeWildcard()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal.name like \"*\" };");
+
+        NodeLike node = Assert.IsType<NodeLike>(Assert.Single(policy.Conditions));
+        Assert.True(node.Pattern.Match(new CedarString("anything")));
+    }
+
+    [Fact]
+    public void ParseLikeEscapedAsterisk()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { \"f*o\" like \"f\\*o\" };");
+
+        NodeLike node = Assert.IsType<NodeLike>(Assert.Single(policy.Conditions));
+        Assert.True(node.Pattern.Match(new CedarString("f*o")));
+        Assert.False(node.Pattern.Match(new CedarString("foo")));
+    }
+
+    [Fact]
+    public void ParseLikeWithUnicodeEscapePattern()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal.name like \"\\u{210d}*\" };");
+
+        NodeLike node = Assert.IsType<NodeLike>(Assert.Single(policy.Conditions));
+        Assert.True(node.Pattern.Match(new CedarString("\u210dello")));
+        Assert.False(node.Pattern.Match(new CedarString("Hello")));
+    }
+
+    [Fact]
+    public void ParseMostPositiveLong()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 9223372036854775807 == -(-9223372036854775807) };");
+
+        Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+    }
+
+    [Fact]
+    public void ParseMostNegativeLong()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { -9223372036854775808 == -9223372036854775808 };");
+
+        Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+    }
+
+    [Fact]
+    public void ParsePrincipalIsScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal is X, action, resource);");
+
+        ScopeIs scope = Assert.IsType<ScopeIs>(policy.PrincipalScope);
+        Assert.Equal("X", scope.Type.Value);
+    }
+
+    [Fact]
+    public void ParsePrincipalIsLongScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal is X::Y, action, resource);");
+
+        ScopeIs scope = Assert.IsType<ScopeIs>(policy.PrincipalScope);
+        Assert.Equal("X::Y", scope.Type.Value);
+    }
+
+    [Fact]
+    public void ParsePrincipalIsInScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal is X in X::\"z\", action, resource);");
+
+        ScopeIsIn scope = Assert.IsType<ScopeIsIn>(policy.PrincipalScope);
+        Assert.Equal("X", scope.Type.Value);
+        Assert.Equal("X", scope.Entity.Type.Value);
+        Assert.Equal("z", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParsePrincipalInScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal in Group::\"admins\", action, resource);");
+
+        ScopeIn scope = Assert.IsType<ScopeIn>(policy.PrincipalScope);
+        Assert.Equal("Group", scope.Entity.Type.Value);
+        Assert.Equal("admins", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParseActionEqScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action == Action::\"sow\", resource);");
+
+        ScopeEq scope = Assert.IsType<ScopeEq>(policy.ActionScope);
+        Assert.Equal("Action", scope.Entity.Type.Value);
+        Assert.Equal("sow", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParseResourceEqScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource == Crop::\"apple\");");
+
+        ScopeEq scope = Assert.IsType<ScopeEq>(policy.ResourceScope);
+        Assert.Equal("Crop", scope.Entity.Type.Value);
+        Assert.Equal("apple", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParseResourceInScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource in Genus::\"malus\");");
+
+        ScopeIn scope = Assert.IsType<ScopeIn>(policy.ResourceScope);
+        Assert.Equal("Genus", scope.Entity.Type.Value);
+        Assert.Equal("malus", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParseTrailingCommaInExtensionCall()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { ip(\"1.2.3.4\",) };");
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
+        Assert.Equal("ip", call.Name.Value);
+        Assert.Single(call.Args);
+    }
+
+    [Fact]
+    public void ParseExtensionFunctionNoArgs()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { ip() };");
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
+        Assert.Equal("ip", call.Name.Value);
+        Assert.Empty(call.Args);
+    }
+
+    [Fact]
+    public void ParseExtensionFunctionWithContextArg()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { ip(context.someString) };");
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
+        Assert.Equal("ip", call.Name.Value);
+        Assert.Single(call.Args);
+        Assert.IsType<NodeAccess>(call.Args[0]);
+    }
+
+    [Fact]
+    public void ParseContainsAllMethodCall()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { context.strings.containsAll([\"foo\"]) };");
+
+        NodeContainsAll node = Assert.IsType<NodeContainsAll>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAccess>(node.Left);
+        Assert.IsType<NodeSet>(node.Right);
+    }
+
+    [Fact]
+    public void ParseContainsAnyMethodCall()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { context.strings.containsAny([\"foo\"]) };");
+
+        NodeContainsAny node = Assert.IsType<NodeContainsAny>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAccess>(node.Left);
+        Assert.IsType<NodeSet>(node.Right);
+    }
+
+    [Fact]
+    public void ParseIsEmptyMethodCall()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { context.strings.isEmpty() };");
+
+        NodeIsEmpty node = Assert.IsType<NodeIsEmpty>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAccess>(node.Arg);
+    }
+
+    [Fact]
+    public void ParseAndOverOrPrecedence()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { true && false || true && true };");
+
+        NodeOr or = Assert.IsType<NodeOr>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAnd>(or.Left);
+        Assert.IsType<NodeAnd>(or.Right);
+    }
+
+    [Fact]
+    public void ParseRelOverAndPrecedence()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 1 < 2 && true };");
+
+        NodeAnd and = Assert.IsType<NodeAnd>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeLessThan>(and.Left);
+        Assert.IsType<NodeValue>(and.Right);
+    }
+
+    [Fact]
+    public void ParseAddOverRelPrecedence()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 1 + 1 < 3 };");
+
+        NodeLessThan lt = Assert.IsType<NodeLessThan>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAdd>(lt.Left);
+        Assert.IsType<NodeValue>(lt.Right);
+    }
+
+    [Fact]
+    public void ParseMultOverAddPrecedenceRhsAdd()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 2 * 3 + 4 == 10 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeAdd add = Assert.IsType<NodeAdd>(equals.Left);
+        Assert.IsType<NodeMult>(add.Left);
+        Assert.IsType<NodeValue>(add.Right);
+    }
+
+    [Fact]
+    public void ParseMultOverAddPrecedenceLhsAdd()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 2 + 3 * 4 == 14 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeAdd add = Assert.IsType<NodeAdd>(equals.Left);
+        Assert.IsType<NodeValue>(add.Left);
+        Assert.IsType<NodeMult>(add.Right);
+    }
+
+    [Fact]
+    public void ParseMemberOverUnaryPrecedence()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { -context.num };");
+
+        NodeNegate negate = Assert.IsType<NodeNegate>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAccess>(negate.Arg);
+    }
+
+    [Fact]
+    public void ParseParenthesizedIfThenElse()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { (if true then 2 else 3 * 4) == 2 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeIfThenElse ite = Assert.IsType<NodeIfThenElse>(equals.Left);
+        Assert.IsType<NodeValue>(ite.If);
+        Assert.IsType<NodeValue>(ite.Then);
+        Assert.IsType<NodeMult>(ite.Else);
+    }
+
+    [Fact]
+    public void ParseParenthesizedIfWithTrailingMult()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { (if true then 2 else 3) * 4 == 8 };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeMult mult = Assert.IsType<NodeMult>(equals.Left);
+        Assert.IsType<NodeIfThenElse>(mult.Left);
+        Assert.IsType<NodeValue>(mult.Right);
+    }
+
+    [Fact]
+    public void ParseEmptySetLiteral()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { [] };");
+
+        NodeSet set = Assert.IsType<NodeSet>(Assert.Single(policy.Conditions));
+        Assert.Empty(set.Elements);
+    }
+
+    [Fact]
+    public void ParseEmptyRecordLiteral()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { {} };");
+
+        NodeRecord record = Assert.IsType<NodeRecord>(Assert.Single(policy.Conditions));
+        Assert.Empty(record.Elements);
+    }
+
+    [Fact]
+    public void ParseExtensionMethodCallIsIpv4()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { context.sourceIP.isIpv4() };");
+
+        NodeExtensionCall call = Assert.IsType<NodeExtensionCall>(Assert.Single(policy.Conditions));
+        Assert.Equal("isIpv4", call.Name.Value);
+    }
+
+    [Fact]
+    public void ParseIpEqualityWithTwoExtensionCalls()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { ip(\"1.2.3.4\") == ip(\"2.3.4.5\") };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        NodeExtensionCall left = Assert.IsType<NodeExtensionCall>(equals.Left);
+        NodeExtensionCall right = Assert.IsType<NodeExtensionCall>(equals.Right);
+        Assert.Equal("ip", left.Name.Value);
+        Assert.Equal("ip", right.Name.Value);
+    }
+
+    [Fact]
+    public void ParseDecimalEquality()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { decimal(\"12.34\") == decimal(\"23.45\") };");
+
+        NodeEquals equals = Assert.IsType<NodeEquals>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeExtensionCall>(equals.Left);
+        Assert.IsType<NodeExtensionCall>(equals.Right);
+    }
+
+    [Fact]
+    public void ParsePolicyPositions()
+    {
+        string input = "// idk a comment\n@blah(\"asdf\")\npermit( principal, action, resource );\n\n\n// later on\n  permit (principal, action, resource) ;\n\n// annotation indent\n @test(\"1234\") permit (principal, action, resource );";
+
+        PolicyAst[] policies = CedarParser.ParsePolicies(input);
+
+        Assert.Equal(3, policies.Length);
+        Assert.Equal(2, policies[0].Position.Line);
+        Assert.Equal(1, policies[0].Position.Column);
+        Assert.Equal(7, policies[1].Position.Line);
+        Assert.Equal(3, policies[1].Position.Column);
+        Assert.Equal(10, policies[2].Position.Line);
+        Assert.Equal(2, policies[2].Position.Column);
+    }
+
+    [Fact]
+    public void ParseMostNegativeLongComparison()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { -9223372036854775808 < -9223372036854775807 };");
+
+        Assert.IsType<NodeLessThan>(Assert.Single(policy.Conditions));
+    }
+
+    [Fact]
+    public void ParseTwoAnnotations()
+    {
+        PolicyAst policy = ParseSingle("@foo(\"bar\") @baz(\"quux\") permit(principal, action, resource);");
+
+        Assert.Equal(2, policy.Annotations.Length);
+        Assert.Equal("foo", policy.Annotations[0].Key.Value);
+        Assert.Equal("bar", policy.Annotations[0].Value.Value);
+        Assert.Equal("baz", policy.Annotations[1].Key.Value);
+        Assert.Equal("quux", policy.Annotations[1].Value.Value);
+    }
+
+    [Fact]
+    public void ParseMultiplePoliciesWithInScopes()
+    {
+        string input = "permit(principal in Team::\"eng\", action in [PhotoflashRole::\"admin\"], resource in Album::\"jane_vacation\"); permit(principal in Team::\"eng\", action in [PhotoflashRole::\"admin\", PhotoflashRole::\"operator\"], resource in Album::\"jane_vacation\");";
+
+        PolicyAst[] policies = CedarParser.ParsePolicies(input);
+
+        Assert.Equal(2, policies.Length);
+        ScopeInSet actionScope0 = Assert.IsType<ScopeInSet>(policies[0].ActionScope);
+        Assert.Single(actionScope0.Entities);
+        ScopeInSet actionScope1 = Assert.IsType<ScopeInSet>(policies[1].ActionScope);
+        Assert.Equal(2, actionScope1.Entities.Length);
+    }
+
+    [Fact]
+    public void ParseTagsWithGetTag()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { resource.getTag(context.color) };");
+
+        NodeGetTag getTag = Assert.IsType<NodeGetTag>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeVariable>(getTag.Left);
+        NodeAccess access = Assert.IsType<NodeAccess>(getTag.Right);
+        Assert.IsType<NodeVariable>(access.Arg);
+    }
+
+    [Fact]
+    public void ParseContainsMethodCall()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { context.strings.contains(\"foo\") };");
+
+        NodeContains node = Assert.IsType<NodeContains>(Assert.Single(policy.Conditions));
+        Assert.IsType<NodeAccess>(node.Left);
+        Assert.IsType<NodeValue>(node.Right);
+    }
+
+    [Fact]
+    public void ParseMultiplication()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 * 2 };");
+
+        NodeMult mult = Assert.IsType<NodeMult>(Assert.Single(policy.Conditions));
+        NodeValue left = Assert.IsType<NodeValue>(mult.Left);
+        NodeValue right = Assert.IsType<NodeValue>(mult.Right);
+        Assert.Equal(new CedarLong(42), left.Value);
+        Assert.Equal(new CedarLong(2), right.Value);
+    }
+
+    [Fact]
+    public void ParseAddition()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 + 2 };");
+
+        NodeAdd add = Assert.IsType<NodeAdd>(Assert.Single(policy.Conditions));
+        NodeValue left = Assert.IsType<NodeValue>(add.Left);
+        NodeValue right = Assert.IsType<NodeValue>(add.Right);
+        Assert.Equal(new CedarLong(42), left.Value);
+        Assert.Equal(new CedarLong(2), right.Value);
+    }
+
+    [Fact]
+    public void ParseSubtraction()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { 42 - 2 };");
+
+        NodeSub sub = Assert.IsType<NodeSub>(Assert.Single(policy.Conditions));
+        NodeValue left = Assert.IsType<NodeValue>(sub.Left);
+        NodeValue right = Assert.IsType<NodeValue>(sub.Right);
+        Assert.Equal(new CedarLong(42), left.Value);
+        Assert.Equal(new CedarLong(2), right.Value);
+    }
+
+    [Fact]
+    public void ParseSingleAnd()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { true && false };");
+
+        NodeAnd and = Assert.IsType<NodeAnd>(Assert.Single(policy.Conditions));
+        NodeValue left = Assert.IsType<NodeValue>(and.Left);
+        NodeValue right = Assert.IsType<NodeValue>(and.Right);
+        Assert.Equal(CedarBool.True, left.Value);
+        Assert.Equal(CedarBool.False, right.Value);
+    }
+
+    [Fact]
+    public void ParseSingleOr()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { true || false };");
+
+        NodeOr or = Assert.IsType<NodeOr>(Assert.Single(policy.Conditions));
+        NodeValue left = Assert.IsType<NodeValue>(or.Left);
+        NodeValue right = Assert.IsType<NodeValue>(or.Right);
+        Assert.Equal(CedarBool.True, left.Value);
+        Assert.Equal(CedarBool.False, right.Value);
+    }
+
+    [Fact]
+    public void ParseResourceIsLongScope()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource is X::Y);");
+
+        ScopeIs scope = Assert.IsType<ScopeIs>(policy.ResourceScope);
+        Assert.Equal("X::Y", scope.Type.Value);
+    }
+
+    [Fact]
+    public void ParseResourceIsInScopeWithEntity()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource is X in X::\"z\");");
+
+        ScopeIsIn scope = Assert.IsType<ScopeIsIn>(policy.ResourceScope);
+        Assert.Equal("X", scope.Type.Value);
+        Assert.Equal("X", scope.Entity.Type.Value);
+        Assert.Equal("z", scope.Entity.Id.Value);
+    }
+
+    [Fact]
+    public void ParseWhenIsExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal is X };");
+
+        NodeIs node = Assert.IsType<NodeIs>(Assert.Single(policy.Conditions));
+        Assert.Equal("X", node.EntityType.Value);
+    }
+
+    [Fact]
+    public void ParseWhenIsInExpression()
+    {
+        PolicyAst policy = ParseSingle("permit(principal, action, resource) when { principal is X in X::\"z\" };");
+
+        NodeIsIn node = Assert.IsType<NodeIsIn>(Assert.Single(policy.Conditions));
+        Assert.Equal("X", node.EntityType.Value);
+    }
+
     private static PolicyAst ParseSingle(string source)
     {
         PolicyAst[] policies = CedarParser.ParsePolicies(source);

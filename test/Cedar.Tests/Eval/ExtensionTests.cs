@@ -335,4 +335,237 @@ public sealed class ExtensionTests
     {
         Assert.Throws<EvalException>(() => Invoke("decimal", new CedarString("notanumber")));
     }
+
+    // --- Registry count (from Go TestExtensions: len(ExtMap)==22) ---
+    // C# has additional datetime component extensions not present in Go.
+
+    [Fact]
+    public void ExtensionRegistry_ContainsAllExpectedFunctions()
+    {
+        // Verify all expected functions exist by invoking with valid args
+        string[] expectedFunctions = new[]
+        {
+            "decimal", "ip", "datetime", "duration",
+            "lessThan", "lessThanOrEqual", "greaterThan", "greaterThanOrEqual",
+            "isIpv4", "isIpv6", "isLoopback", "isMulticast", "isInRange",
+            "toDate", "toTime", "offset", "durationSince",
+            "toDays", "toHours", "toMinutes", "toSeconds", "toMilliseconds",
+            "daysInMonth", "year", "month", "day", "dayOfWeek", "dayOfYear",
+            "hour", "minute", "second", "millisecond"
+        };
+
+        foreach (string name in expectedFunctions)
+        {
+            Assert.True(
+                Cedar.Core.Internal.Extensions.ExtensionRegistry.TryGet(name, out _),
+                $"Expected extension '{name}' to be registered");
+        }
+    }
+
+    // --- IP with CIDR prefix (from Go TestToEval/ip test with /16) ---
+
+    [Fact]
+    public void Ip_WithCidrPrefix_ReturnsIp()
+    {
+        ICedarData result = Invoke("ip", new CedarString("127.0.0.42/16"));
+        CedarIpAddress ip = Assert.IsType<CedarIpAddress>(result);
+        Assert.NotNull(ip);
+    }
+
+    [Fact]
+    public void Ip_InvalidString_ThrowsEvalException()
+    {
+        Assert.Throws<EvalException>(() => Invoke("ip", new CedarString("not-an-IP-address")));
+    }
+
+    [Fact]
+    public void Datetime_InvalidString_ThrowsEvalException()
+    {
+        Assert.Throws<EvalException>(() => Invoke("datetime", new CedarString("not-a-datetime")));
+    }
+
+    [Fact]
+    public void Duration_InvalidString_ThrowsEvalException()
+    {
+        Assert.Throws<EvalException>(() => Invoke("duration", new CedarString("not-a-duration")));
+    }
+
+    // --- IsIpv6 with Ipv4 loopback (from Go TestIPTestNode) ---
+
+    [Fact]
+    public void IsIpv6_Ipv4Loopback_ReturnsFalse()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("127.0.0.1");
+        Assert.Equal(CedarBool.False, Invoke("isIpv6", ip));
+    }
+
+    // --- IsIpv4 with Ipv6 loopback (from Go TestIPTestNode) ---
+
+    [Fact]
+    public void IsIpv4_Ipv6Loopback_ReturnsFalse()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("::1");
+        Assert.Equal(CedarBool.False, Invoke("isIpv4", ip));
+    }
+
+    // --- IsLoopback Ipv6 (from Go TestIPTestNode/LoopbackTrue with ipv6) ---
+
+    [Fact]
+    public void IsLoopback_Ipv6Loopback_ReturnsTrue()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("::1");
+        Assert.Equal(CedarBool.True, Invoke("isLoopback", ip));
+    }
+
+    // --- IsMulticast false (from Go TestIPTestNode/MulticastFalse) ---
+
+    [Fact]
+    public void IsMulticast_Ipv6Loopback_ReturnsFalse()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("::1");
+        Assert.Equal(CedarBool.False, Invoke("isMulticast", ip));
+    }
+
+    // --- IsInRange detailed cases (from Go TestIPIsInRangeNode) ---
+
+    [Fact]
+    public void IsInRange_SameIp_ReturnsTrue()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("1.2.3.4");
+        Assert.Equal(CedarBool.True, Invoke("isInRange", ip, ip));
+    }
+
+    [Fact]
+    public void IsInRange_RangeDoesNotContainIp_ReturnsFalse()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("1.2.3.4");
+        CedarIpAddress range = CedarIpAddress.Parse("1.2.4.0/24");
+        Assert.Equal(CedarBool.False, Invoke("isInRange", ip, range));
+    }
+
+    [Fact]
+    public void IsInRange_SubnetContainsIp_ReturnsTrue()
+    {
+        CedarIpAddress ip = CedarIpAddress.Parse("1.2.3.4");
+        CedarIpAddress range = CedarIpAddress.Parse("1.2.3.0/24");
+        Assert.Equal(CedarBool.True, Invoke("isInRange", ip, range));
+    }
+
+    [Fact]
+    public void IsInRange_IpDoesNotContainSubnet_ReturnsFalse()
+    {
+        CedarIpAddress subnet = CedarIpAddress.Parse("1.2.3.0/24");
+        CedarIpAddress ip = CedarIpAddress.Parse("1.2.3.4");
+        Assert.Equal(CedarBool.False, Invoke("isInRange", subnet, ip));
+    }
+
+    // --- Decimal comparisons with equal values (from Go TestDecimalLessThanNode etc.) ---
+
+    [Fact]
+    public void LessThan_Equal_ReturnsFalse()
+    {
+        CedarDecimal val = CedarDecimal.Parse("1.0");
+        Assert.Equal(CedarBool.False, Invoke("lessThan", val, val));
+    }
+
+    [Fact]
+    public void GreaterThan_Equal_ReturnsFalse()
+    {
+        CedarDecimal val = CedarDecimal.Parse("1.0");
+        Assert.Equal(CedarBool.False, Invoke("greaterThan", val, val));
+    }
+
+    [Fact]
+    public void LessThanOrEqual_Less_ReturnsTrue()
+    {
+        CedarDecimal left = CedarDecimal.Parse("1.0");
+        CedarDecimal right = CedarDecimal.Parse("2.0");
+        Assert.Equal(CedarBool.True, Invoke("lessThanOrEqual", left, right));
+    }
+
+    [Fact]
+    public void GreaterThanOrEqual_Greater_ReturnsTrue()
+    {
+        CedarDecimal left = CedarDecimal.Parse("2.0");
+        CedarDecimal right = CedarDecimal.Parse("1.0");
+        Assert.Equal(CedarBool.True, Invoke("greaterThanOrEqual", left, right));
+    }
+
+    [Fact]
+    public void GreaterThan_Less_ReturnsFalse()
+    {
+        CedarDecimal left = CedarDecimal.Parse("1.0");
+        CedarDecimal right = CedarDecimal.Parse("2.0");
+        Assert.Equal(CedarBool.False, Invoke("greaterThan", left, right));
+    }
+
+    [Fact]
+    public void GreaterThanOrEqual_Less_ReturnsFalse()
+    {
+        CedarDecimal left = CedarDecimal.Parse("1.0");
+        CedarDecimal right = CedarDecimal.Parse("2.0");
+        Assert.Equal(CedarBool.False, Invoke("greaterThanOrEqual", left, right));
+    }
+
+    [Fact]
+    public void LessThanOrEqual_Greater_ReturnsFalse()
+    {
+        CedarDecimal left = CedarDecimal.Parse("2.0");
+        CedarDecimal right = CedarDecimal.Parse("1.0");
+        Assert.Equal(CedarBool.False, Invoke("lessThanOrEqual", left, right));
+    }
+
+    // --- Duration conversions from 1d (from Go TestDurationTo* tests) ---
+
+    [Fact]
+    public void ToMilliseconds_OneDay_ReturnsCorrectValue()
+    {
+        CedarDuration dur = CedarDuration.Parse("1d");
+        Assert.Equal(new CedarLong(24L * 60 * 60 * 1000), Invoke("toMilliseconds", dur));
+    }
+
+    [Fact]
+    public void ToSeconds_OneDay_ReturnsCorrectValue()
+    {
+        CedarDuration dur = CedarDuration.Parse("1d");
+        Assert.Equal(new CedarLong(24L * 60 * 60), Invoke("toSeconds", dur));
+    }
+
+    [Fact]
+    public void ToMinutes_OneDay_ReturnsCorrectValue()
+    {
+        CedarDuration dur = CedarDuration.Parse("1d");
+        Assert.Equal(new CedarLong(24L * 60), Invoke("toMinutes", dur));
+    }
+
+    [Fact]
+    public void ToHours_OneDay_ReturnsCorrectValue()
+    {
+        CedarDuration dur = CedarDuration.Parse("1d");
+        Assert.Equal(new CedarLong(24L), Invoke("toHours", dur));
+    }
+
+    // --- ToDate extracts date (from Go TestDatetimeToDate) ---
+
+    [Fact]
+    public void ToDate_ExtractsDatePortion()
+    {
+        CedarDatetime dt = CedarDatetime.Parse("1970-01-02T10:00:00Z");
+        ICedarData result = Invoke("toDate", dt);
+        CedarDatetime date = Assert.IsType<CedarDatetime>(result);
+        // 1970-01-02 is 86400000 ms from epoch
+        Assert.Equal(new CedarDatetime(86400000L), date);
+    }
+
+    // --- ToTime extracts time portion (from Go TestDatetimeToTime) ---
+
+    [Fact]
+    public void ToTime_ExtractsTimePortion()
+    {
+        CedarDatetime dt = CedarDatetime.Parse("1970-01-01T10:00:00Z");
+        ICedarData result = Invoke("toTime", dt);
+        CedarDuration duration = Assert.IsType<CedarDuration>(result);
+        // 10 hours in ms
+        Assert.Equal(10L * 60 * 60 * 1000, duration.Value);
+    }
 }

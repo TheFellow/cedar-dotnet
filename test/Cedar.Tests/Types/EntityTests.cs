@@ -24,6 +24,23 @@ public sealed class EntityTests
     }
 
     [Fact]
+    public void EmptyEntitiesCompareEqual()
+    {
+        Entity empty1 = new(
+            new EntityUid(new EntityType(""), new CedarString("")),
+            new EntityUidSet(),
+            new CedarRecord(),
+            new CedarRecord());
+        Entity empty2 = new(
+            new EntityUid(new EntityType(""), new CedarString("")),
+            new EntityUidSet(),
+            new CedarRecord(),
+            new CedarRecord());
+
+        Assert.Equal(empty1, empty2);
+    }
+
+    [Fact]
     public void DifferentUidsAreNotEqual()
     {
         Assert.NotEqual(CreateEntity(), CreateEntity() with

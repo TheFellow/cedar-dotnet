@@ -10,11 +10,12 @@ namespace Cedar.Conformance;
 public sealed class CorpusValidationTests
 {
     [Theory]
-    [MemberData(nameof(CorpusTestData.ValidationScenarios), MemberType = typeof(CorpusTestData))]
-    public void ValidationPayloadsHaveExpectedCounts(CorpusScenarioCase scenario)
+    [MemberData(nameof(CorpusTestData.ValidationKeys), MemberType = typeof(CorpusTestData))]
+    public void ValidationPayloadsHaveExpectedCounts(string scenarioFile)
     {
-        Assert.NotNull(scenario.Validation);
+        CorpusScenarioCase scenario = CorpusTestData.GetScenario(scenarioFile);
 
+        Assert.NotNull(scenario.Validation);
         Assert.Equal(scenario.Requests.Length, scenario.Validation!.RequestValidation.Count);
         Assert.Equal(scenario.Policies.All().Count(), scenario.Validation.PolicyValidation.PerPolicy.Count);
         Assert.Equal(scenario.Entities.Count, scenario.Validation.EntityValidation.PerEntity.Count);
@@ -26,23 +27,25 @@ public sealed class CorpusValidationTests
     }
 
     [Theory]
-    [MemberData(nameof(CorpusTestData.ValidationScenarios), MemberType = typeof(CorpusTestData))]
-    public void StrictPolicyValidationMatchesRust(CorpusScenarioCase scenario)
+    [MemberData(nameof(CorpusTestData.ValidationKeys), MemberType = typeof(CorpusTestData))]
+    public void StrictPolicyValidationMatchesRust(string scenarioFile)
     {
-        RunPolicyParityCheck(scenario, ValidationMode.Strict, static expected => expected.Strict, 0.05);
+        RunPolicyParityCheck(scenarioFile, ValidationMode.Strict, static expected => expected.Strict, 0.05);
     }
 
     [Theory]
-    [MemberData(nameof(CorpusTestData.ValidationScenarios), MemberType = typeof(CorpusTestData))]
-    public void PermissivePolicyValidationMatchesRust(CorpusScenarioCase scenario)
+    [MemberData(nameof(CorpusTestData.ValidationKeys), MemberType = typeof(CorpusTestData))]
+    public void PermissivePolicyValidationMatchesRust(string scenarioFile)
     {
-        RunPolicyParityCheck(scenario, ValidationMode.Permissive, static expected => expected.Permissive, 0.05);
+        RunPolicyParityCheck(scenarioFile, ValidationMode.Permissive, static expected => expected.Permissive, 0.05);
     }
 
     [Theory]
-    [MemberData(nameof(CorpusTestData.ValidationScenarios), MemberType = typeof(CorpusTestData))]
-    public void EntityValidationMatchesRust(CorpusScenarioCase scenario)
+    [MemberData(nameof(CorpusTestData.ValidationKeys), MemberType = typeof(CorpusTestData))]
+    public void EntityValidationMatchesRust(string scenarioFile)
     {
+        CorpusScenarioCase scenario = CorpusTestData.GetScenario(scenarioFile);
+
         if (scenario.SchemaText is null || scenario.Validation is null)
         {
             return;
@@ -66,9 +69,11 @@ public sealed class CorpusValidationTests
     }
 
     [Theory]
-    [MemberData(nameof(CorpusTestData.ValidationScenarios), MemberType = typeof(CorpusTestData))]
-    public void RequestValidationMatchesRust(CorpusScenarioCase scenario)
+    [MemberData(nameof(CorpusTestData.ValidationKeys), MemberType = typeof(CorpusTestData))]
+    public void RequestValidationMatchesRust(string scenarioFile)
     {
+        CorpusScenarioCase scenario = CorpusTestData.GetScenario(scenarioFile);
+
         if (scenario.SchemaText is null || scenario.Validation is null)
         {
             return;
@@ -99,11 +104,13 @@ public sealed class CorpusValidationTests
     }
 
     private static void RunPolicyParityCheck(
-        CorpusScenarioCase scenario,
+        string scenarioFile,
         ValidationMode mode,
         Func<CorpusPolicyValidationResult, bool> selector,
         double allowedMismatchRatio)
     {
+        CorpusScenarioCase scenario = CorpusTestData.GetScenario(scenarioFile);
+
         if (scenario.SchemaText is null || scenario.Validation is null)
         {
             return;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Cedar.Tests.TestSupport;
 using Cedar.Types;
 using Xunit;
@@ -13,6 +14,24 @@ public sealed class CedarDatetimeTests
         CedarDatetime value = new(42);
 
         Assert.Equal(42, value.Value);
+    }
+
+    [Theory]
+    [InlineData("1970-01-01", "datetime(\"1970-01-01T00:00:00.000Z\")")]
+    [InlineData("1970-10-10", "datetime(\"1970-10-10T00:00:00.000Z\")")]
+    [InlineData("1970-11-11", "datetime(\"1970-11-11T00:00:00.000Z\")")]
+    [InlineData("1970-01-01T01:01:01Z", "datetime(\"1970-01-01T01:01:01.000Z\")")]
+    [InlineData("1970-01-01T10:10:10Z", "datetime(\"1970-01-01T10:10:10.000Z\")")]
+    [InlineData("1970-01-01T11:11:11Z", "datetime(\"1970-01-01T11:11:11.000Z\")")]
+    [InlineData("1970-01-01T00:00:00.000Z", "datetime(\"1970-01-01T00:00:00.000Z\")")]
+    [InlineData("1970-01-01T00:00:00.001Z", "datetime(\"1970-01-01T00:00:00.001Z\")")]
+    [InlineData("1970-01-01T00:00:00.011Z", "datetime(\"1970-01-01T00:00:00.011Z\")")]
+    [InlineData("1970-01-01T00:00:00.111Z", "datetime(\"1970-01-01T00:00:00.111Z\")")]
+    [InlineData("1970-01-01T00:00:00.010Z", "datetime(\"1970-01-01T00:00:00.010Z\")")]
+    [InlineData("1970-01-01T00:00:00.100Z", "datetime(\"1970-01-01T00:00:00.100Z\")")]
+    public void ParseAcceptsValidDatetimeFormats(string input, string expected)
+    {
+        CedarAssert.CedarText(CedarDatetime.Parse(input), expected);
     }
 
     [Fact]
@@ -200,6 +219,12 @@ public sealed class CedarDatetimeTests
     public void DifferentValuesAreNotEqual()
     {
         CedarAssert.NotEqual(new CedarDatetime(42), new CedarDatetime(43));
+    }
+
+    [Fact]
+    public void DifferentValueTypesAreNotEqual()
+    {
+        CedarAssert.NotEqual(new CedarDatetime(0), new CedarBool(false));
     }
 
     [Fact]

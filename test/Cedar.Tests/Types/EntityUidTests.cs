@@ -26,11 +26,27 @@ public sealed class EntityUidTests
     }
 
     [Fact]
+    public void MarshalCedarFormatsNamespacedType()
+    {
+        EntityUid uid = new(new EntityType("namespace::type"), new CedarString("id"));
+
+        Assert.Equal("namespace::type::\"id\"", uid.MarshalCedar());
+    }
+
+    [Fact]
     public void MarshalCedarEscapesIdentifierText()
     {
         EntityUid uid = new(new EntityType("User"), new CedarString("a\"b"));
 
         Assert.Equal("User::\"a\\\"b\"", uid.MarshalCedar());
+    }
+
+    [Fact]
+    public void DifferentIdsAreNotEqual()
+    {
+        Assert.NotEqual(
+            new EntityUid(new EntityType("User"), new CedarString("alice")),
+            new EntityUid(new EntityType("User"), new CedarString("bob")));
     }
 
     [Theory]
@@ -171,6 +187,7 @@ public sealed class EntityUidTests
     [InlineData("")]
     [InlineData("\"id\"")]
     [InlineData("::\"id\"")]
+    [InlineData("Type::\"")]
     public void TryParseCedar_RejectsInvalidInput(string input)
     {
         Assert.False(EntityUid.TryParseCedar(input, out EntityUid? result));

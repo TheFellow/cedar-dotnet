@@ -107,4 +107,50 @@ public sealed class MapSetTests
     {
         Assert.Empty(new ImmutableMapSet<int>());
     }
+
+    [Fact]
+    public void EqualReturnsFalseForDifferentItems()
+    {
+        ImmutableMapSet<int> left = new MapSetBuilder<int>([1, 2, 3]).Build();
+        ImmutableMapSet<int> right = new MapSetBuilder<int>([1, 2, 4]).Build();
+
+        Assert.False(left.Equal(right));
+    }
+
+    [Fact]
+    public void EqualReturnsTrueForSelfReference()
+    {
+        ImmutableMapSet<int> set = new MapSetBuilder<int>([1, 2, 3]).Build();
+
+        Assert.True(set.Equal(set));
+    }
+
+    [Fact]
+    public void EqualReturnsFalseForNull()
+    {
+        ImmutableMapSet<int> set = new MapSetBuilder<int>([1, 2, 3]).Build();
+
+        Assert.False(set.Equal(null));
+    }
+
+    [Fact]
+    public void EmptySetContainsNothing()
+    {
+        ImmutableMapSet<int> set = new MapSetBuilder<int>().Build();
+
+        Assert.Empty(set);
+        Assert.False(set.Contains(1));
+    }
+
+    [Fact]
+    public void BuilderDeduplicatesFromEnumerable()
+    {
+        MapSetBuilder<int> builder = new([1, 1, 2, 2, 3]);
+        ImmutableMapSet<int> set = builder.Build();
+
+        Assert.Equal(3, set.Count);
+        Assert.True(set.Contains(1));
+        Assert.True(set.Contains(2));
+        Assert.True(set.Contains(3));
+    }
 }

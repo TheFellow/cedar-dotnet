@@ -286,4 +286,52 @@ public sealed class PolicySetTests
         Assert.Same(second, set.Get(new PolicyId("policy1")));
         Assert.Null(set.Get(new PolicyId("policy2")));
     }
+
+    [Fact]
+    public void ParseCedar_TokenizerError_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => PolicySet.ParseCedar("\""));
+    }
+
+    [Fact]
+    public void ParseCedar_ParserError_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => PolicySet.ParseCedar("err"));
+    }
+
+    [Fact]
+    public void ParseCedar_WithAnnotations_PreservesAnnotations()
+    {
+        PolicySet set = PolicySet.ParseCedar("@key(\"value\") permit(principal, action, resource);");
+
+        Policy? policy = set.Get(new PolicyId("policy0"));
+        Assert.NotNull(policy);
+        Assert.True(policy!.Annotations.ContainsKey(new Cedar.Types.Ident("key")));
+        Assert.Equal("value", policy.Annotations[new Cedar.Types.Ident("key")].Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_InvalidPayload_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => PolicySet.UnmarshalJson("!@#$"));
+    }
+
+    [Fact]
+    public void UnmarshalJson_ValidPayload_ReadsPolicies()
+    {
+        PolicySet set = PolicySet.UnmarshalJson("{\"staticPolicies\":{\"policy0\":{\"effect\":\"permit\",\"principal\":{\"op\":\"All\"},\"action\":{\"op\":\"All\"},\"resource\":{\"op\":\"All\"}}}}");
+
+        Assert.Single(set.Map());
+    }
+
+    [Fact]
+    public void MarshalJson_RoundTripsThroughUnmarshalJson()
+    {
+        PolicySet set = PolicySet.ParseCedar("permit(principal, action, resource);");
+
+        string json = set.MarshalJson();
+        PolicySet roundTripped = PolicySet.UnmarshalJson(json);
+
+        Assert.Equal(json, roundTripped.MarshalJson());
+    }
 }

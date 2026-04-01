@@ -111,4 +111,89 @@ public sealed class SchemaRoundTripTests
         Assert.NotNull(action.AppliesTo.ContextPath);
         Assert.Equal("CommonCtx", action.AppliesTo.ContextPath!.Name);
     }
+
+    // --- Ported from Go convert_json_test.go: TestConvertJsonToHumanRoundtrip ---
+
+    [Fact]
+    public void JsonToHumanToJson_PreservesSemantics()
+    {
+        string json = SchemaTestData.SampleJson;
+        SchemaDocument fromJson = SchemaDocument.UnmarshalJson(json);
+
+        string cedar = fromJson.MarshalCedar();
+        SchemaDocument fromCedar = SchemaDocument.UnmarshalCedar(cedar);
+
+        SchemaAssert.JsonEqual(json, fromCedar.MarshalJson());
+    }
+
+    // --- Ported from Go schema_test.go (x/exp): TestSchemaCedarMarshalUnmarshal double-pass ---
+
+    [Fact]
+    public void CedarRoundTrip_DoublePassProducesIdenticalOutput()
+    {
+        const string cedar =
+            """
+            namespace foo {
+                action Bar appliesTo {
+                    principal: String,
+                    resource: String
+                };
+            }
+            """;
+
+        SchemaDocument s1 = SchemaDocument.UnmarshalCedar(cedar);
+        string pass1 = s1.MarshalCedar();
+
+        SchemaDocument s2 = SchemaDocument.UnmarshalCedar(pass1);
+        string pass2 = s2.MarshalCedar();
+
+        Assert.Equal(pass1, pass2);
+    }
+
+    // --- Ported from Go schema_test.go (x/exp): TestSchemaCrossFormatMarshaling ---
+
+    [Fact]
+    public void CrossFormat_CedarToJsonIsAllowed()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar("namespace test {}");
+
+        string json = document.MarshalJson();
+
+        Assert.NotNull(json);
+    }
+
+    [Fact]
+    public void CrossFormat_JsonToCedarIsAllowed()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalJson("{}");
+
+        // An empty JSON schema should marshal to valid JSON
+        string json = document.MarshalJson();
+        Assert.Equal("{}", json);
+    }
+
+    // --- Ported from Go convert_json_test.go: round-trip through multiple namespaces ---
+
+    [Fact]
+    public void CrossFormat_MultipleNamespacesRoundTrip()
+    {
+        const string cedar =
+            """
+            entity User;
+
+            namespace AppA {
+                entity Document;
+            }
+
+            namespace AppB {
+                entity Photo;
+            }
+            """;
+
+        string json = SchemaDocument.UnmarshalCedar(cedar).MarshalJson();
+        SchemaDocument fromJson = SchemaDocument.UnmarshalJson(json);
+        string roundTripped = fromJson.MarshalJson();
+
+        SchemaAssert.JsonEqual(json, roundTripped);
+    }
 }

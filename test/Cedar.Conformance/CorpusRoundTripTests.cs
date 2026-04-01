@@ -9,9 +9,11 @@ namespace Cedar.Conformance;
 public sealed class CorpusRoundTripTests
 {
     [Theory]
-    [MemberData(nameof(CorpusTestData.Scenarios), MemberType = typeof(CorpusTestData))]
-    public void AuthorizationRemainsStableAcrossPolicyAndEntityRoundTrips(CorpusScenarioCase scenario)
+    [MemberData(nameof(CorpusTestData.ScenarioKeys), MemberType = typeof(CorpusTestData))]
+    public void AuthorizationRemainsStableAcrossPolicyAndEntityRoundTrips(string scenarioFile)
     {
+        CorpusScenarioCase scenario = CorpusTestData.GetScenario(scenarioFile);
+
         PolicySet cedarPolicyRoundTrip = PolicySet.ParseCedar(scenario.Policies.MarshalCedar());
         CorpusAssertions.AssertAuthorizationMatchesExpected(scenario, cedarPolicyRoundTrip, scenario.Entities);
 

@@ -7,13 +7,16 @@ namespace Cedar.Conformance;
 public sealed class CorpusTests
 {
     [Theory]
-    [MemberData(nameof(CorpusTestData.Requests), MemberType = typeof(CorpusTestData))]
-    public void AuthorizationMatchesCorpusExpectations(CorpusRequestCase testCase)
+    [MemberData(nameof(CorpusTestData.RequestKeys), MemberType = typeof(CorpusTestData))]
+    public void AuthorizationMatchesCorpusExpectations(string scenarioFile, int requestIndex)
     {
-        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(testCase.Policies, testCase.Entities, testCase.Request);
+        CorpusScenarioCase scenario = CorpusTestData.GetScenario(scenarioFile);
+        CorpusScenarioRequest request = scenario.Requests[requestIndex];
 
-        Assert.Equal(testCase.ExpectedDecision, decision);
-        CorpusAssertions.AssertEqualSorted(testCase.ExpectedReasons, diagnostic.Reasons.Select(static reason => reason.PolicyId.Value));
-        CorpusAssertions.AssertEqualSorted(testCase.ExpectedErrors, diagnostic.Errors.Select(static error => error.PolicyId.Value));
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(scenario.Policies, scenario.Entities, request.Request);
+
+        Assert.Equal(request.ExpectedDecision, decision);
+        CorpusAssertions.AssertEqualSorted(request.ExpectedReasons, diagnostic.Reasons.Select(static reason => reason.PolicyId.Value));
+        CorpusAssertions.AssertEqualSorted(request.ExpectedErrors, diagnostic.Errors.Select(static error => error.PolicyId.Value));
     }
 }

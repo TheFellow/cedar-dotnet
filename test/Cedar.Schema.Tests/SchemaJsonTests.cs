@@ -217,4 +217,126 @@ public sealed class SchemaJsonTests
         Assert.NotNull(action.AppliesTo.ContextPath);
         Assert.Equal("CommonCtx", action.AppliesTo.ContextPath!.Name);
     }
+
+    // --- Ported from Go json_test.go: TestParsesExampleSchema round-trip ---
+
+    [Fact]
+    public void UnmarshalJson_MarshalJson_RoundTripsEntityWithMultipleAttributes()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {
+                  "User": {
+                    "shape": {
+                      "type": "Record",
+                      "attributes": {
+                        "name": { "type": "EntityOrCommon", "name": "String" },
+                        "age": { "type": "EntityOrCommon", "name": "Long" },
+                        "active": { "type": "EntityOrCommon", "name": "Bool" }
+                      }
+                    }
+                  }
+                },
+                "actions": {}
+              }
+            }
+            """;
+
+        SchemaDocument first = SchemaDocument.UnmarshalJson(json);
+        string serialized = first.MarshalJson();
+        SchemaDocument second = SchemaDocument.UnmarshalJson(serialized);
+
+        Assert.Equal(first.MarshalJson(), second.MarshalJson());
+    }
+
+    // --- Ported from Go schema_test.go (x/exp): TestSchemaJSONMarshalUnmarshal with empty ---
+
+    [Fact]
+    public void UnmarshalJson_EmptyObject_RoundTrips()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalJson("{}");
+
+        Assert.Equal("{}", document.MarshalJson());
+    }
+
+    // --- Ported from Go convert_json_test.go: TestConvertJsonToHumanRoundtrip ---
+
+    [Fact]
+    public void UnmarshalJson_ToHumanAndBack_PreservesJsonSemantics()
+    {
+        string json = SchemaTestData.SampleJson;
+        SchemaDocument fromJson = SchemaDocument.UnmarshalJson(json);
+        string cedar = fromJson.MarshalCedar();
+        SchemaDocument fromCedar = SchemaDocument.UnmarshalCedar(cedar);
+        string roundTripJson = fromCedar.MarshalJson();
+
+        SchemaAssert.JsonEqual(json, roundTripJson);
+    }
+
+    // --- Ported from Go json_test.go: entity parent serialization ---
+
+    [Fact]
+    public void MarshalJson_SerializesEntityMemberOfRelationship()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(
+            """
+            entity Group;
+            entity User in [Group] {
+                name: String,
+            };
+            """);
+
+        string json = document.MarshalJson();
+
+        Assert.Contains("memberOfTypes", json, StringComparison.Ordinal);
+        Assert.Contains("Group", json, StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go json_test.go: Set type serialization ---
+
+    [Fact]
+    public void MarshalJson_SerializesSetTypeInEntityShape()
+    {
+        SchemaDocument document = SchemaDocument.UnmarshalCedar(
+            """
+            entity User {
+                tags: Set<String>,
+            };
+            """);
+
+        string json = document.MarshalJson();
+
+        Assert.Contains("\"Set\"", json, StringComparison.Ordinal);
+        Assert.Contains("element", json, StringComparison.Ordinal);
+    }
+
+    // --- Ported from Go schema_test.go: JSON schema with action parents ---
+
+    [Fact]
+    public void UnmarshalJson_ActionMemberOfRoundTrips()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {},
+                "actions": {
+                  "read": {},
+                  "view": {
+                    "memberOf": [
+                      { "id": "read" }
+                    ]
+                  }
+                }
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+        string roundTrip = document.MarshalJson();
+
+        SchemaAssert.JsonEqual(json, roundTrip);
+    }
 }

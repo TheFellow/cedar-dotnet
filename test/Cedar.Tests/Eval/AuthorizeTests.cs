@@ -368,6 +368,445 @@ public sealed class AuthorizeTests
         Assert.Equal("policy0", Assert.Single(diagnostic.Reasons).PolicyId.Value);
     }
 
+    // --- End-to-end tests from Go authorize_test.go ---
+
+    [Fact]
+    public void PermitWhenTags_PrincipalHasTag_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { principal.hasTag(\"foo\") };");
+        EntityUid cuzco = new(new EntityType("coder"), new CedarString("cuzco"));
+        Entity cuzcoEntity = new(cuzco, new EntityUidSet(), new CedarRecord(),
+            new CedarRecord(new RecordMap { [new CedarString("foo")] = new CedarString("bar") }));
+
+        Request request = new(cuzco, new EntityUid(new EntityType("table"), new CedarString("drop")),
+            new EntityUid(new EntityType("table"), new CedarString("whatever")), new CedarRecord());
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(new[] { cuzcoEntity }), request);
+
+        Assert.Equal(Decision.Allow, decision);
+        Assert.Empty(diagnostic.Errors);
+    }
+
+    [Fact]
+    public void PermitNoMatch_ResourceScope_Deny()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource in asdf::\"1234\");");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Deny, decision);
+    }
+
+    [Fact]
+    public void ErrorInPolicy_CapturedAsDiagnosticError()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { resource in \"foo\" };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Deny, decision);
+        Assert.Single(diagnostic.Errors);
+    }
+
+    [Fact]
+    public void ErrorInPolicy_ContinuesToNextPolicy()
+    {
+        PolicySet policies = PolicySet.ParseCedar(
+            "permit(principal,action,resource) when { resource in \"foo\" };\n" +
+            "permit(principal,action,resource);");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+        Assert.Single(diagnostic.Errors);
+    }
+
+    [Fact]
+    public void PermitRequiresContext_ContextMatches_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { context.x == 42 };");
+        CedarRecord context = new(new RecordMap { [new CedarString("x")] = new CedarLong(42) });
+        Request request = new(Alice, ActionRead, Doc1, context);
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitRequiresContext_ContextMismatch_Deny()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { context.x == 42 };");
+        CedarRecord context = new(new RecordMap { [new CedarString("x")] = new CedarLong(43) });
+        Request request = new(Alice, ActionRead, Doc1, context);
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Deny, decision);
+    }
+
+    [Fact]
+    public void PermitRequiresEntity_EntityMatchesAttribute_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { principal.x == 42 };");
+        Entity aliceEntity = new(Alice, new EntityUidSet(), new CedarRecord(new RecordMap { [new CedarString("x")] = new CedarLong(42) }), new CedarRecord());
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { aliceEntity }), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitRequiresEntity_EntityMismatch_Deny()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { principal.x == 42 };");
+        Entity aliceEntity = new(Alice, new EntityUidSet(), new CedarRecord(new RecordMap { [new CedarString("x")] = new CedarLong(43) }), new CedarRecord());
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { aliceEntity }), request);
+        Assert.Equal(Decision.Deny, decision);
+    }
+
+    [Fact]
+    public void PermitActionIn_WithParent_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action in scary::\"stuff\",resource);");
+        EntityUid dropTable = new(new EntityType("table"), new CedarString("drop"));
+        EntityUid scaryStuff = new(new EntityType("scary"), new CedarString("stuff"));
+        Entity dropEntity = new(dropTable, new EntityUidSet(new[] { scaryStuff }), new CedarRecord(), new CedarRecord());
+        Request request = new(Alice, dropTable, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { dropEntity }), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitActionInSet_WithParent_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action in [scary::\"stuff\"],resource);");
+        EntityUid dropTable = new(new EntityType("table"), new CedarString("drop"));
+        EntityUid scaryStuff = new(new EntityType("scary"), new CedarString("stuff"));
+        Entity dropEntity = new(dropTable, new EntityUidSet(new[] { scaryStuff }), new CedarRecord(), new CedarRecord());
+        Request request = new(Alice, dropTable, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { dropEntity }), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenRelations_AllComparisons_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { (1<2) && (1<=1) && (2>1) && (1>=1) && (1!=2) && (1==1)};");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenPrincipalInPrincipal_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { principal in principal };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenPrincipalHasAttribute_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { principal has name };");
+        Entity aliceEntity = new(Alice, new EntityUidSet(), new CedarRecord(new RecordMap { [new CedarString("name")] = new CedarString("bob") }), new CedarRecord());
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { aliceEntity }), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenAddSubtract_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { 40+3-1==42 };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenMultiply_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { 6*7==42 };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenNegate_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { -42==-42 };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenNot_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { !(1+1==42) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenSetContains_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { [1,2,3].contains(2) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenRecordHas_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { {name:\"bob\"} has name };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenActionInAction_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { action in action };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenContainsAll_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { [1,2,3].containsAll([2,3]) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenContainsAny_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { [1,2,3].containsAny([2,5]) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenRecordAccess_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { {name:\"bob\"}[\"name\"] == \"bob\" };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenLike_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { \"bananas\" like \"*nan*\" };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenDecimalComparisons_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar(
+            "permit(principal,action,resource) when {\n" +
+            "  decimal(\"10.0\").lessThan(decimal(\"11.0\")) &&\n" +
+            "  decimal(\"10.0\").lessThanOrEqual(decimal(\"11.0\")) &&\n" +
+            "  decimal(\"10.0\").greaterThan(decimal(\"9.0\")) &&\n" +
+            "  decimal(\"10.0\").greaterThanOrEqual(decimal(\"9.0\")) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenDecimalWrongArity_EvalError()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { decimal(1, 2) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic diagnostic) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Deny, decision);
+        Assert.Single(diagnostic.Errors);
+    }
+
+    [Fact]
+    public void PermitWhenDatetime_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar(
+            "permit(principal,action,resource) when {\n" +
+            "  datetime(\"1970-01-01T09:08:07Z\") < (datetime(\"1970-02-01\")) &&\n" +
+            "  datetime(\"1970-01-01T09:08:07Z\") <= (datetime(\"1970-02-01\")) &&\n" +
+            "  datetime(\"1970-01-01T09:08:07Z\") > (datetime(\"1970-01-01\")) &&\n" +
+            "  datetime(\"1970-01-01T09:08:07Z\") >= (datetime(\"1970-01-01\")) &&\n" +
+            "  datetime(\"1970-01-01T09:08:07Z\").toDate() == datetime(\"1970-01-01\")};");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenDuration_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar(
+            "permit(principal,action,resource) when {\n" +
+            "  duration(\"9h8m\") < (duration(\"10h\")) &&\n" +
+            "  duration(\"9h8m\") <= (duration(\"10h\")) &&\n" +
+            "  duration(\"9h8m\") > (duration(\"7h\")) &&\n" +
+            "  duration(\"9h8m\") >= (duration(\"7h\")) &&\n" +
+            "  duration(\"1ms\").toMilliseconds() == 1 &&\n" +
+            "  duration(\"1s\").toSeconds() == 1 &&\n" +
+            "  duration(\"1m\").toMinutes() == 1 &&\n" +
+            "  duration(\"1h\").toHours() == 1 &&\n" +
+            "  duration(\"1d\").toDays() == 1 &&\n" +
+            "  datetime(\"1970-01-01\").toTime() == duration(\"0ms\") &&\n" +
+            "  datetime(\"1970-01-01\").offset(duration(\"1ms\")).toTime() == duration(\"1ms\") &&\n" +
+            "  datetime(\"1970-01-01T00:00:00.001Z\").durationSince(datetime(\"1970-01-01\")) == duration(\"1ms\")};");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenIp_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar(
+            "permit(principal,action,resource) when {\n" +
+            "  ip(\"1.2.3.4\").isIpv4() &&\n" +
+            "  ip(\"a:b:c:d::/16\").isIpv6() &&\n" +
+            "  ip(\"::1\").isLoopback() &&\n" +
+            "  ip(\"224.1.2.3\").isMulticast() &&\n" +
+            "  ip(\"127.0.0.1\").isInRange(ip(\"127.0.0.0/16\"))};");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void NegativeUnaryOp_ContextValue_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { -context.value > 0 };");
+        CedarRecord context = new(new RecordMap { [new CedarString("value")] = new CedarLong(-42) });
+        Request request = new(Alice, ActionRead, Doc1, context);
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PrincipalIs_TypeMatches_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal is User,action,resource);");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PrincipalIsIn_TypeAndEntityMatch_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal is User in User::\"alice\",action,resource);");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void ResourceIs_TypeMatches_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource is Document);");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void ResourceIsIn_TypeAndEntityMatch_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource is Document in Document::\"doc1\");");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void WhenResourceIs_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { resource is Document };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void WhenResourceIsIn_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { resource is Document in Document::\"doc1\" };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void WhenResourceIsIn_WithEntityHierarchy_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { resource is Document in Group::\"admins\" };");
+        Entity docEntity = new(Doc1, new EntityUidSet(new[] { Group }), new CedarRecord(), new CedarRecord());
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { docEntity }), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void Rfc57_GeneralMultiplication_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal, action, resource) when { context.foo * principal.bar >= 100 };");
+        EntityUid principal = new(new EntityType("Principal"), new CedarString("1"));
+        Entity principalEntity = new(principal, new EntityUidSet(),
+            new CedarRecord(new RecordMap { [new CedarString("bar")] = new CedarLong(42) }), new CedarRecord());
+        CedarRecord context = new(new RecordMap { [new CedarString("foo")] = new CedarLong(43) });
+        Request request = new(principal, ActionRead, Doc1, context);
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(new[] { principalEntity }), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenIfThenElse_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { (if true then true else true) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenOr_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { (true || false) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitWhenAnd_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) when { (true && true) };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
+    [Fact]
+    public void PermitUnlessFalse_Allow()
+    {
+        PolicySet policies = PolicySet.ParseCedar("permit(principal,action,resource) unless { false };");
+        Request request = new(Alice, ActionRead, Doc1, new CedarRecord());
+        (Decision decision, Diagnostic _) = Authorization.Authorize(policies, new EntityMap(), request);
+        Assert.Equal(Decision.Allow, decision);
+    }
+
     private sealed class SimplePolicyIterator : IPolicyIterator
     {
         private readonly Policy[] _policies;

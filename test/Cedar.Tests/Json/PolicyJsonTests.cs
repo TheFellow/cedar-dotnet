@@ -790,6 +790,336 @@ public sealed class PolicyJsonTests
             """));
     }
 
+    [Fact]
+    public void UnmarshalJson_UnknownScopeOp_ThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "???" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+    }
+
+    [Fact]
+    public void UnmarshalJson_UnknownActionOp_ThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": { "op": "???" },
+              "resource": { "op": "All" }
+            }
+            """;
+
+        Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+    }
+
+    [Fact]
+    public void UnmarshalJson_UnknownResourceOp_ThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": { "op": "All" },
+              "resource": { "op": "???" }
+            }
+            """;
+
+        Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+    }
+
+    [Fact]
+    public void UnmarshalJson_UnknownVariable_ThrowsJsonException()
+    {
+        const string json = """
+            {
+              "effect": "permit",
+              "principal": { "op": "All" },
+              "action": { "op": "All" },
+              "resource": { "op": "All" },
+              "conditions": [{ "kind": "when", "body": { "Var": "unknown" } }]
+            }
+            """;
+
+        Assert.Throws<JsonException>(() => Policy.UnmarshalJson(json));
+    }
+
+    [Fact]
+    public void UnmarshalJson_NotOperator_DeserializesAsNodeNot()
+    {
+        const string bodyJson = """
+            { "!": { "arg": { "Value": true } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeNot not = Assert.IsType<NodeNot>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(not.Arg);
+    }
+
+    [Fact]
+    public void UnmarshalJson_TopLevelNotOperator_MarshaledAsUnlessCondition()
+    {
+        const string bodyJson = """
+            { "!": { "arg": { "Value": true } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+        string json = policy.MarshalJson();
+
+        Assert.Contains("\"unless\"", json, StringComparison.Ordinal);
+
+        Policy roundTripped = Policy.UnmarshalJson(json);
+        Assert.IsType<NodeNot>(Assert.Single(roundTripped.Ast.Conditions));
+    }
+
+    [Fact]
+    public void UnmarshalJson_NegateOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "neg": { "arg": { "Value": 42 } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeNegate negate = Assert.IsType<NodeNegate>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(negate.Arg);
+
+        string json = policy.MarshalJson();
+        Assert.Contains("\"neg\"", json, StringComparison.Ordinal);
+
+        Policy roundTripped = Policy.UnmarshalJson(json);
+        Assert.IsType<NodeNegate>(Assert.Single(roundTripped.Ast.Conditions));
+    }
+
+    [Fact]
+    public void UnmarshalJson_InOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "in": { "left": { "Value": 42 }, "right": { "Value": 24 } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeIn node = Assert.IsType<NodeIn>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(node.Left);
+        Assert.IsType<NodeValue>(node.Right);
+    }
+
+    [Fact]
+    public void UnmarshalJson_HasOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "has": { "left": { "Var": "context" }, "attr": "key" } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeHas has = Assert.IsType<NodeHas>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeVariable>(has.Arg);
+        Assert.Equal("key", has.Attribute.Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_GetTagOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "getTag": { "left": { "Var": "principal" }, "right": { "Value": "key" } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeGetTag getTag = Assert.IsType<NodeGetTag>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeVariable>(getTag.Left);
+        Assert.IsType<NodeValue>(getTag.Right);
+    }
+
+    [Fact]
+    public void UnmarshalJson_HasTagOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "hasTag": { "left": { "Var": "principal" }, "right": { "Value": "key" } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeHasTag hasTag = Assert.IsType<NodeHasTag>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeVariable>(hasTag.Left);
+        Assert.IsType<NodeValue>(hasTag.Right);
+    }
+
+    [Fact]
+    public void UnmarshalJson_IsOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "is": { "left": { "Var": "resource" }, "entity_type": "T" } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeIs node = Assert.IsType<NodeIs>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeVariable>(node.Left);
+        Assert.Equal("T", node.EntityType.Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_IsInOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "is": { "left": { "Var": "resource" }, "entity_type": "T", "in": { "Value": { "__entity": { "type": "P", "id": "42" } } } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeIsIn node = Assert.IsType<NodeIsIn>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeVariable>(node.Left);
+        Assert.Equal("T", node.EntityType.Value);
+    }
+
+    [Fact]
+    public void UnmarshalJson_IsEmptyOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "isEmpty": { "arg": { "Value": 42 } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeIsEmpty node = Assert.IsType<NodeIsEmpty>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(node.Arg);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ContainsOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "contains": { "left": { "Value": 42 }, "right": { "Value": 24 } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeContains node = Assert.IsType<NodeContains>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(node.Left);
+        Assert.IsType<NodeValue>(node.Right);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ContainsAllOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "containsAll": { "left": { "Value": 42 }, "right": { "Value": 24 } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeContainsAll node = Assert.IsType<NodeContainsAll>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(node.Left);
+        Assert.IsType<NodeValue>(node.Right);
+    }
+
+    [Fact]
+    public void UnmarshalJson_ContainsAnyOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { "containsAny": { "left": { "Value": 42 }, "right": { "Value": 24 } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeContainsAny node = Assert.IsType<NodeContainsAny>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeValue>(node.Left);
+        Assert.IsType<NodeValue>(node.Right);
+    }
+
+    [Fact]
+    public void UnmarshalJson_AccessOperator_RoundTrips()
+    {
+        const string bodyJson = """
+            { ".": { "left": { "Var": "context" }, "attr": "key" } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeAccess node = Assert.IsType<NodeAccess>(Assert.Single(policy.Ast.Conditions));
+        Assert.IsType<NodeVariable>(node.Arg);
+    }
+
+    [Fact]
+    public void UnmarshalJson_VariableNodes_RoundTrip()
+    {
+        string[] variables = ["principal", "action", "resource", "context"];
+
+        foreach (string varName in variables)
+        {
+            string bodyJson = $$"""{ "Var": "{{varName}}" }""";
+            Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+            NodeVariable node = Assert.IsType<NodeVariable>(Assert.Single(policy.Ast.Conditions));
+            Assert.Equal(varName, node.Name.Value);
+        }
+    }
+
+    [Fact]
+    public void UnmarshalJson_AllBinaryOperators_RoundTrip()
+    {
+        (string Op, Type NodeType)[] operators =
+        [
+            ("==", typeof(NodeEquals)),
+            ("!=", typeof(NodeNotEquals)),
+            ("<", typeof(NodeLessThan)),
+            ("<=", typeof(NodeLessThanOrEqual)),
+            (">", typeof(NodeGreaterThan)),
+            (">=", typeof(NodeGreaterThanOrEqual)),
+            ("&&", typeof(NodeAnd)),
+            ("||", typeof(NodeOr)),
+            ("+", typeof(NodeAdd)),
+            ("-", typeof(NodeSub)),
+            ("*", typeof(NodeMult)),
+        ];
+
+        foreach ((string op, Type expectedType) in operators)
+        {
+            string bodyJson = $$"""{ "{{op}}": { "left": { "Value": 42 }, "right": { "Value": 24 } } }""";
+            Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+            INode node = Assert.Single(policy.Ast.Conditions);
+            Assert.IsType(expectedType, node);
+        }
+    }
+
+    [Fact]
+    public void UnmarshalJson_EntityValue_RoundTrips()
+    {
+        const string bodyJson = """
+            { "Value": { "__entity": { "type": "T", "id": "42" } } }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeValue node = Assert.IsType<NodeValue>(Assert.Single(policy.Ast.Conditions));
+        EntityUid uid = Assert.IsType<EntityUid>(node.Value);
+        Assert.Equal(new EntityType("T"), uid.Type);
+        Assert.Equal(new CedarString("42"), uid.Id);
+    }
+
+    [Fact]
+    public void UnmarshalJson_StringValue_RoundTrips()
+    {
+        const string bodyJson = """
+            { "Value": "bananas" }
+            """;
+
+        Policy policy = UnmarshalPolicyWithConditionBody(bodyJson);
+
+        NodeValue node = Assert.IsType<NodeValue>(Assert.Single(policy.Ast.Conditions));
+        Assert.Equal(new CedarString("bananas"), node.Value);
+    }
+
     private static NodeValue UnmarshalConditionValueNode(string valueJson)
     {
         Policy policy = UnmarshalPolicyWithConditionBody($$"""

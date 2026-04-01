@@ -191,4 +191,120 @@ public sealed class CedarPatternTests
         Assert.Equal("{\"__extn\":{\"fn\":\"pattern\",\"arg\":\"\\u0000\"}}", json);
         CedarAssert.Equal(expected, Assert.IsType<CedarPattern>(actual));
     }
+
+    [Fact]
+    public void ParseSingleWildcardMatchesAnything()
+    {
+        CedarPattern pattern = CedarPattern.Parse("*");
+
+        Assert.True(pattern.Match(new CedarString("hello")));
+        Assert.True(pattern.Match(new CedarString(string.Empty)));
+    }
+
+    [Fact]
+    public void ParseDoubleWildcardCollapses()
+    {
+        CedarPattern single = CedarPattern.Parse("*");
+        CedarPattern doubled = CedarPattern.Parse("**");
+
+        Assert.Equal(single.ToPatternText(), doubled.ToPatternText());
+    }
+
+    [Fact]
+    public void ParseWildcardBeforeLiteral()
+    {
+        CedarPattern pattern = CedarPattern.Parse("*a");
+
+        Assert.True(pattern.Match(new CedarString("xa")));
+        Assert.True(pattern.Match(new CedarString("a")));
+        Assert.False(pattern.Match(new CedarString("ab")));
+    }
+
+    [Fact]
+    public void ParseLiteralAfterWildcard()
+    {
+        CedarPattern pattern = CedarPattern.Parse("a*");
+
+        Assert.True(pattern.Match(new CedarString("a")));
+        Assert.True(pattern.Match(new CedarString("abc")));
+        Assert.False(pattern.Match(new CedarString("b")));
+    }
+
+    [Fact]
+    public void ParseWildcardLiteralWildcard()
+    {
+        CedarPattern pattern = CedarPattern.Parse("*a*");
+
+        Assert.True(pattern.Match(new CedarString("xax")));
+        Assert.True(pattern.Match(new CedarString("a")));
+        Assert.False(pattern.Match(new CedarString("b")));
+    }
+
+    [Fact]
+    public void ParseComplexPattern()
+    {
+        CedarPattern pattern = CedarPattern.Parse("*abra*ca*dabra");
+
+        Assert.True(pattern.Match(new CedarString("xxabrayycanndabra")));
+        Assert.False(pattern.Match(new CedarString("xxabrayycann")));
+    }
+
+    [Theory]
+    [InlineData("\"\"", "", true)]
+    [InlineData("\"\"", "hello", false)]
+    [InlineData("\"*\"", "hello", true)]
+    [InlineData("\"e\"", "hello", false)]
+    [InlineData("\"*e\"", "hello", false)]
+    [InlineData("\"*e*\"", "hello", true)]
+    [InlineData("\"hello\"", "hello", true)]
+    [InlineData("\"hello*\"", "hello", true)]
+    [InlineData("\"*h*llo*\"", "hello", true)]
+    [InlineData("\"h*e*o\"", "hello", true)]
+    [InlineData("\"h*e**o\"", "hello", true)]
+    [InlineData("\"h*z*o\"", "hello", false)]
+    public void PatternParseAndMatchFromGoTests(string patternWithQuotes, string target, bool expected)
+    {
+        string rawPattern = patternWithQuotes[1..^1];
+        CedarPattern pattern = CedarPattern.Parse(rawPattern);
+
+        Assert.Equal(expected, pattern.Match(new CedarString(target)));
+    }
+
+    [Theory]
+    [InlineData("\"\\*\\**\\*\\*\"", "**foo**", true)]
+    [InlineData("\"\\*\\**\\*\\*\"", "**bar**", true)]
+    [InlineData("\"\\*\\**\\*\\*\"", "*bar*", false)]
+    public void PatternWithEscapedAsterisksMatchCorrectly(string patternWithQuotes, string target, bool expected)
+    {
+        string rawPattern = patternWithQuotes[1..^1];
+        CedarPattern pattern = CedarPattern.Parse(rawPattern);
+
+        Assert.Equal(expected, pattern.Match(new CedarString(target)));
+    }
+
+    [Theory]
+    [InlineData("abra*ca")]
+    [InlineData("*abra*ca")]
+    [InlineData("abra*ca*")]
+    [InlineData("*abra*ca*")]
+    public void ParsePatternVariantsWithWildcardPositions(string rawPattern)
+    {
+        CedarPattern pattern = CedarPattern.Parse(rawPattern);
+        string text = pattern.ToPatternText();
+
+        CedarPattern reparsed = CedarPattern.Parse(text);
+        Assert.Equal(text, reparsed.ToPatternText());
+    }
+
+    [Fact]
+    public void ParsePatternWithMixedEscapedStarsAndWildcards()
+    {
+        CedarPattern pattern = CedarPattern.Parse("*abra*c\\**da\\*bra");
+
+        Assert.True(pattern.Match(new CedarString("xxabrayyc*zzda*bra")));
+        Assert.False(pattern.Match(new CedarString("xxabrayycnndabra")));
+
+        string text = pattern.ToPatternText();
+        Assert.Contains("\\*", text, StringComparison.Ordinal);
+    }
 }

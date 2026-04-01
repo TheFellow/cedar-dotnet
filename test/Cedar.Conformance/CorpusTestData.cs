@@ -47,22 +47,6 @@ public sealed record CorpusScenarioCase(
     }
 }
 
-public sealed record CorpusRequestCase(
-    string ScenarioFile,
-    int RequestIndex,
-    PolicySet Policies,
-    EntityMap Entities,
-    Request Request,
-    Decision ExpectedDecision,
-    ImmutableArray<string> ExpectedReasons,
-    ImmutableArray<string> ExpectedErrors)
-{
-    public override string ToString()
-    {
-        return $"{ScenarioFile}#{RequestIndex}";
-    }
-}
-
 public sealed class CorpusValidationDocument
 {
     [JsonPropertyName("policyValidation")]
@@ -132,60 +116,85 @@ public static class CorpusTestData
     private const string ValidationArchiveRoot = "corpus-tests-validation/";
 
     private static readonly Lazy<IReadOnlyList<CorpusScenarioCase>> CachedScenarios = new(LoadScenarios);
-    private static readonly Lazy<IReadOnlyList<CorpusRequestCase>> CachedCases = new(LoadCases);
-
-    public static IEnumerable<object[]> Requests
-    {
-        get
-        {
-            foreach (CorpusRequestCase request in CachedCases.Value)
-            {
-                yield return [request];
-            }
-        }
-    }
-
-    public static IEnumerable<object[]> Scenarios
-    {
-        get
-        {
-            foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
-            {
-                yield return [scenario];
-            }
-        }
-    }
-
-    public static IEnumerable<object[]> SchemaScenarios
-    {
-        get
-        {
-            foreach (CorpusScenarioCase scenario in CachedScenarios.Value.Where(static scenario => scenario.SchemaText is not null))
-            {
-                yield return [scenario];
-            }
-        }
-    }
-
-    public static IEnumerable<object[]> ValidationScenarios
-    {
-        get
-        {
-            foreach (CorpusScenarioCase scenario in CachedScenarios.Value.Where(static scenario => scenario.Validation is not null))
-            {
-                yield return [scenario];
-            }
-        }
-    }
+    private static readonly Lazy<Dictionary<string, CorpusScenarioCase>> ScenarioIndex = new(BuildScenarioIndex);
 
     public static IReadOnlyList<CorpusScenarioCase> GetAllScenarios()
     {
         return CachedScenarios.Value;
     }
 
+    public static CorpusScenarioCase GetScenario(string scenarioFile)
+    {
+        return ScenarioIndex.Value[scenarioFile];
+    }
+
     public static IReadOnlyList<CorpusScenarioCase> GetSchemaScenarios()
     {
         return CachedScenarios.Value.Where(static scenario => scenario.SchemaText is not null).ToList();
+    }
+
+    public static IEnumerable<object[]> RequestKeys
+    {
+        get
+        {
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
+            {
+                for (int i = 0; i < scenario.Requests.Length; i++)
+                {
+                    yield return [scenario.ScenarioFile, i];
+                }
+            }
+        }
+    }
+
+    public static IEnumerable<object[]> ScenarioKeys
+    {
+        get
+        {
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
+            {
+                yield return [scenario.ScenarioFile];
+            }
+        }
+    }
+
+    public static IEnumerable<object[]> SchemaKeys
+    {
+        get
+        {
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
+            {
+                if (scenario.SchemaText is not null)
+                {
+                    yield return [scenario.ScenarioFile];
+                }
+            }
+        }
+    }
+
+    public static IEnumerable<object[]> ValidationKeys
+    {
+        get
+        {
+            foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
+            {
+                if (scenario.Validation is not null)
+                {
+                    yield return [scenario.ScenarioFile];
+                }
+            }
+        }
+    }
+
+    private static Dictionary<string, CorpusScenarioCase> BuildScenarioIndex()
+    {
+        Dictionary<string, CorpusScenarioCase> index = new(StringComparer.Ordinal);
+        foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
+        {
+            index[scenario.ScenarioFile] = scenario;
+        }
+
+        return index;
     }
 
     public static string LocateTestDataArchive(string archiveName)
@@ -351,28 +360,6 @@ public static class CorpusTestData
         }
 
         return scenarios;
-    }
-
-    private static IReadOnlyList<CorpusRequestCase> LoadCases()
-    {
-        List<CorpusRequestCase> requests = [];
-        foreach (CorpusScenarioCase scenario in CachedScenarios.Value)
-        {
-            foreach (CorpusScenarioRequest request in scenario.Requests)
-            {
-                requests.Add(new CorpusRequestCase(
-                    scenario.ScenarioFile,
-                    request.RequestIndex,
-                    scenario.Policies,
-                    scenario.Entities,
-                    request.Request,
-                    request.ExpectedDecision,
-                    request.ExpectedReasons,
-                    request.ExpectedErrors));
-            }
-        }
-
-        return requests;
     }
 
     private static byte[] ReadAllBytesBounded(Stream stream, long maxBytes)

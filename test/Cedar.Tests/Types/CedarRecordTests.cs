@@ -83,6 +83,105 @@ public sealed class CedarRecordTests
     }
 
     [Fact]
+    public void DifferentKeysAreNotEqual()
+    {
+        CedarRecord left = new(new RecordMap
+        {
+            [new CedarString("foo")] = new CedarBool(false),
+            [new CedarString("bar")] = new CedarLong(1)
+        });
+        CedarRecord right = new(new RecordMap
+        {
+            [new CedarString("foo")] = new CedarBool(true),
+            [new CedarString("bar")] = new CedarString("blah")
+        });
+
+        Assert.False(left.Equals(right));
+    }
+
+    [Fact]
+    public void NestedRecordEqualityMatchesGoUpstream()
+    {
+        CedarRecord inner = new(new RecordMap
+        {
+            [new CedarString("foo")] = new CedarBool(true),
+            [new CedarString("bar")] = new CedarString("blah")
+        });
+        CedarRecord nested1 = new(new RecordMap
+        {
+            [new CedarString("one")] = new CedarLong(1),
+            [new CedarString("two")] = new CedarLong(2),
+            [new CedarString("nest")] = inner
+        });
+        CedarRecord nested2 = new(new RecordMap
+        {
+            [new CedarString("one")] = new CedarLong(1),
+            [new CedarString("two")] = new CedarLong(2),
+            [new CedarString("nest")] = inner
+        });
+
+        CedarAssert.Equal(nested1, nested2);
+        Assert.False(nested1.Equals(inner));
+    }
+
+    [Fact]
+    public void MarshalCedarFormatsEmptyRecord()
+    {
+        CedarAssert.CedarText(new CedarRecord(), "{}");
+    }
+
+    [Fact]
+    public void MarshalCedarFormatsSingleEntryRecord()
+    {
+        CedarAssert.CedarText(
+            new CedarRecord(new RecordMap
+            {
+                [new CedarString("foo")] = new CedarBool(true)
+            }),
+            "{\"foo\":true}");
+    }
+
+    [Fact]
+    public void MarshalCedarFormatsTwoEntryRecordInSortedOrder()
+    {
+        CedarAssert.CedarText(
+            new CedarRecord(new RecordMap
+            {
+                [new CedarString("foo")] = new CedarBool(true),
+                [new CedarString("bar")] = new CedarString("blah")
+            }),
+            "{\"bar\":\"blah\", \"foo\":true}");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void CountReturnsNumberOfEntries(int count)
+    {
+        RecordMap map = new();
+        for (int i = 0; i < count; i++)
+        {
+            map[new CedarString("key" + i)] = new CedarLong(i);
+        }
+
+        CedarRecord record = new(map);
+
+        Assert.Equal(count, record.Count);
+    }
+
+    [Fact]
+    public void GetCaseSensitiveKeyReturnsFalseForWrongCase()
+    {
+        CedarRecord record = new(new RecordMap
+        {
+            [new CedarString("foo")] = new CedarLong(42)
+        });
+
+        Assert.False(record.TryGetValue(new CedarString("Foo"), out _));
+    }
+
+    [Fact]
     public void HashCodeIsStable()
     {
         CedarAssert.HashStable(new CedarRecord(new RecordMap

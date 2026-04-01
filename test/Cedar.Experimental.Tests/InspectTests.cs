@@ -85,6 +85,12 @@ public sealed class InspectTests
         return count;
     }
 
+    [Fact]
+    public void Inspect_NullNode_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => AstInspect.Inspect(null!, _ => true));
+    }
+
     private static Node Wrap(INode node)
     {
         return new Node(node);

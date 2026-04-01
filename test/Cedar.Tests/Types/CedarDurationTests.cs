@@ -15,6 +15,55 @@ public sealed class CedarDurationTests
         Assert.Equal(42, value.Value);
     }
 
+    [Theory]
+    [InlineData("1h", "1h")]
+    [InlineData("60m", "1h")]
+    [InlineData("3600s", "1h")]
+    [InlineData("3600000ms", "1h")]
+    [InlineData("24h", "1d")]
+    [InlineData("36h", "1d12h")]
+    [InlineData("1d12h", "1d12h")]
+    [InlineData("1d11h60m", "1d12h")]
+    [InlineData("1d11h59m60s", "1d12h")]
+    [InlineData("1d11h59m59s1000ms", "1d12h")]
+    [InlineData("60s60000ms", "2m")]
+    [InlineData("62m", "1h2m")]
+    [InlineData("2m3600s", "1h2m")]
+    [InlineData("-1h", "-1h")]
+    [InlineData("-60m", "-1h")]
+    [InlineData("-3600s", "-1h")]
+    [InlineData("-3600000ms", "-1h")]
+    [InlineData("-24h", "-1d")]
+    [InlineData("-36h", "-1d12h")]
+    [InlineData("-1d12h", "-1d12h")]
+    [InlineData("-1d11h60m", "-1d12h")]
+    [InlineData("-1d11h59m60s", "-1d12h")]
+    [InlineData("-1d11h59m59s1000ms", "-1d12h")]
+    [InlineData("-60s60000ms", "-2m")]
+    [InlineData("-62m", "-1h2m")]
+    [InlineData("-2m3600s", "-1h2m")]
+    public void ParseProducesCanonicalString(string input, string expected)
+    {
+        CedarAssert.CedarText(CedarDuration.Parse(input), "duration(\"" + expected + "\")");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-")]
+    [InlineData("h")]
+    [InlineData("3")]
+    [InlineData("-m")]
+    [InlineData("-1t")]
+    [InlineData("-1h1h")]
+    [InlineData("-3h3")]
+    [InlineData("3h-1m")]
+    [InlineData("3h1m   ")]
+    [InlineData("999999999999999999999ms")]
+    public void ParseRejectsInvalidInputs(string input)
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse(input));
+    }
+
     [Fact]
     public void ParseAcceptsSingleUnit()
     {
@@ -114,6 +163,30 @@ public sealed class CedarDurationTests
     }
 
     [Fact]
+    public void ParseRejectsDuplicateMillisecondsUnit()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("3600ms30ms"));
+    }
+
+    [Fact]
+    public void ParseRejectsSmallUnitBeforeLargeUnit()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("36ms30h"));
+    }
+
+    [Fact]
+    public void ParseRejectsEmbeddedNegativeSign()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("3h-1m"));
+    }
+
+    [Fact]
+    public void ParseRejectsTrailingWhitespace()
+    {
+        Assert.Throws<FormatException>(() => CedarDuration.Parse("3h1m   "));
+    }
+
+    [Fact]
     public void EqualValuesAreEqual()
     {
         CedarAssert.Equal(new CedarDuration(3_600_000), CedarDuration.Parse("60m"));
@@ -126,9 +199,21 @@ public sealed class CedarDurationTests
     }
 
     [Fact]
+    public void DifferentValueTypesAreNotEqual()
+    {
+        CedarAssert.NotEqual(new CedarDuration(0), new CedarBool(false));
+    }
+
+    [Fact]
     public void HashCodeIsStable()
     {
         CedarAssert.HashStable(CedarDuration.Parse("42ms"));
+    }
+
+    [Fact]
+    public void MarshalCedarFormatsMillisecondDuration()
+    {
+        CedarAssert.CedarText(new CedarDuration(42), "duration(\"42ms\")");
     }
 
     [Fact]

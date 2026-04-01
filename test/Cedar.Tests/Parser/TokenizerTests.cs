@@ -227,4 +227,180 @@ public sealed class TokenizerTests
 
         Assert.Contains("Unexpected character", ex.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("\"\\a\"")]
+    [InlineData("\"\\b\"")]
+    [InlineData("\"\\f\"")]
+    [InlineData("\"\\v\"")]
+    [InlineData("\"\\1\"")]
+    public void TokenizeRejectsInvalidCharEscapes(string input)
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes(input)));
+
+        Assert.Contains("Invalid escape sequence", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TokenizeRejectsInvalidUnicodeEscapeMissingBraces()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\ubadf\"")));
+
+        Assert.Contains("unicode escape sequence", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TokenizeRejectsEmptyUnicodeEscape()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\u{}\"")));
+
+        Assert.Contains("escape sequence", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TokenizeRejectsTooManyDigitsInUnicodeEscape()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\u{0000000}\"")));
+
+        Assert.Contains("escape sequence", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("'")]
+    [InlineData("/")]
+    public void TokenizeRejectsUnknownSingleCharacters(string input)
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes(input)));
+
+        Assert.NotNull(ex);
+    }
+
+    [Fact]
+    public void TokenizeHandlesWildcardInStringLiteral()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"*\"")).ToArray();
+
+        Assert.Equal(TokenType.String, tokens[0].Type);
+        Assert.Equal("\"*\"", tokens[0].Text);
+    }
+
+    [Fact]
+    public void TokenizeHandlesEscapedWildcardInStringLiteral()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\*\"")).ToArray();
+
+        Assert.Equal(TokenType.String, tokens[0].Type);
+        Assert.Equal("\"\\*\"", tokens[0].Text);
+    }
+
+    [Fact]
+    public void TokenizeRejectsHexEscapeInString()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\x123\"")));
+
+        Assert.Contains("Invalid escape sequence", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TokenizeHandlesUnicodeEscapeInString()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\u{0}\\u{10fFfF}\"")).ToArray();
+
+        Assert.Equal(TokenType.String, tokens[0].Type);
+    }
+
+    [Fact]
+    public void TokenizeRejectsUppercaseUUnicodeEscape()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\U0000badf\"")));
+
+        Assert.Contains("Invalid escape sequence", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TokenizeRejectsNonHexInUnicodeEscape()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\u{z\"")));
+
+        Assert.Contains("escape sequence", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TokenizeRejectsNulCharacter()
+    {
+        ParseException ex = Assert.Throws<ParseException>(() => CedarTokenizer.Tokenize(new byte[] { 0x00 }));
+
+        Assert.NotNull(ex);
+    }
+
+    [Fact]
+    public void TokenizeMultiCharOperatorsAndTokenTypes()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes(":::")).ToArray();
+
+        Assert.Equal(TokenType.ColonColon, tokens[0].Type);
+        Assert.Equal(TokenType.Colon, tokens[1].Type);
+    }
+
+    [Fact]
+    public void TokenizeBangAndBangEquals()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("!!=")).ToArray();
+
+        Assert.Equal(TokenType.Bang, tokens[0].Type);
+        Assert.Equal(TokenType.BangEq, tokens[1].Type);
+    }
+
+    [Fact]
+    public void TokenizeReservedKeywords()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("true false if then else in like has is")).ToArray();
+
+        Assert.Equal(TokenType.True, tokens[0].Type);
+        Assert.Equal(TokenType.False, tokens[1].Type);
+        Assert.Equal(TokenType.If, tokens[2].Type);
+        Assert.Equal(TokenType.Then, tokens[3].Type);
+        Assert.Equal(TokenType.Else, tokens[4].Type);
+        Assert.Equal(TokenType.In, tokens[5].Type);
+        Assert.Equal(TokenType.Like, tokens[6].Type);
+        Assert.Equal(TokenType.Has, tokens[7].Type);
+        Assert.Equal(TokenType.Is, tokens[8].Type);
+        Assert.Equal(TokenType.EOF, tokens[9].Type);
+    }
+
+    [Fact]
+    public void TokenizeWildcardAndEscapedWildcardInPatternStrings()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"*\" \"\\*\" \"*\\**\"")).ToArray();
+
+        Assert.Equal(TokenType.String, tokens[0].Type);
+        Assert.Equal("\"*\"", tokens[0].Text);
+        Assert.Equal(TokenType.String, tokens[1].Type);
+        Assert.Equal("\"\\*\"", tokens[1].Text);
+        Assert.Equal(TokenType.String, tokens[2].Type);
+        Assert.Equal("\"*\\**\"", tokens[2].Text);
+    }
+
+    [Fact]
+    public void TokenizeStringEscapeSequences()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("\"\\\"\\'\\'\\n\\r\\t\\\\\\0\"")).ToArray();
+
+        Assert.Equal(TokenType.String, tokens[0].Type);
+    }
+
+    [Fact]
+    public void TokenizeNegativeIntegers()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("-1 9223372036854775807 -9223372036854775808")).ToArray();
+
+        Assert.Equal(TokenType.Dash, tokens[0].Type);
+        Assert.Equal(TokenType.Int, tokens[1].Type);
+        Assert.Equal("1", tokens[1].Text);
+        Assert.Equal(TokenType.Int, tokens[2].Type);
+        Assert.Equal("9223372036854775807", tokens[2].Text);
+        Assert.Equal(TokenType.Dash, tokens[3].Type);
+        Assert.Equal(TokenType.Int, tokens[4].Type);
+        Assert.Equal("9223372036854775808", tokens[4].Text);
+    }
 }
