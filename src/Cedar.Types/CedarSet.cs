@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Cedar.Types.Internal;
 
@@ -41,7 +40,16 @@ public sealed record CedarSet : CedarValue, IEnumerable<ICedarData>
                 _buckets.Add(hash, bucket);
             }
 
-            if (bucket.Any(existing => CedarData.Equals(existing, value)))
+            bool found = false;
+            foreach (ICedarData existing in bucket)
+            {
+                if (CedarData.Equals(existing, value))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
             {
                 continue;
             }
@@ -60,8 +68,18 @@ public sealed record CedarSet : CedarValue, IEnumerable<ICedarData>
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        return _buckets.TryGetValue(CedarData.GetHashCode(value), out List<ICedarData>? bucket)
-            && bucket.Any(existing => CedarData.Equals(existing, value));
+        if (!_buckets.TryGetValue(CedarData.GetHashCode(value), out List<ICedarData>? bucket))
+        {
+            return false;
+        }
+        foreach (ICedarData existing in bucket)
+        {
+            if (CedarData.Equals(existing, value))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public override string MarshalCedar()
@@ -108,7 +126,12 @@ public sealed record CedarSet : CedarValue, IEnumerable<ICedarData>
 
     public override int GetHashCode()
     {
-        return CedarHash.ForXorCollection(nameof(CedarSet), _orderedValues.Select(CedarData.GetHashCode));
+        int[] hashes = new int[_orderedValues.Length];
+        for (int i = 0; i < _orderedValues.Length; i++)
+        {
+            hashes[i] = CedarData.GetHashCode(_orderedValues[i]);
+        }
+        return CedarHash.ForXorCollection(nameof(CedarSet), hashes);
     }
 
     public IEnumerator<ICedarData> GetEnumerator()

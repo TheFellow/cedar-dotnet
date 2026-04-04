@@ -22,7 +22,7 @@ public static class Authorization
 
         foreach ((PolicyId policyId, Policy policy) in EnumeratePolicies(policies))
         {
-            BoolEvaluator evaluator = Compiler.Compile(policy.Ast);
+            BoolEvaluator evaluator = policy.CompiledEvaluator;
 
             try
             {

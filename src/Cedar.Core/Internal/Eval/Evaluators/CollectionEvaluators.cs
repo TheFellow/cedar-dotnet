@@ -9,7 +9,7 @@ internal sealed class ContainsEvaluator(IEvaluator left, IEvaluator right) : IEv
     {
         CedarSet leftValue = TypeConversion.ValueToSet(left.Eval(env));
         ICedarData rightValue = right.Eval(env);
-        return new CedarBool(leftValue.Contains(rightValue));
+        return leftValue.Contains(rightValue) ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -55,7 +55,7 @@ internal sealed class IsEmptyEvaluator(IEvaluator inner) : IEvaluator
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(TypeConversion.ValueToSet(inner.Eval(env)).Count == 0);
+        return TypeConversion.ValueToSet(inner.Eval(env)).Count == 0 ? CedarBool.True : CedarBool.False;
     }
 }
 

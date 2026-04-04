@@ -7,7 +7,7 @@ internal sealed class EqualEvaluator(IEvaluator left, IEvaluator right) : IEvalu
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(left.Eval(env).Equals(right.Eval(env)));
+        return left.Eval(env).Equals(right.Eval(env)) ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -15,7 +15,7 @@ internal sealed class NotEqualEvaluator(IEvaluator left, IEvaluator right) : IEv
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(!left.Eval(env).Equals(right.Eval(env)));
+        return !left.Eval(env).Equals(right.Eval(env)) ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -23,7 +23,7 @@ internal sealed class LessThanEvaluator(IEvaluator left, IEvaluator right) : IEv
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(ComparableValues.Compare(left.Eval(env), right.Eval(env)) < 0);
+        return ComparableValues.Compare(left.Eval(env), right.Eval(env)) < 0 ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -31,7 +31,7 @@ internal sealed class LessThanOrEqualEvaluator(IEvaluator left, IEvaluator right
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(ComparableValues.Compare(left.Eval(env), right.Eval(env)) <= 0);
+        return ComparableValues.Compare(left.Eval(env), right.Eval(env)) <= 0 ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -39,7 +39,7 @@ internal sealed class GreaterThanEvaluator(IEvaluator left, IEvaluator right) : 
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(ComparableValues.Compare(left.Eval(env), right.Eval(env)) > 0);
+        return ComparableValues.Compare(left.Eval(env), right.Eval(env)) > 0 ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -47,7 +47,7 @@ internal sealed class GreaterThanOrEqualEvaluator(IEvaluator left, IEvaluator ri
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(ComparableValues.Compare(left.Eval(env), right.Eval(env)) >= 0);
+        return ComparableValues.Compare(left.Eval(env), right.Eval(env)) >= 0 ? CedarBool.True : CedarBool.False;
     }
 }
 

@@ -1,6 +1,8 @@
 using System;
+using System.Threading;
 using Cedar.Ast;
 using Cedar.Ast.Internal;
+using Cedar.Core.Internal.Eval;
 using Cedar.Core.Internal.Json;
 using Cedar.Core.Internal.Parser;
 
@@ -8,6 +10,8 @@ namespace Cedar.Core;
 
 public sealed class Policy
 {
+    private BoolEvaluator? _compiledEvaluator;
+
     internal Policy(PolicyAst ast)
     {
         ArgumentNullException.ThrowIfNull(ast);
@@ -21,6 +25,22 @@ public sealed class Policy
     public Position Position => Ast.Position;
 
     internal PolicyAst Ast { get; }
+
+    internal BoolEvaluator CompiledEvaluator
+    {
+        get
+        {
+            BoolEvaluator? evaluator = Volatile.Read(ref _compiledEvaluator);
+            if (evaluator is not null)
+            {
+                return evaluator;
+            }
+
+            evaluator = Compiler.Compile(Ast);
+            Volatile.Write(ref _compiledEvaluator, evaluator);
+            return evaluator;
+        }
+    }
 
     public static Policy UnmarshalCedar(string cedarText)
     {

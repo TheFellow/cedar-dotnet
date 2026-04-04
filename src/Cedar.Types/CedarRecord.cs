@@ -32,7 +32,8 @@ public sealed record CedarRecord : CedarValue, IEnumerable<KeyValuePair<CedarStr
             }
         }
 
-        _orderedEntries = [.. _entries.OrderBy(entry => entry.Key.Value, StringComparer.Ordinal)];
+        _orderedEntries = [.. _entries];
+        System.Array.Sort(_orderedEntries, static (a, b) => StringComparer.Ordinal.Compare(a.Key.Value, b.Key.Value));
     }
 
     public int Count => _entries.Count;
@@ -100,9 +101,12 @@ public sealed record CedarRecord : CedarValue, IEnumerable<KeyValuePair<CedarStr
 
     public override int GetHashCode()
     {
-        return CedarHash.ForXorCollection(
-            nameof(CedarRecord),
-            _orderedEntries.Select(entry => CedarHash.ForInt32Pair("Entry", entry.Key.GetHashCode(), CedarData.GetHashCode(entry.Value))));
+        int[] hashes = new int[_orderedEntries.Length];
+        for (int i = 0; i < _orderedEntries.Length; i++)
+        {
+            hashes[i] = CedarHash.ForInt32Pair("Entry", _orderedEntries[i].Key.GetHashCode(), CedarData.GetHashCode(_orderedEntries[i].Value));
+        }
+        return CedarHash.ForXorCollection(nameof(CedarRecord), hashes);
     }
 
     public IEnumerator<KeyValuePair<CedarString, ICedarData>> GetEnumerator()

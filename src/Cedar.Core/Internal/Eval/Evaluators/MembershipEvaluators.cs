@@ -9,7 +9,7 @@ internal sealed class InEvaluator(IEvaluator left, IEvaluator right) : IEvaluato
     {
         EntityUid leftValue = TypeConversion.ValueToEntity(left.Eval(env));
         ICedarData rightValue = right.Eval(env);
-        return new CedarBool(InOperator.Contains(env, leftValue, rightValue));
+        return InOperator.Contains(env, leftValue, rightValue) ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -18,7 +18,7 @@ internal sealed class IsEvaluator(IEvaluator left, CedarPath entityType) : IEval
     public ICedarData Eval(EvalEnv env)
     {
         EntityUid leftValue = TypeConversion.ValueToEntity(left.Eval(env));
-        return new CedarBool(string.Equals(leftValue.Type.Value, entityType.Value, System.StringComparison.Ordinal));
+        return string.Equals(leftValue.Type.Value, entityType.Value, System.StringComparison.Ordinal) ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -33,7 +33,7 @@ internal sealed class IsInEvaluator(IEvaluator left, CedarPath entityType, IEval
         }
 
         ICedarData rightValue = right.Eval(env);
-        return new CedarBool(InOperator.Contains(env, leftValue, rightValue));
+        return InOperator.Contains(env, leftValue, rightValue) ? CedarBool.True : CedarBool.False;
     }
 }
 

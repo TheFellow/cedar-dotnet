@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using Cedar.Core.Internal.MapSet;
 
 namespace Cedar.Types;
@@ -34,7 +33,13 @@ public sealed record EntityUidSet : IReadOnlyCollection<EntityUid>
 
     public override int GetHashCode()
     {
-        return CedarHash.ForXorCollection(nameof(EntityUidSet), this.Select(static item => item.GetHashCode()));
+        int[] hashes = new int[Count];
+        int index = 0;
+        foreach (EntityUid item in this)
+        {
+            hashes[index++] = item.GetHashCode();
+        }
+        return CedarHash.ForXorCollection(nameof(EntityUidSet), hashes);
     }
 
     public IEnumerator<EntityUid> GetEnumerator()

@@ -38,6 +38,6 @@ internal sealed class NotEvaluator(IEvaluator inner) : IEvaluator
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(!TypeConversion.ValueToBool(inner.Eval(env)));
+        return !TypeConversion.ValueToBool(inner.Eval(env)) ? CedarBool.True : CedarBool.False;
     }
 }

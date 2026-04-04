@@ -30,7 +30,10 @@ internal static class CedarHash
     public static int ForString(string discriminator, string value)
     {
         ulong hash = Start(discriminator);
-        hash = Update(hash, Encoding.UTF8.GetBytes(value));
+        int byteCount = Encoding.UTF8.GetByteCount(value);
+        Span<byte> bytes = byteCount <= 256 ? stackalloc byte[byteCount] : new byte[byteCount];
+        Encoding.UTF8.GetBytes(value, bytes);
+        hash = Update(hash, bytes);
         return Finish(hash);
     }
 
@@ -44,9 +47,15 @@ internal static class CedarHash
     public static int ForStringPair(string discriminator, string first, string second)
     {
         ulong hash = Start(discriminator);
-        hash = Update(hash, Encoding.UTF8.GetBytes(first));
+        int firstByteCount = Encoding.UTF8.GetByteCount(first);
+        Span<byte> firstBytes = firstByteCount <= 256 ? stackalloc byte[firstByteCount] : new byte[firstByteCount];
+        Encoding.UTF8.GetBytes(first, firstBytes);
+        hash = Update(hash, firstBytes);
         hash = Update(hash, (byte)0xff);
-        hash = Update(hash, Encoding.UTF8.GetBytes(second));
+        int secondByteCount = Encoding.UTF8.GetByteCount(second);
+        Span<byte> secondBytes = secondByteCount <= 256 ? stackalloc byte[secondByteCount] : new byte[secondByteCount];
+        Encoding.UTF8.GetBytes(second, secondBytes);
+        hash = Update(hash, secondBytes);
         return Finish(hash);
     }
 
@@ -96,7 +105,10 @@ internal static class CedarHash
     private static ulong Start(string discriminator)
     {
         ulong hash = OffsetBasis;
-        hash = Update(hash, Encoding.UTF8.GetBytes(discriminator));
+        int byteCount = Encoding.UTF8.GetByteCount(discriminator);
+        Span<byte> bytes = byteCount <= 128 ? stackalloc byte[byteCount] : new byte[byteCount];
+        Encoding.UTF8.GetBytes(discriminator, bytes);
+        hash = Update(hash, bytes);
         return Update(hash, (byte)0xff);
     }
 
