@@ -18,9 +18,9 @@ public sealed record ValidationResult(bool IsValid, IReadOnlyList<string> Errors
 {
     public static ValidationResult Success { get; } = new(true, Array.Empty<string>());
 
-    public static ValidationResult Failure(params string[] errors)
+    public static ValidationResult Failure(params ReadOnlySpan<string> errors)
     {
-        return new ValidationResult(false, errors);
+        return new ValidationResult(false, [.. errors]);
     }
 
     public static ValidationResult Failure(IReadOnlyList<string> errors)

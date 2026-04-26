@@ -26,9 +26,16 @@ public static class Values
         return Value(new CedarLong(value));
     }
 
-    public static Node Set(params Node[] values)
+    public static Node Set(params ReadOnlySpan<Node> values)
     {
-        return SetNodes(values);
+        ImmutableArray<INode>.Builder builder = ImmutableArray.CreateBuilder<INode>(values.Length);
+        foreach (Node value in values)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            builder.Add(value.Inner);
+        }
+
+        return new Node(new NodeSet(builder.ToImmutable()));
     }
 
     public static Node SetNodes(IEnumerable<Node> values)
@@ -52,10 +59,8 @@ public static class Values
         return SetNodes(values.Select(ValueToNode));
     }
 
-    public static Node Record(params RecordElement[] entries)
+    public static Node Record(params ReadOnlySpan<RecordElement> entries)
     {
-        ArgumentNullException.ThrowIfNull(entries);
-
         Dictionary<string, int> seen = new(StringComparer.Ordinal);
         ImmutableArray<NodeRecordElement>.Builder builder = ImmutableArray.CreateBuilder<NodeRecordElement>();
 

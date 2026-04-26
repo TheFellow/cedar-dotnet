@@ -174,10 +174,9 @@ public static class Operators
         return new Node(new NodeIsEmpty(value.Inner));
     }
 
-    internal static Node ExtensionCall(string name, params Node[] args)
+    internal static Node ExtensionCall(string name, params ReadOnlySpan<Node> args)
     {
         ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(args);
 
         ImmutableArray<INode>.Builder builder = ImmutableArray.CreateBuilder<INode>(args.Length);
         foreach (Node arg in args)

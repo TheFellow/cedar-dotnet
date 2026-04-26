@@ -226,7 +226,7 @@ internal static class NodeJsonModel
         return new JsonObject { [node.Name.Value] = args };
     }
 
-    private static INode ReadBinary(JsonNode node, Func<INode, INode, INode> create, params string[] rightNames)
+    private static INode ReadBinary(JsonNode node, Func<INode, INode, INode> create, params ReadOnlySpan<string> rightNames)
     {
         JsonObject payload = AsObject(node, "binary");
         INode left = ToAst(ReadRequiredProperty(payload, "left"));

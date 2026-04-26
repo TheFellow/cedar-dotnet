@@ -54,9 +54,8 @@ public sealed class PolicyBuilder
         return WithActionScope(new ScopeIn(entity));
     }
 
-    public PolicyBuilder ActionInSet(params EntityUid[] entities)
+    public PolicyBuilder ActionInSet(params ReadOnlySpan<EntityUid> entities)
     {
-        ArgumentNullException.ThrowIfNull(entities);
         return WithActionScope(new ScopeInSet([.. entities]));
     }
 
