@@ -1,49 +1,242 @@
-digraph Workflow {
-  graph [ label="Semantic Port Tracking Loop", goal="We want to intelligently track and port semantic changes from the upstream cedar-go repository to our C# implementation.\n\nWe want to fetch the latest commits from inspiration/cedar-go, analyze each new commit for semantic changes (not just syntax), and intelligently port those changes into our C# codebase while respecting .NET idioms and our existing architecture.\n\nWe want to track the disposition of each upstream commit in semport/ledger.tsv with three states: 'new' (unprocessed), 'implemented' (changes made), or 'acknowledged' (reviewed but no changes needed).\n\nWe want to make sure we follow the established cedar-dotnet conventions: sealed records for value types, immutable collections, System.Text.Json serialization, xUnit tests, and the multi-project solution layout defined in docs/sprints/SPRINT-PLAN.md.", rankdir="LR", default_max_retry="100" ];
+digraph cedar_dotnet_semport {
+  graph [
+    label="cedar-dotnet — Semantic Port Tracking Loop",
+    goal="Port semantic changes from upstream cedar-go (https://github.com/cedar-policy/cedar-go) into our C# implementation, one commit at a time in chronological order.\n\nDispositions in semport/ledger.tsv:\n- new — unprocessed\n- implemented — port committed\n- acknowledged — reviewed, no port needed (Go-specific, docs, CI, tests, infra)\n\nEvery acknowledgment must leave a reviewable breadcrumb: deliberate skips at semport/skipped/<sha>.md, post-failure escapes at semport/wedged/<sha>.md. Together these ensure no commit is silently dropped.\n\nConventions: sealed records for value types, immutable collections, System.Text.Json, xUnit, the multi-project layout in docs/sprints/SPRINT-PLAN.md. ImplicitUsings is disabled — every using is explicit. Treat warnings as errors.",
+    rankdir="LR",
+    default_max_retry="5",
+    default_fidelity="compact",
+    model_stylesheet="* { llm_model: claude-sonnet-4-6; llm_provider: anthropic; } .planner { llm_model: claude-opus-4-7; llm_provider: anthropic; } .implementer { llm_model: gpt-5.4; llm_provider: openai; } .reviewer { llm_model: claude-opus-4-7; llm_provider: anthropic; }"
+  ];
 
-  Start [label="Start", shape="Mdiamond"];
-  Exit [label="Exit", shape="Msquare"];
+  node [system_prompt="You are working on cedar-dotnet, a C# semantic port of cedar-go (Cedar policy language). Conventions:\n- Sealed records for value types; immutable collections; System.Text.Json for serialization; xUnit for tests\n- ImplicitUsings is DISABLED — every using statement must be explicit (System, System.Collections.Generic, etc.)\n- Treat warnings as errors\n- File-scoped namespaces\n- Multi-project layout: Cedar.Types (primitives), Cedar.Core (request/diagnostic shared with Cedar.Ast), Cedar.Ast (parsing/eval/auth), Cedar.Schema, Cedar.Batch, Cedar.Experimental\n- Eval/, Extensions/, Authorization.cs physically live in Cedar.Core/ but compile as part of Cedar.Ast (Cedar.Ast.csproj uses <Compile Include>; Cedar.Core.csproj uses <Compile Remove>) — preserve this split\n- Use rg over grep/find for codebase search\n- Read CLAUDE.md at repo root and docs/sprints/SPRINT-PLAN.md for project-specific conventions\n- Read whatever the task references cite — upstream paths under inspiration/cedar-go/, prior summaries under semport/skipped/, etc.\n- Map Go idioms to C# idioms semantically: Go interface → C# interface or abstract record; Go error → exception or Result<T>; Go map → IReadOnlyDictionary; Go slice → ImmutableArray<T>"];
 
-  // ── Stage 1: Fetch upstream and identify next commit ──
-  FetchUpstream [shape="tab", label="1) Fetch upstream & identify next commit", llm_model="claude-sonnet-4-6", llm_provider="anthropic", cwd=".", max_turns="50", reasoning_effort="high", prompt="Our goal is: $goal\n\n---\n\n**CRITICAL: Use semport/ledger.py for all ledger operations to ensure proper chronological ordering. Ledger entries MUST always use short git hashes (7 characters, e.g. from `git rev-parse --short`).**\n\n1. Run `python3 semport/ledger.py earliest` to get the chronologically earliest commit with disposition='new'\n2. If a commit is found, write ONLY that single commit (shortsha, iso8601, and full commit message from git show) to .ai/semport_new_commits.md and you are done.\n3. If NO 'new' commits exist:\n   a. Ensure inspiration/cedar-go exists (clone from https://github.com/cedar-policy/cedar-go.git if missing)\n   b. Run `git -C inspiration/cedar-go fetch origin && git -C inspiration/cedar-go checkout main && git -C inspiration/cedar-go pull origin main` to get latest\n   c. Use git log to find commits newer than the latest in ledger.tsv, capturing a short hash for each commit (e.g. `git -C inspiration/cedar-go log --format='%%h %%cI' <latest_sha>..HEAD`)\n   d. Add new commits using `python3 semport/ledger.py add <shortsha> <timestamp>`\n   e. Run `python3 semport/ledger.py sort` to maintain chronological order\n   f. Then run `python3 semport/ledger.py earliest` to get the first new commit\n   g. If a new commit is found after fetching, write it to .ai/semport_new_commits.md\n   h. If still no new commits after fetching, remove .ai/semport_new_commits.md if it exists (rm -f)\n\nIMPORTANT: If there IS a commit to process, .ai/semport_new_commits.md must exist when you finish. If there is NOT, .ai/semport_new_commits.md must NOT exist."];
+  Start [shape="Mdiamond", label="Start"];
+  Exit  [shape="Msquare", label="Exit"];
 
-  CheckFetchResult [shape="parallelogram", label="Check: new commits?", tool_command="test -f .ai/semport_new_commits.md", timeout="10s"];
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 1: Fetch upstream and identify the next commit
+  // ═══════════════════════════════════════════════════════════════════════
 
-  // ── Stage 2: Analyze commit and decide: port or acknowledge ──
-  AnalyzePlan [shape="tab", label="2) Analyze & plan port", llm_model="claude-sonnet-4-6", llm_provider="anthropic", cwd=".", max_turns="50", reasoning_effort="high", prompt="You have ONE job: analyze a single upstream commit and decide whether to port or acknowledge it.\n\nSTEP 1: Read .ai/semport_new_commits.md to get the commit shortsha.\nSTEP 2: Run `git -C inspiration/cedar-go show <shortsha>` to see the full diff.\nSTEP 3: Decide: is this a semantic change that needs porting to C#? Or is it Go-specific/docs-only/CI-only/test-only?\n\nIF ACKNOWLEDGE (skip):\n1. Run: `python3 semport/ledger.py update <shortsha> acknowledged && python3 semport/ledger.py sort`\n2. Run: `git add semport/ledger.tsv && git commit -m \"semport: acknowledge <shortsha> - <brief reason>\"`\n3. Run: `rm -f .ai/semport_new_commits.md`\n4. Write .ai/semport_plan.md with first line: SKIP\n\nIF PORT:\n1. Write .ai/semport_plan.md with first line: PORT\n2. Below PORT, include: commit summary, semantic analysis, and concrete port tasks with file:line references for both Go source and C# target.\n\nDo NOT browse the repo. Do NOT read files other than .ai/semport_new_commits.md and the git show output. Be fast and decisive."];
+  FetchUpstream [
+    shape="tab",
+    label="1) Fetch upstream & identify next commit",
+    cwd=".",
+    fresh_session="true",
+    max_turns="80",
+    reasoning_effort="low",
+    prompt="Determine the next cedar-go commit to port. STOP as soon as you have an answer — do NOT run `stats`, do NOT verify, do NOT explore beyond what these steps require.\n\n**STEP 1 — fast path:** Run `python3 semport/ledger.py earliest`.\n- Exit 0 with output: a 'new' commit exists. Capture its shortsha (first column of the output). Run `git -C inspiration/cedar-go show --no-patch --format='%%h%%n%%cI%%n%%B' <shortsha>` and write the output verbatim to .ai/semport_new_commits.md. **STOP.**\n- Exit 1 ('No new commits found'): continue to STEP 2.\n\n**STEP 2 — refresh upstream and detect missing SHAs:**\n1. If inspiration/cedar-go does not exist, `git clone https://github.com/cedar-policy/cedar-go.git inspiration/cedar-go`.\n2. `git -C inspiration/cedar-go fetch origin && git -C inspiration/cedar-go checkout main && git -C inspiration/cedar-go pull --ff-only origin main`\n3. Compute the set of upstream SHAs that are NOT in the ledger. **Do NOT use `<latest_sha>..HEAD` syntax** — the ledger contains historical SHAs that may have been rebased out of upstream, so walking forward from the ledger tail is unreliable. Use set difference:\n   ```\n   git -C inspiration/cedar-go log --format='%%h %%cI' > /tmp/semport_upstream.tsv\n   awk 'NR>1{print $1}' semport/ledger.tsv | sort > /tmp/semport_ledger_shas.txt\n   awk '{print $1}' /tmp/semport_upstream.tsv | sort > /tmp/semport_upstream_shas.txt\n   comm -23 /tmp/semport_upstream_shas.txt /tmp/semport_ledger_shas.txt > /tmp/semport_missing_shas.txt\n   wc -l /tmp/semport_missing_shas.txt\n   ```\n4. If /tmp/semport_missing_shas.txt is empty, the pipeline is caught up: `rm -f .ai/semport_new_commits.md` and **STOP**.\n5. Otherwise, for each missing SHA look up its iso8601 in /tmp/semport_upstream.tsv and add it: `python3 semport/ledger.py add <shortsha> <iso8601>`. (Adding all of them at once via a small shell loop is fine.)\n6. `python3 semport/ledger.py sort`\n7. `python3 semport/ledger.py earliest` — should now succeed. Capture the shortsha and write the commit body to .ai/semport_new_commits.md exactly as in STEP 1. **STOP.**\n\n**Postconditions (CRITICAL):**\n- If a commit IS to process: .ai/semport_new_commits.md exists, with the shortsha on the first line.\n- If caught up: .ai/semport_new_commits.md does NOT exist.\n- Stop the moment one of those is true. Do not double-check, do not run stats, do not list directories."
+  ];
 
-  CheckPlanResult [shape="parallelogram", label="Check: port or skip?", tool_command="head -1 .ai/semport_plan.md | grep -q PORT", timeout="10s"];
+  CheckFetchResult [
+    shape="parallelogram",
+    label="Check: new commits?",
+    tool_command="test -f .ai/semport_new_commits.md",
+    timeout="10s"
+  ];
 
-  // ── Stage 3: Finalize port plan ──
-  FinalizePlan [shape="tab", label="3) Finalize port plan", llm_model="claude-sonnet-4-6", llm_provider="anthropic", cwd=".", max_turns="50", reasoning_effort="high", prompt="Finalize the port plan for implementation.\n\n1. Read .ai/semport_plan.md\n2. Search the C# codebase for the target files mentioned in the plan (use find/grep to locate them quickly)\n3. Write .ai/semport_plan_finalized.md with concrete file:line references, acceptance criteria, and C# idioms mapped from Go patterns\n4. Be fast — do not read entire files, just locate the relevant types and note their locations\n\nThe plan should be directly executable by the next agent. Map Go patterns to C# equivalents (Go interface -> C# interface/abstract record, Go error -> Result/exception, etc.)."];
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 2: Analyze commit, decide port or acknowledge
+  // ═══════════════════════════════════════════════════════════════════════
 
-  // ── Stage 4: Implement port ──
-  ImplementPort [shape="tab", label="4) Implement port", llm_model="gpt-5.4", llm_provider="openai", cwd=".", max_turns="50", max_tool_rounds="45", reasoning_effort="high", prompt="Follow the port plan in .ai/semport_plan_finalized.md. Port the semantic changes to the C# codebase. Focus on semantic equivalence, not literal translation. Use C# idioms (sealed records, pattern matching, immutable collections, System.Text.Json), respect the existing multi-project architecture (Cedar.Types, Cedar.Ast, Cedar.Core). IMPORTANT: ImplicitUsings is disabled — add all using statements explicitly (System, System.Collections.Generic, etc.). Run `dotnet build cedar-dotnet.sln` after all changes to verify compilation. Fix any build errors before finishing."];
+  AnalyzePlan [
+    shape="tab",
+    label="2) Analyze & plan port",
+    class="planner",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="80",
+    max_tool_rounds="80",
+    max_retries="3",
+    reasoning_effort="high",
+    prompt="Analyze ONE upstream commit and decide port-or-acknowledge. Be fast and decisive.\n\nSTEP 1: Read .ai/semport_new_commits.md to get the shortsha.\nSTEP 2: Run `git -C inspiration/cedar-go show <shortsha>` for the full diff.\nSTEP 3: Decide — semantic change worth porting to C#? Or Go-specific / docs-only / CI / test-only / infra?\n\nIF ACKNOWLEDGE (skip):\n1. Write semport/skipped/<shortsha>.md with:\n   - Commit subject + author + date\n   - 2-3 sentence rationale (why no port needed)\n   - List of cedar-go files touched, so a human can sanity-check the call\n2. `python3 semport/ledger.py update <shortsha> acknowledged && python3 semport/ledger.py sort`\n3. `git add semport/ledger.tsv semport/skipped/<shortsha>.md && git commit -m \"semport: acknowledge <shortsha> - <brief reason>\"`\n4. `rm -f .ai/semport_new_commits.md`\n5. Write .ai/semport_plan.md with FIRST LINE exactly `SKIP` on its own line.\n\nIF PORT:\n1. Write .ai/semport_plan.md. The FIRST LINE MUST be exactly `PORT` on its own line — no markdown heading, no other text. A downstream gate uses `head -1 ... | grep -q '^PORT$'` to route.\n2. After the literal first line, leave a blank line and then write your detail section: commit summary, semantic analysis, concrete port tasks with file:line refs for both Go source and C# target.\n\nDo NOT browse the repo extensively. Stick to .ai/semport_new_commits.md and the git show output."
+  ];
 
-  // ── Stage 5: Test/Validate ──
-  TestValidate [shape="tab", label="5) Test/Validate changes", llm_model="claude-sonnet-4-6", llm_provider="anthropic", cwd=".", max_turns="40", reasoning_effort="high", prompt="Run these commands sequentially. Do NOT read any files first — just run the commands:\n\n1. `dotnet build cedar-dotnet.sln` — this builds ALL projects including benchmarks. Must succeed with 0 errors, 0 warnings.\n2. `dotnet test test/Cedar.Tests/`\n3. `dotnet test test/Cedar.Schema.Tests/`\n4. `dotnet test test/Cedar.Batch.Tests/`\n5. `dotnet test test/Cedar.Experimental.Tests/`\n\nDo NOT run test/Cedar.Conformance/.\n\nIf the build fails (step 1), try to fix the build errors and re-run. Common issues: benchmark project references changed APIs — update benchmarks/ to match.\n\nAfter all commands pass, write .ai/semport_validation_report.md with first line PASS or FAIL. That is ALL you need to do."];
+  CheckPlanResult [
+    shape="parallelogram",
+    label="Check: port or skip?",
+    tool_command="head -1 .ai/semport_plan.md | grep -q '^PORT$'",
+    timeout="10s"
+  ];
 
-  CheckTestResult [shape="parallelogram", label="Check: tests pass?", tool_command="head -1 .ai/semport_validation_report.md | grep -q PASS", timeout="10s"];
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 3: Finalize port plan with concrete C# refs
+  // ═══════════════════════════════════════════════════════════════════════
 
-  // ── Stage 6a: Analyze failure ──
-  AnalyzeFailure [shape="tab", label="6a) Analyze failure", llm_model="claude-sonnet-4-6", llm_provider="anthropic", cwd=".", max_turns="50", reasoning_effort="high", prompt="Tests or validation failed. Inspect .ai/semport_validation_report.md, logs, diffs, and error messages. Write .ai/semport_failure_analysis.md summarizing root causes, impacted files (with line references), and what needs to be fixed. Clearly note where failure artifacts are located. Keep our goal $goal in mind and be subjective."];
+  FinalizePlan [
+    shape="tab",
+    label="3) Finalize port plan",
+    class="planner",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="60",
+    max_tool_rounds="60",
+    max_retries="3",
+    reasoning_effort="high",
+    prompt="Finalize the port plan for direct execution by the implementation agent.\n\n1. Read .ai/semport_plan.md\n2. Use rg to locate the C# target files mentioned in the plan (don't read entire files — just locate types and note file:line)\n3. Write .ai/semport_plan_finalized.md with:\n   - Concrete file:line references in cedar-dotnet for every target\n   - Acceptance criteria (what must be true after the port)\n   - Go→C# idiom mapping notes for non-obvious cases\n   - Build/test commands the implementer should run\n4. Be fast — no full-file reads, no exhaustive exploration. The implementer will read details as needed.\n\nThe finalized plan must be directly executable. No hand-waving."
+  ];
 
-  // ── Stage 6: Finalize and update ledger ──
-  FinalizeAndUpdateLedger [shape="tab", label="6) Finalize & update ledger", llm_model="claude-sonnet-4-6", llm_provider="anthropic", cwd=".", max_turns="50", reasoning_effort="high", prompt="Read .ai/semport_new_commits.md to get the shortsha and commit message, then run these commands:\n\n1. `python3 semport/ledger.py update <shortsha> implemented && python3 semport/ledger.py sort`\n2. `git update-index --refresh && git add src/ test/ benchmarks/ semport/ledger.tsv && git commit -m \"semport: implement <shortsha> - <brief description>\"`\n3. `git push`\n4. `rm -f .ai/semport_new_commits.md .ai/semport_plan.md .ai/semport_plan_finalized.md .ai/semport_validation_report.md .ai/semport_failure_analysis.md .ai/semport_impl.log .ai/semport_implementation_summary.md`\n\nIMPORTANT: git update-index --refresh forces git to re-check file contents against the index. This prevents stale stat cache issues. Do not read other files."];
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 4: Implement port (Codex / gpt-5.4)
+  // ═══════════════════════════════════════════════════════════════════════
 
-  // ── Edges ──
+  Implement [
+    shape="tab",
+    label="4) Implement port (Codex)",
+    class="implementer",
+    cwd=".",
+    fresh_session="true",
+    max_turns="160",
+    max_tool_rounds="160",
+    max_retries="3",
+    reasoning_effort="high",
+    prompt="Implement the port per .ai/semport_plan_finalized.md.\n\n## Rules\n\n1. Read .ai/semport_plan_finalized.md FIRST — it has the exact files, types, and acceptance criteria\n2. Read CLAUDE.md and docs/sprints/SPRINT-PLAN.md for project conventions\n3. Read inspiration/cedar-go/<files cited in plan> for upstream ground truth\n4. Aim for SEMANTIC equivalence, not literal translation:\n   - Go interface → C# interface or abstract record\n   - Go error → exception or Result<T> per existing patterns\n   - Go map[K]V → IReadOnlyDictionary<K,V> or ImmutableDictionary\n   - Go slice → ImmutableArray<T> for value-equality semantics\n5. ImplicitUsings is DISABLED — add every using explicitly\n6. Treat warnings as errors\n7. Follow the Cedar.Core/Cedar.Ast Compile Include/Remove split — Eval/, Extensions/, Authorization.cs live in Cedar.Core/ on disk but compile into Cedar.Ast\n8. Run `dotnet build cedar-dotnet.sln` to verify compilation; fix any errors before finishing\n9. Do NOT commit — the review step handles that\n\n## Quality bar\n- Every public type and method has XML doc comments\n- Every new behavior has a corresponding xUnit test\n- No placeholder or TODO code\n\nWhen done, write .ai/semport_implementation_status.md with:\n- First line: DONE or PARTIAL\n- List of files created/modified\n- Any deviations from the plan and why"
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 5: Validate (build + test)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  Validate [
+    shape="tab",
+    label="5) Validate",
+    cwd=".",
+    fresh_session="true",
+    max_turns="50",
+    reasoning_effort="low",
+    prompt="Run validation commands. Do NOT read code first — just run the commands:\n\n1. `dotnet build cedar-dotnet.sln` — must succeed with 0 errors, 0 warnings\n2. `dotnet test test/Cedar.Tests/`\n3. `dotnet test test/Cedar.Schema.Tests/`\n4. `dotnet test test/Cedar.Batch.Tests/`\n5. `dotnet test test/Cedar.Experimental.Tests/`\n\nDo NOT run test/Cedar.Conformance/.\n\nIf step 1 fails, try to fix build errors and re-run (limit 3 attempts). If a test fails, try to fix the failing test and re-run (limit 3 attempts). Common build issue: benchmarks/ project references changed APIs — update benchmark sources to match.\n\nAfter all commands complete, write .ai/semport_validation_report.md. The FIRST LINE MUST be exactly `PASS` or exactly `FAIL` on its own line — no markdown heading, no `# Sprint Validation Report` title, no `**Status:**` prefix, no leading whitespace. A downstream gate uses `head -1 ... | grep -q PASS` to route, so anything other than those two literals on line 1 is interpreted as FAIL.\n\nAfter the literal first line, leave a blank line and then write your detail section (markdown headings allowed there): build output summary, per-suite test counts, any failure traces."
+  ];
+
+  CheckValidation [
+    shape="parallelogram",
+    label="Check: validation pass?",
+    tool_command="head -1 .ai/semport_validation_report.md | grep -q PASS",
+    timeout="10s"
+  ];
+
+  FixFailures [
+    shape="tab",
+    label="5b) Fix failures",
+    class="implementer",
+    cwd=".",
+    fresh_session="true",
+    max_turns="80",
+    max_tool_rounds="80",
+    reasoning_effort="high",
+    prompt="Build or tests failed. Fix the issues.\n\n1. Read .ai/semport_validation_report.md for failure details\n2. Read .ai/semport_plan_finalized.md for the intended design\n3. Diagnose root causes — read the relevant source files (Go upstream and C# target)\n4. Fix the issues\n5. Run `dotnet build cedar-dotnet.sln`\n6. Run the four test suites: Cedar.Tests, Cedar.Schema.Tests, Cedar.Batch.Tests, Cedar.Experimental.Tests\n7. Rewrite .ai/semport_validation_report.md. The FIRST LINE MUST be exactly `PASS` or exactly `FAIL` on its own line — no markdown heading, no other text, no leading whitespace. A downstream gate uses `head -1 ... | grep -q PASS` to route. After the literal first line, leave a blank line and then write your detail section."
+  ];
+
+  CheckFixResult [
+    shape="parallelogram",
+    label="Check: fix worked?",
+    tool_command="head -1 .ai/semport_validation_report.md | grep -q PASS",
+    timeout="10s"
+  ];
+
+  // After fix exhaustion, route to wedge — never partial-commit a red build.
+  WedgeAcknowledge [
+    shape="tab",
+    label="5c) Wedge: acknowledge & move on",
+    cwd=".",
+    fresh_session="true",
+    max_turns="30",
+    reasoning_effort="low",
+    prompt="Validation could not be made green for this commit. Mark it acknowledged with a wedge breadcrumb so the backlog moves on; a human can revisit later.\n\n1. Read .ai/semport_new_commits.md for the shortsha and commit subject\n2. Reset any working-tree changes from the failed port: `git reset --hard HEAD && git clean -fd`\n3. Write semport/wedged/<shortsha>.md with:\n   - Header: `WEDGED: <shortsha>` and the date\n   - Commit subject + author\n   - One-paragraph summary of what the port attempted\n   - The contents of .ai/semport_validation_report.md (or its tail) so the human sees the failure mode\n   - Suggested next step (split into smaller phases? hand-port? defer until a dependency lands?)\n4. `python3 semport/ledger.py update <shortsha> acknowledged && python3 semport/ledger.py sort`\n5. `git add semport/ledger.tsv semport/wedged/<shortsha>.md && git commit -m \"semport: wedge-acknowledge <shortsha> - validation could not be made green\"`\n6. `rm -f .ai/semport_new_commits.md .ai/semport_plan.md .ai/semport_plan_finalized.md .ai/semport_implementation_summary.md .ai/semport_implementation_status.md .ai/semport_validation_report.md .ai/semport_review.md .ai/semport_commit_msg.txt`\n\nDo NOT push — the loop continues; pushes happen on the next successful commit."
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 6: Opus second-opinion review (different family from gpt-5.4 implementer)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  OpusReview [
+    shape="tab",
+    label="6) Opus code review",
+    class="reviewer",
+    cwd=".",
+    fidelity="full",
+    fresh_session="true",
+    max_turns="40",
+    max_tool_rounds="40",
+    max_retries="3",
+    reasoning_effort="high",
+    prompt="Second-opinion review of the C# port produced by the implementation agent (gpt-5.4). Your job is to catch what a different model family sees.\n\n1. Read .ai/semport_plan_finalized.md for intended scope\n2. Read .ai/semport_new_commits.md for the shortsha; run `git -C inspiration/cedar-go show <shortsha>` for upstream ground truth\n3. `git diff HEAD` to see staged + unstaged C# changes\n4. Sanity-check semantic faithfulness:\n   - silently-dropped behavior (an enum branch, a guard clause, a corner case)\n   - off-by-one or off-by-tag errors in pattern matching\n   - missing null/empty handling that the Go version handled\n   - exception types that swallow vs. propagate where Go would surface\n   - test gaps (behavior changed but no xUnit test asserts the new behavior)\n   - C# idiom conformance (sealed records, ImmutableArray, explicit usings, file-scoped namespaces)\n   - Cedar.Core ↔ Cedar.Ast Compile Include/Remove split preserved\n\nWrite .ai/semport_review.md. The FIRST LINE MUST be exactly `APPROVED` or exactly `REVISE` on its own line — no markdown heading, no other text, no leading whitespace. A downstream gate uses `grep -q '^APPROVED$'` to route. Use APPROVED if code is correct and faithful; REVISE only for real issues with file:line references. Be pragmatic — do not block on style nits.\n\nAlso write .ai/semport_commit_msg.txt with format: `semport: implement <shortsha> - <brief description>`, blank line, 2-3 bullets on what changed, footer `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`."
+  ];
+
+  CheckReview [
+    shape="parallelogram",
+    label="Check: review approved?",
+    tool_command="grep -q '^APPROVED$' .ai/semport_review.md",
+    timeout="10s"
+  ];
+
+  FixReviewIssues [
+    shape="tab",
+    label="6b) Fix review issues",
+    class="implementer",
+    cwd=".",
+    fresh_session="true",
+    max_turns="120",
+    max_tool_rounds="120",
+    max_visits="5",
+    reasoning_effort="high",
+    prompt="The Opus reviewer found issues. Fix them.\n\n1. Read .ai/semport_review.md for specific issues with file:line refs\n2. Fix each issue\n3. Run `dotnet build cedar-dotnet.sln` and the four test suites (Cedar.Tests, Cedar.Schema.Tests, Cedar.Batch.Tests, Cedar.Experimental.Tests)\n4. Rewrite .ai/semport_validation_report.md with FIRST LINE exactly `PASS` or `FAIL` (same convention as Validate). The flow loops back to Validate, which loops back to OpusReview on success."
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Stage 7: Commit, update ledger, push
+  // ═══════════════════════════════════════════════════════════════════════
+
+  CommitAndUpdate [
+    shape="tab",
+    label="7) Commit & update ledger",
+    cwd=".",
+    fresh_session="true",
+    max_turns="50",
+    reasoning_effort="low",
+    requires_green_build="dotnet build cedar-dotnet.sln",
+    prompt="Finalize: commit changes, update the ledger, push.\n\n1. Read .ai/semport_new_commits.md for shortsha; read .ai/semport_commit_msg.txt for the message\n2. `python3 semport/ledger.py update <shortsha> implemented && python3 semport/ledger.py sort`\n3. `git update-index --refresh && git add src/ test/ benchmarks/ semport/ledger.tsv && git commit -F .ai/semport_commit_msg.txt`\n4. `git push`\n5. Clean up scratch:\n   `rm -f .ai/semport_new_commits.md .ai/semport_plan.md .ai/semport_plan_finalized.md .ai/semport_implementation_status.md .ai/semport_implementation_summary.md .ai/semport_validation_report.md .ai/semport_review.md .ai/semport_commit_msg.txt .ai/semport_failure_analysis.md .ai/semport_impl.log`\n\n`git update-index --refresh` forces git to re-check file contents against the index, preventing stale stat-cache issues. Do not read other files — your inputs are .ai/semport_new_commits.md and .ai/semport_commit_msg.txt."
+  ];
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Edges
+  // ═══════════════════════════════════════════════════════════════════════
+
   Start -> FetchUpstream;
+
+  // Stage 1: Fetch
   FetchUpstream -> CheckFetchResult;
   CheckFetchResult -> AnalyzePlan [condition="outcome=success", label="has commits"];
-  CheckFetchResult -> Exit [condition="outcome=fail", label="caught up"];
+  CheckFetchResult -> Exit         [condition="outcome=fail",    label="caught up"];
+
+  // Stage 2: Analyze
   AnalyzePlan -> CheckPlanResult;
-  CheckPlanResult -> FinalizePlan [condition="outcome=success", label="port"];
-  CheckPlanResult -> FetchUpstream [condition="outcome=fail", label="skip", loop_restart="true"];
-  FinalizePlan -> ImplementPort;
-  ImplementPort -> TestValidate;
-  TestValidate -> CheckTestResult;
-  CheckTestResult -> FinalizeAndUpdateLedger [condition="outcome=success", label="pass"];
-  CheckTestResult -> AnalyzeFailure [condition="outcome=fail", label="fail"];
-  AnalyzeFailure -> FinalizeAndUpdateLedger;
-  FinalizeAndUpdateLedger -> FetchUpstream [loop_restart="true"];
+  CheckPlanResult -> FinalizePlan  [condition="outcome=success", label="port"];
+  CheckPlanResult -> FetchUpstream [condition="outcome=fail",    label="skip", loop_restart="true"];
+
+  // Stage 3: Finalize plan
+  FinalizePlan -> Implement;
+
+  // Stage 4: Implement
+  Implement -> Validate;
+
+  // Stage 5: Validate
+  Validate -> CheckValidation;
+  CheckValidation -> OpusReview   [condition="outcome=success", label="pass"];
+  CheckValidation -> FixFailures  [condition="outcome=fail",    label="fail"];
+  FixFailures -> CheckFixResult;
+  CheckFixResult -> OpusReview        [condition="outcome=success", label="fixed"];
+  CheckFixResult -> WedgeAcknowledge  [condition="outcome=fail",    label="give up — wedge"];
+  WedgeAcknowledge -> FetchUpstream   [loop_restart="true"];
+
+  // Stage 6: Review
+  OpusReview -> CheckReview;
+  CheckReview -> CommitAndUpdate  [condition="outcome=success", label="approved"];
+  CheckReview -> FixReviewIssues  [condition="outcome=fail",    label="revise"];
+  FixReviewIssues -> Validate;
+
+  // Stage 7: Commit and loop. Every stage uses fresh_session="true", so
+  // looping back to FetchUpstream in-process does not carry the
+  // session-pollution checkpoint bloat that previously forced a wrapper.
+  CommitAndUpdate -> FetchUpstream [loop_restart="true"];
 }
