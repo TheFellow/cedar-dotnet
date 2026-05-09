@@ -24,13 +24,13 @@ digraph cedar_dotnet_semport {
     fresh_session="true",
     max_turns="80",
     reasoning_effort="low",
-    prompt="Determine the next cedar-go commit to port. STOP as soon as you have an answer — do NOT run `stats`, do NOT verify, do NOT explore beyond what these steps require.\n\n**STEP 1 — fast path:** Run `python3 semport/ledger.py earliest`.\n- Exit 0 with output: a 'new' commit exists. Capture its shortsha (first column of the output). Run `git -C inspiration/cedar-go show --no-patch --format='%%h%%n%%cI%%n%%B' <shortsha>` and write the output verbatim to .ai/semport_new_commits.md. **STOP.**\n- Exit 1 ('No new commits found'): continue to STEP 2.\n\n**STEP 2 — refresh upstream and detect missing SHAs:**\n1. If inspiration/cedar-go does not exist, `git clone https://github.com/cedar-policy/cedar-go.git inspiration/cedar-go`.\n2. `git -C inspiration/cedar-go fetch origin && git -C inspiration/cedar-go checkout main && git -C inspiration/cedar-go pull --ff-only origin main`\n3. Compute the set of upstream SHAs that are NOT in the ledger. **Do NOT use `<latest_sha>..HEAD` syntax** — the ledger contains historical SHAs that may have been rebased out of upstream, so walking forward from the ledger tail is unreliable. Use set difference:\n   ```\n   git -C inspiration/cedar-go log --format='%%h %%cI' > /tmp/semport_upstream.tsv\n   awk 'NR>1{print $1}' semport/ledger.tsv | sort > /tmp/semport_ledger_shas.txt\n   awk '{print $1}' /tmp/semport_upstream.tsv | sort > /tmp/semport_upstream_shas.txt\n   comm -23 /tmp/semport_upstream_shas.txt /tmp/semport_ledger_shas.txt > /tmp/semport_missing_shas.txt\n   wc -l /tmp/semport_missing_shas.txt\n   ```\n4. If /tmp/semport_missing_shas.txt is empty, the pipeline is caught up: `rm -f .ai/semport_new_commits.md` and **STOP**.\n5. Otherwise, for each missing SHA look up its iso8601 in /tmp/semport_upstream.tsv and add it: `python3 semport/ledger.py add <shortsha> <iso8601>`. (Adding all of them at once via a small shell loop is fine.)\n6. `python3 semport/ledger.py sort`\n7. `python3 semport/ledger.py earliest` — should now succeed. Capture the shortsha and write the commit body to .ai/semport_new_commits.md exactly as in STEP 1. **STOP.**\n\n**Postconditions (CRITICAL):**\n- If a commit IS to process: .ai/semport_new_commits.md exists, with the shortsha on the first line.\n- If caught up: .ai/semport_new_commits.md does NOT exist.\n- Stop the moment one of those is true. Do not double-check, do not run stats, do not list directories."
+    prompt="Determine the next cedar-go commit to port. STOP as soon as you have an answer — do NOT run `stats`, do NOT verify, do NOT explore beyond what these steps require.\n\n**STEP 1 — fast path:** Run `python3 semport/ledger.py earliest`.\n- Exit 0 with output: a 'new' commit exists. Capture its shortsha (first column of the output). Run `git -C inspiration/cedar-go show --no-patch --format='%%h%%n%%cI%%n%%B' <shortsha>` and write the output verbatim to .ai/semport_new_commits.md. **STOP.**\n- Exit 1 ('No new commits found'): continue to STEP 2.\n\n**STEP 2 — refresh upstream and detect missing SHAs:**\n1. If inspiration/cedar-go does not exist, `git clone https://github.com/cedar-policy/cedar-go.git inspiration/cedar-go`.\n2. `git -C inspiration/cedar-go fetch origin && git -C inspiration/cedar-go checkout main && git -C inspiration/cedar-go pull --ff-only origin main`\n3. Compute the set of upstream SHAs that are NOT in the ledger. **Do NOT use `<latest_sha>..HEAD` syntax** — the ledger contains historical SHAs that may have been rebased out of upstream, so walking forward from the ledger tail is unreliable. Use set difference:\n   ```\n   git -C inspiration/cedar-go log --format='%%h %%cI' > /tmp/semport_upstream.tsv\n   awk 'NR>1{print $1}' semport/ledger.tsv | sort > /tmp/semport_ledger_shas.txt\n   awk '{print $1}' /tmp/semport_upstream.tsv | sort > /tmp/semport_upstream_shas.txt\n   comm -23 /tmp/semport_upstream_shas.txt /tmp/semport_ledger_shas.txt > /tmp/semport_missing_shas.txt\n   wc -l /tmp/semport_missing_shas.txt\n   ```\n4. If /tmp/semport_missing_shas.txt is empty, the pipeline is caught up: write the literal string `CAUGHT_UP` (single line) to .ai/semport_new_commits.md and **STOP**. (CheckFetchResult uses this sentinel to route to Exit without the engine reporting a cosmetic FAILED status.)\n5. Otherwise, for each missing SHA look up its iso8601 in /tmp/semport_upstream.tsv and add it: `python3 semport/ledger.py add <shortsha> <iso8601>`. (Adding all of them at once via a small shell loop is fine.)\n6. `python3 semport/ledger.py sort`\n7. `python3 semport/ledger.py earliest` — should now succeed. Capture the shortsha and write the commit body to .ai/semport_new_commits.md exactly as in STEP 1. **STOP.**\n\n**Postconditions (CRITICAL):**\n- If a commit IS to process: .ai/semport_new_commits.md exists with the shortsha on the first line (and NOT the literal `CAUGHT_UP`).\n- If caught up: .ai/semport_new_commits.md exists with `CAUGHT_UP` as its single line.\n- Stop the moment one of those is true. Do not double-check, do not run stats, do not list directories."
   ];
 
   CheckFetchResult [
     shape="parallelogram",
-    label="Check: new commits?",
-    tool_command="test -f .ai/semport_new_commits.md",
+    label="Check: caught up?",
+    tool_command="grep -q '^CAUGHT_UP$' .ai/semport_new_commits.md",
     timeout="10s"
   ];
 
@@ -206,8 +206,12 @@ digraph cedar_dotnet_semport {
 
   // Stage 1: Fetch
   FetchUpstream -> CheckFetchResult;
-  CheckFetchResult -> AnalyzePlan [condition="outcome=success", label="has commits"];
-  CheckFetchResult -> Exit         [condition="outcome=fail",    label="caught up"];
+  // Note: CheckFetchResult uses grep against the CAUGHT_UP sentinel — the
+  // pipeline must EXIT on grep-success (sentinel matched) so the engine
+  // reports overall success rather than the cosmetic Pipeline FAILED you'd
+  // get from terminating on a non-zero parallelogram (pitfall #11).
+  CheckFetchResult -> Exit         [condition="outcome=success", label="caught up"];
+  CheckFetchResult -> AnalyzePlan  [condition="outcome=fail",    label="has commits"];
 
   // Stage 2: Analyze
   AnalyzePlan -> CheckPlanResult;
