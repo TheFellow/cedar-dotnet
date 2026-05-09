@@ -1,13 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Cedar.Types;
 
 namespace Cedar.Schema;
 
+/// <summary>
+/// Parses Cedar entity JSON using schema-guided coercion and validation rules.
+/// </summary>
 public static class SchemaGuidedEntityParser
 {
+    /// <summary>
+    /// Parses an entity JSON array into an <see cref="EntityMap"/> using the supplied schema.
+    /// </summary>
+    /// <param name="json">The UTF-8 encoded entity JSON array.</param>
+    /// <param name="schema">The schema that guides entity parsing.</param>
+    /// <returns>The parsed entity map.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> or <paramref name="schema"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the JSON does not conform to the expected entity format or schema-guided constraints.</exception>
     public static EntityMap ParseEntityMap(byte[] json, SchemaDocument schema)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -52,9 +64,27 @@ public static class SchemaGuidedEntityParser
             ? ParseParents(parentsElement)
             : new EntityUidSet();
 
-        // Fall back to default (non-schema) parsing for entity types not in the schema
-        if (!TryLookupEntityDeclaration(schema, uid.Type.Value, out string currentNamespace, out EntityDecl? entityDecl))
+        if (!TryLookupEntityDeclaration(schema, uid.Type.Value, out string currentNamespace, out EntityDecl? entityDecl, out bool isEnum))
         {
+            throw new InvalidDataException($"Entity type '{uid.Type.Value}' not found in schema.");
+        }
+
+        if (isEnum)
+        {
+            if (element.TryGetProperty("attrs", out JsonElement attrsForEnum)
+                && attrsForEnum.ValueKind == JsonValueKind.Object
+                && attrsForEnum.EnumerateObject().Any())
+            {
+                throw new InvalidDataException($"Entity '{uid}': enum entities must not declare attributes.");
+            }
+
+            if (element.TryGetProperty("tags", out JsonElement tagsForEnum)
+                && tagsForEnum.ValueKind == JsonValueKind.Object
+                && tagsForEnum.EnumerateObject().Any())
+            {
+                throw new InvalidDataException($"Entity '{uid}': enum entities must not declare tags.");
+            }
+
             return new Entity(uid, parents, new CedarRecord(), new CedarRecord());
         }
 
@@ -90,7 +120,12 @@ public static class SchemaGuidedEntityParser
 
         if (tagsType is null)
         {
-            return ParseRecord(tagsElement, "tags");
+            if (tagsElement.ValueKind == JsonValueKind.Object && tagsElement.EnumerateObject().Any())
+            {
+                throw new InvalidDataException("Entity tags are not allowed by schema.");
+            }
+
+            return new CedarRecord();
         }
 
         if (tagsElement.ValueKind != JsonValueKind.Object)
@@ -317,11 +352,12 @@ public static class SchemaGuidedEntityParser
         throw new InvalidDataException($"Unknown schema type '{name}'.");
     }
 
-    private static bool TryLookupEntityDeclaration(SchemaDocument schema, string entityTypeName, out string currentNamespace, out EntityDecl? entityDecl)
+    private static bool TryLookupEntityDeclaration(SchemaDocument schema, string entityTypeName, out string currentNamespace, out EntityDecl? entityDecl, out bool isEnum)
     {
         SplitQualifiedTypeName(entityTypeName, out string namespaceName, out string localName);
         currentNamespace = namespaceName;
         entityDecl = null;
+        isEnum = false;
 
         if (!TryGetNamespaceDeclaration(schema, namespaceName, out NamespaceDecl? declaration))
         {
@@ -336,7 +372,7 @@ public static class SchemaGuidedEntityParser
 
         if (declaration.Enums.ContainsKey(new Ident(localName)))
         {
-            entityDecl = new EntityDecl();
+            isEnum = true;
             return true;
         }
 

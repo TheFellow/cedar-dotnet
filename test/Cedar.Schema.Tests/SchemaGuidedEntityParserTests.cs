@@ -277,6 +277,119 @@ public sealed class SchemaGuidedEntityParserTests
         Assert.Equal(new EntityUid(new EntityType("User"), new CedarString("alice")), entity.Tags[new CedarString("owner")]);
     }
 
+    [Fact]
+    public void ParseEntityMap_UnknownEntityType_Throws()
+    {
+        SchemaDocument schema = BuildSchema("{ \"type\": \"EntityOrCommon\", \"name\": \"String\" }");
+        string entityJson =
+            "["
+            + "{"
+            + "\"uid\":{\"type\":\"OtherEntity\",\"id\":\"e1\"},"
+            + "\"attrs\":{},"
+            + "\"parents\":[],"
+            + "\"tags\":{}"
+            + "}"
+            + "]";
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityJson), schema));
+
+        Assert.Contains("not found in schema", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseEntityMap_EnumEntityWithAttrs_Throws()
+    {
+        SchemaDocument schema = BuildSchemaWithEnum("Status", "active", "inactive");
+        string entityWithAttrsJson =
+            "["
+            + "{"
+            + "\"uid\":{\"type\":\"Status\",\"id\":\"active\"},"
+            + "\"attrs\":{\"extra\":\"bad\"},"
+            + "\"parents\":[],"
+            + "\"tags\":{}"
+            + "}"
+            + "]";
+        string entityWithTagsJson =
+            "["
+            + "{"
+            + "\"uid\":{\"type\":\"Status\",\"id\":\"active\"},"
+            + "\"attrs\":{},"
+            + "\"parents\":[],"
+            + "\"tags\":{\"owner\":\"alice\"}"
+            + "}"
+            + "]";
+
+        InvalidDataException attrsException = Assert.Throws<InvalidDataException>(() =>
+            SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityWithAttrsJson), schema));
+        InvalidDataException tagsException = Assert.Throws<InvalidDataException>(() =>
+            SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityWithTagsJson), schema));
+
+        Assert.Contains("enum entities must not declare attributes", attrsException.Message, StringComparison.Ordinal);
+        Assert.Contains("enum entities must not declare tags", tagsException.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseEntityMap_EnumEntityEmptyAttrsAndTags_Parses()
+    {
+        SchemaDocument schema = BuildSchemaWithEnum("Status", "active", "inactive");
+        string entityJson =
+            "["
+            + "{"
+            + "\"uid\":{\"type\":\"Status\",\"id\":\"active\"},"
+            + "\"attrs\":{},"
+            + "\"parents\":[],"
+            + "\"tags\":{}"
+            + "}"
+            + "]";
+
+        EntityMap map = SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityJson), schema);
+        Entity entity = Assert.Single(map);
+
+        Assert.Empty(entity.Attributes);
+        Assert.Empty(entity.Tags);
+    }
+
+    [Fact]
+    public void ParseEntityMap_TagsNotAllowedBySchema_Throws()
+    {
+        SchemaDocument schema = BuildSchema("{ \"type\": \"EntityOrCommon\", \"name\": \"String\" }");
+        string entityJson =
+            "["
+            + "{"
+            + "\"uid\":{\"type\":\"TestEntity\",\"id\":\"e1\"},"
+            + "\"attrs\":{\"v\":\"hello\"},"
+            + "\"parents\":[],"
+            + "\"tags\":{\"owner\":\"alice\"}"
+            + "}"
+            + "]";
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityJson), schema));
+
+        Assert.Contains("tags", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseEntityMap_TagsNotAllowedEmptyTags_Parses()
+    {
+        SchemaDocument schema = BuildSchema("{ \"type\": \"EntityOrCommon\", \"name\": \"String\" }");
+        string entityJson =
+            "["
+            + "{"
+            + "\"uid\":{\"type\":\"TestEntity\",\"id\":\"e1\"},"
+            + "\"attrs\":{\"v\":\"hello\"},"
+            + "\"parents\":[],"
+            + "\"tags\":{}"
+            + "}"
+            + "]";
+
+        EntityMap map = SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityJson), schema);
+        Entity entity = Assert.Single(map);
+
+        Assert.Empty(entity.Tags);
+    }
+
     private static Entity ParseSingleEntity(string valueJson, string attributeTypeJson)
     {
         SchemaDocument schema = BuildSchema(attributeTypeJson);
@@ -292,6 +405,27 @@ public sealed class SchemaGuidedEntityParserTests
 
         EntityMap map = SchemaGuidedEntityParser.ParseEntityMap(System.Text.Encoding.UTF8.GetBytes(entityJson), schema);
         return Assert.Single(map);
+    }
+
+    private static SchemaDocument BuildSchemaWithEnum(string enumName, params string[] members)
+    {
+        string enumMembersJson = string.Join(",\n            ", members.Select(static member => $"\"{member}\""));
+        string schemaJson =
+            "{\n"
+            + "  \"\": {\n"
+            + "    \"entityTypes\": {\n"
+            + "      \"" + enumName + "\": {\n"
+            + "        \"enum\": [\n"
+            + "            " + enumMembersJson + "\n"
+            + "        ]\n"
+            + "      },\n"
+            + "      \"User\": {}\n"
+            + "    },\n"
+            + "    \"actions\": {}\n"
+            + "  }\n"
+            + "}";
+
+        return SchemaDocument.UnmarshalJson(schemaJson);
     }
 
     private static SchemaDocument BuildSchema(string attributeTypeJson, string? tagsTypeJson = null)
