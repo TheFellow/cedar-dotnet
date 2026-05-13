@@ -131,7 +131,7 @@ public sealed class SchemaJsonTests
     }
 
     [Fact]
-    public void UnmarshalJson_InvalidTypeThrows()
+    public void UnmarshalJson_AcceptsShorthandCommonTypeRef()
     {
         const string json =
             """
@@ -148,8 +148,166 @@ public sealed class SchemaJsonTests
             }
             """;
 
-        JsonException exception = Assert.Throws<JsonException>(() => SchemaDocument.UnmarshalJson(json));
-        Assert.Contains("Nope", exception.Message, StringComparison.Ordinal);
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+
+        Assert.Equal(new TypeRef("Nope"), document.GlobalNamespace.CommonTypes[new Ident("Broken")].Type);
+    }
+
+    [Fact]
+    public void FromJsonType_AcceptsShorthandInCommonTypeAlias()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {},
+                "actions": {},
+                "commonTypes": {
+                  "Alias": {
+                    "type": "PersonType"
+                  }
+                }
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+
+        Assert.Equal(new TypeRef("PersonType"), document.GlobalNamespace.CommonTypes[new Ident("Alias")].Type);
+    }
+
+    [Fact]
+    public void FromJsonType_AcceptsShorthandInEntityTags()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {
+                  "Foo": {
+                    "tags": {
+                      "type": "Unknown"
+                    }
+                  }
+                },
+                "actions": {}
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+
+        Assert.Equal(new TypeRef("Unknown"), Assert.IsType<TypeRef>(document.GlobalNamespace.Entities[new Ident("Foo")].Tags));
+    }
+
+    [Fact]
+    public void FromJsonType_AcceptsShorthandInEntityShapeAttribute()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {
+                  "Foo": {
+                    "shape": {
+                      "type": "Record",
+                      "attributes": {
+                        "bar": {
+                          "type": "PersonType"
+                        }
+                      }
+                    }
+                  }
+                },
+                "actions": {}
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+        RecordType shape = Assert.IsType<RecordType>(document.GlobalNamespace.Entities[new Ident("Foo")].Shape);
+
+        Assert.Equal(new TypeRef("PersonType"), Assert.IsType<TypeRef>(shape.Attributes["bar"].Type));
+    }
+
+    [Fact]
+    public void FromJsonType_AcceptsShorthandInActionContext()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {},
+                "actions": {
+                  "view": {
+                    "appliesTo": {
+                      "principalTypes": [],
+                      "resourceTypes": [],
+                      "context": {
+                        "type": "ContextType"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+        ActionDecl action = document.GlobalNamespace.Actions["view"];
+
+        Assert.NotNull(action.AppliesTo);
+        Assert.Null(action.AppliesTo!.ContextRecord);
+        Assert.Equal(new TypeRef("ContextType"), Assert.IsType<TypeRef>(action.AppliesTo.ContextPath));
+    }
+
+    [Fact]
+    public void FromJsonType_AcceptsShorthandInSetElement()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {},
+                "actions": {},
+                "commonTypes": {
+                  "Alias": {
+                    "type": "Set",
+                    "element": {
+                      "type": "PersonType"
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        SchemaDocument document = SchemaDocument.UnmarshalJson(json);
+        SetType alias = Assert.IsType<SetType>(document.GlobalNamespace.CommonTypes[new Ident("Alias")].Type);
+
+        Assert.Equal(new TypeRef("PersonType"), Assert.IsType<TypeRef>(alias.Element));
+    }
+
+    [Fact]
+    public void FromJsonType_StillRejectsSetMissingElement()
+    {
+        const string json =
+            """
+            {
+              "": {
+                "entityTypes": {
+                  "Foo": {
+                    "tags": {
+                      "type": "Set"
+                    }
+                  }
+                },
+                "actions": {}
+              }
+            }
+            """;
+
+        Assert.Throws<JsonException>(() => SchemaDocument.UnmarshalJson(json));
     }
 
     [Fact]

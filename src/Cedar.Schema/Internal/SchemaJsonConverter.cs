@@ -380,7 +380,7 @@ internal static class SchemaJsonConverter
             "Record" => FromJsonRecordType("record", model),
             "Entity" => new EntityTypeRef(new EntityType(model.Name ?? throw new JsonException("Entity type missing name."))),
             "EntityOrCommon" => new TypeRef(model.Name ?? throw new JsonException("EntityOrCommon type missing name.")),
-            _ => throw new JsonException($"Unknown schema type \"{model.Type}\".")
+            _ => new TypeRef(model.Type)
         };
     }
 
