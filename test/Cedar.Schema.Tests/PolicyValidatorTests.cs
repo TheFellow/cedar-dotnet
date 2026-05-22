@@ -64,6 +64,38 @@ public sealed class PolicyValidatorTests
     }
 
     [Fact]
+    public void ValidatePolicy_AcceptsCyclicEntityParentSchema()
+    {
+        SchemaValidator validator = CreateValidator(
+            """
+            entity Application;
+            entity Team in [Team, Application];
+            entity User in [Team];
+            entity Document;
+
+            action view appliesTo {
+                principal: User,
+                resource: Document,
+                context: {}
+            };
+            """);
+
+        Policy policy = Policy.UnmarshalCedar(
+            """
+            permit (
+                principal is User,
+                action == Action::"view",
+                resource is Document
+            )
+            when { principal in Application::"app" };
+            """);
+
+        ValidationResult result = validator.ValidatePolicy("policy0", policy);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
     public void ValidatePolicy_StrictModeRejectsEmptyActionSet()
     {
         SchemaValidator validator = CreateValidator("action view;");

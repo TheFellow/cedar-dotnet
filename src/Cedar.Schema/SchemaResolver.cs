@@ -18,7 +18,6 @@ public static class SchemaResolver
         state.CheckShadowing(document);
         state.DetectCommonTypeCycles();
         state.ResolveAllDeclarations(document);
-        state.ValidateEntityParentCycles();
         state.ValidateActionMembership();
         return state.BuildResult();
     }
@@ -177,42 +176,6 @@ public static class SchemaResolver
                 };
 
                 ResolveNamespace(namespaceName, declaration);
-            }
-        }
-
-        internal void ValidateEntityParentCycles()
-        {
-            Dictionary<EntityType, VisitState> visited = [];
-            foreach (EntityType entityType in _entities.Keys)
-            {
-                Visit(entityType);
-            }
-
-            void Visit(EntityType entityType)
-            {
-                if (visited.TryGetValue(entityType, out VisitState state))
-                {
-                    if (state == VisitState.InProgress)
-                    {
-                        throw new InvalidOperationException($"cycle detected in entity hierarchy involving `{entityType}`");
-                    }
-
-                    return;
-                }
-
-                visited[entityType] = VisitState.InProgress;
-                if (!_entities.TryGetValue(entityType, out ResolvedEntity? entity))
-                {
-                    visited[entityType] = VisitState.Complete;
-                    return;
-                }
-
-                foreach (EntityType parent in entity.ParentTypes)
-                {
-                    Visit(parent);
-                }
-
-                visited[entityType] = VisitState.Complete;
             }
         }
 

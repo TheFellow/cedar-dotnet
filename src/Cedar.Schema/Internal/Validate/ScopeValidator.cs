@@ -253,14 +253,42 @@ internal static class ScopeValidator
         return (GetActionsInSet(uids, validator), errors);
     }
 
+    /// <summary>
+    /// Returns whether <paramref name="ancestorUid"/> is an ancestor of <paramref name="actionUid"/>
+    /// in the resolved action hierarchy.
+    /// </summary>
+    /// <remarks>
+    /// The visited set is defensive: <see cref="SchemaResolver"/> already rejects cyclic action
+    /// hierarchies during resolution, but mirroring the upstream iterative walk avoids latent
+    /// non-termination if a resolved schema is ever constructed without going through resolution.
+    /// </remarks>
     private static bool IsActionDescendant(EntityUid actionUid, EntityUid ancestorUid, SchemaValidator validator)
     {
-        ResolvedAction action = validator.Schema.Actions[actionUid];
-        foreach (EntityUid parent in action.Entity.Parents)
+        HashSet<EntityUid> visited = [];
+        Stack<EntityUid> stack = new();
+        stack.Push(actionUid);
+
+        while (stack.Count > 0)
         {
-            if (parent == ancestorUid || IsActionDescendant(parent, ancestorUid, validator))
+            EntityUid current = stack.Pop();
+            if (!visited.Add(current))
             {
-                return true;
+                continue;
+            }
+
+            if (!validator.Schema.Actions.TryGetValue(current, out ResolvedAction? action))
+            {
+                continue;
+            }
+
+            foreach (EntityUid parent in action.Entity.Parents)
+            {
+                if (parent == ancestorUid)
+                {
+                    return true;
+                }
+
+                stack.Push(parent);
             }
         }
 
