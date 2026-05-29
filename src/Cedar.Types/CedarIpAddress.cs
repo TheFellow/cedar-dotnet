@@ -48,6 +48,11 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
             prefixLength = parsedPrefix;
         }
 
+        if (addressText.Contains('%'))
+        {
+            throw new FormatException("IPv6 zone identifiers are not supported.");
+        }
+
         if (!IPAddress.TryParse(addressText, out IPAddress? address))
         {
             throw new FormatException("The IP address is invalid.");

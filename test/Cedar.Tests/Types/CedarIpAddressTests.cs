@@ -76,10 +76,26 @@ public sealed class CedarIpAddressTests
     [InlineData("::ffff:192.0.2.128/24")]
     [InlineData("::ffff:192.0.2.128/120")]
     [InlineData("6b6b:f00::32ff:ffff:6368/00")]
+    [InlineData("fe80::1%eth0")]
+    [InlineData("fe80::1%1")]
+    [InlineData("fe80::1%eth0/64")]
+    [InlineData("2001:db8::1%eth0")]
     [InlineData("garbage")]
     public void ParseRejectsInvalidInputs(string input)
     {
         Assert.Throws<FormatException>(() => CedarIpAddress.Parse(input));
+    }
+
+    [Theory]
+    [InlineData("fe80::1%eth0")]
+    [InlineData("fe80::1%1")]
+    [InlineData("fe80::1%eth0/64")]
+    [InlineData("2001:db8::1%eth0")]
+    public void ParseRejectsIpv6ZoneIdentifiersWithSpecificMessage(string input)
+    {
+        FormatException exception = Assert.Throws<FormatException>(() => CedarIpAddress.Parse(input));
+
+        Assert.Equal("IPv6 zone identifiers are not supported.", exception.Message);
     }
 
     [Theory]
