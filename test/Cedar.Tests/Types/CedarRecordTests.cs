@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using Cedar.Tests.TestSupport;
 using Cedar.Types;
-using System.Collections.Generic;
 using Xunit;
 
 namespace Cedar.Tests.Types;
@@ -199,7 +199,7 @@ public sealed class CedarRecordTests
             [new CedarString("b")] = new CedarLong(2)
         });
 
-        Assert.Equal(2, System.Linq.Enumerable.Count(record));
+        Assert.Equal(2, record.Count);
     }
 
     [Fact]

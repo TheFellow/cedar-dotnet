@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -242,7 +243,7 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
                 builder.Append(':');
             }
 
-            builder.Append(groups[index].ToString("x"));
+            builder.Append(groups[index].ToString("x", CultureInfo.InvariantCulture));
             needsSeparator = true;
         }
 

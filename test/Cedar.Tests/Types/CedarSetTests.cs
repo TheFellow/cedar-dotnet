@@ -176,7 +176,7 @@ public sealed class CedarSetTests
     {
         CedarSet set = new(new CedarLong(1), new CedarLong(1), new CedarLong(2));
 
-        Assert.Equal(2, set.Count());
+        Assert.Equal(2, set.Count);
     }
 
     [Fact]

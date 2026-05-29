@@ -119,6 +119,26 @@ public sealed record CedarDecimal : CedarValue, IComparable<CedarDecimal>
         return other is null ? 1 : Value.CompareTo(other.Value);
     }
 
+    public static bool operator <(CedarDecimal? left, CedarDecimal? right)
+    {
+        return left is null ? right is not null : left.CompareTo(right) < 0;
+    }
+
+    public static bool operator <=(CedarDecimal? left, CedarDecimal? right)
+    {
+        return left is null || left.CompareTo(right) <= 0;
+    }
+
+    public static bool operator >(CedarDecimal? left, CedarDecimal? right)
+    {
+        return left is not null && left.CompareTo(right) > 0;
+    }
+
+    public static bool operator >=(CedarDecimal? left, CedarDecimal? right)
+    {
+        return left is null ? right is null : left.CompareTo(right) >= 0;
+    }
+
     public override string MarshalCedar()
     {
         return "decimal(\"" + FormatValue() + "\")";

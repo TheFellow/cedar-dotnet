@@ -293,15 +293,50 @@ internal static class RustPrintable
             return Check(lower, Singletons1U, Singletons1L, Normal1);
         }
 
-        if (0x2a6e0 <= x && x < 0x2a700) return false;
-        if (0x2b81e <= x && x < 0x2b820) return false;
-        if (0x2ceae <= x && x < 0x2ceb0) return false;
-        if (0x2ebe1 <= x && x < 0x2ebf0) return false;
-        if (0x2ee5e <= x && x < 0x2f800) return false;
-        if (0x2fa1e <= x && x < 0x30000) return false;
-        if (0x3134b <= x && x < 0x31350) return false;
-        if (0x3347a <= x && x < 0xe0100) return false;
-        if (0xe01f0 <= x && x < 0x110000) return false;
+        if (0x2a6e0 <= x && x < 0x2a700)
+        {
+            return false;
+        }
+
+        if (0x2b81e <= x && x < 0x2b820)
+        {
+            return false;
+        }
+
+        if (0x2ceae <= x && x < 0x2ceb0)
+        {
+            return false;
+        }
+
+        if (0x2ebe1 <= x && x < 0x2ebf0)
+        {
+            return false;
+        }
+
+        if (0x2ee5e <= x && x < 0x2f800)
+        {
+            return false;
+        }
+
+        if (0x2fa1e <= x && x < 0x30000)
+        {
+            return false;
+        }
+
+        if (0x3134b <= x && x < 0x31350)
+        {
+            return false;
+        }
+
+        if (0x3347a <= x && x < 0xe0100)
+        {
+            return false;
+        }
+
+        if (0xe01f0 <= x && x < 0x110000)
+        {
+            return false;
+        }
 
         return true;
     }

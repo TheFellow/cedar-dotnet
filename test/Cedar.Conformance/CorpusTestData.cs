@@ -117,6 +117,10 @@ public static class CorpusTestData
 
     private static readonly Lazy<IReadOnlyList<CorpusScenarioCase>> CachedScenarios = new(LoadScenarios);
     private static readonly Lazy<Dictionary<string, CorpusScenarioCase>> ScenarioIndex = new(BuildScenarioIndex);
+    private static readonly JsonSerializerOptions ValidationJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public static IReadOnlyList<CorpusScenarioCase> GetAllScenarios()
     {
@@ -406,12 +410,7 @@ public static class CorpusTestData
 
     private static CorpusValidationDocument ParseValidation(string json)
     {
-        JsonSerializerOptions options = new()
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
-        return JsonSerializer.Deserialize<CorpusValidationDocument>(json, options)
+        return JsonSerializer.Deserialize<CorpusValidationDocument>(json, ValidationJsonOptions)
             ?? throw new InvalidDataException("Validation JSON deserialized to null.");
     }
 

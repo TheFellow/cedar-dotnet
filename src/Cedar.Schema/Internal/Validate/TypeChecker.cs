@@ -93,14 +93,14 @@ internal sealed class TypeChecker
 
                 foreach ((string message, (ValidationIssue issue, int count)) in envCounts)
                 {
-                    if (!merged.ContainsKey(message))
+                    if (!merged.TryGetValue(message, out (ValidationIssue Issue, int Count) existing))
                     {
                         order.Add(message);
                         merged[message] = (issue, count);
                     }
                     else
                     {
-                        merged[message] = (merged[message].Issue, Math.Max(merged[message].Count, count));
+                        merged[message] = (existing.Issue, Math.Max(existing.Count, count));
                     }
 
                     if (issue is UnsafeTagAccessIssue unsafeTag)

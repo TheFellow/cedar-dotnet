@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using Cedar.Ast;
 using Cedar.Ast.Internal;
-using Cedar.Experimental;
 using Cedar.Core;
 using Cedar.Core.Internal.Eval;
+using Cedar.Experimental;
 using Cedar.Types;
 using Xunit;
 

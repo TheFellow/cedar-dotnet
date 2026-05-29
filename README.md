@@ -173,12 +173,13 @@ dotnet run -c Release --project benchmarks/Cedar.Benchmarks/
 ## Building
 
 ```
+dotnet format cedar-dotnet.sln --verify-no-changes
 dotnet build cedar-dotnet.sln
 dotnet test cedar-dotnet.sln
 dotnet pack cedar-dotnet.sln --configuration Release
 ```
 
-Requires .NET 10.0 SDK. TreatWarningsAsErrors is enabled.
+Requires .NET 10.0 SDK. TreatWarningsAsErrors and .NET analyzers are enabled.
 
 ## Upstream Sync
 
