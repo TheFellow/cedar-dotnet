@@ -20,8 +20,8 @@ public sealed class RoundTripTests
         Assert.Equal(written, rewritten);
     }
 
-    public static TheoryData<string> PolicyPatterns =>
-    [
+    public static TheoryData<string> PolicyPatterns => new()
+    {
         "permit(principal, action, resource);",
         "forbid(principal == User::\"alice\", action == Action::\"read\", resource == File::\"f1\");",
         "permit(principal, action in [Action::\"read\", Action::\"write\"], resource);",
@@ -65,7 +65,7 @@ public sealed class RoundTripTests
         "permit(principal, action, resource) when { principal.firstName like \"*\" };",
         "permit(principal, action, resource) when { principal is User };",
         "permit(principal, action, resource) when { principal is User in Group::\"folkHeroes\" };"
-    ];
+    };
 
     [Theory]
     [MemberData(nameof(ReservedNamesInEntityPath))]

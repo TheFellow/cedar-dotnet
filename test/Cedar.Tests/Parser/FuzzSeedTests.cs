@@ -32,8 +32,8 @@ public sealed class FuzzSeedTests
         Assert.All(aggregate.InnerExceptions, static inner => Assert.IsType<ParseException>(inner));
     }
 
-    public static TheoryData<string> TokenizerSeeds =>
-    [
+    public static TheoryData<string> TokenizerSeeds => new()
+    {
         "These are some identifiers",
         "0 1 1234",
         "-1 9223372036854775807 -9223372036854775808",
@@ -51,10 +51,10 @@ public sealed class FuzzSeedTests
         "// embedded comment does nothing",
         "*/",
         "'/%|&="
-    ];
+    };
 
-    public static TheoryData<string> ParserSeeds =>
-    [
+    public static TheoryData<string> ParserSeeds => new()
+    {
         "permit(principal,action,resource);",
         "forbid(principal,action,resource);",
         "permit(principal,action,resource in asdf::\"1234\");",
@@ -98,5 +98,5 @@ public sealed class FuzzSeedTests
         "permit(principal,action,resource) when { ip(\"1.2.3.4\").isLoopback(true) };",
         "permit(principal,action,resource) when { ip(\"1.2.3.4\").isMulticast(true) };",
         "permit(principal,action,resource) when { ip(\"1.2.3.4\").isInRange() };"
-    ];
+    };
 }
