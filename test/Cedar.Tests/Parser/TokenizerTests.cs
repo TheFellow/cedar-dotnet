@@ -159,11 +159,12 @@ public sealed class TokenizerTests
     }
 
     [Fact]
-    public void TokenizeCreatesAtTokenWhenNotAnnotation()
+    public void TokenizeBareAnnotation()
     {
-        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("@ permit")).ToArray();
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("@bare permit")).ToArray();
 
-        Assert.Equal(TokenType.At, tokens[0].Type);
+        Assert.Equal(TokenType.Annotation, tokens[0].Type);
+        Assert.Equal("@bare", tokens[0].Text);
         Assert.Equal(TokenType.Permit, tokens[1].Type);
     }
 
@@ -174,6 +175,25 @@ public sealed class TokenizerTests
 
         Assert.Equal(TokenType.Annotation, token.Type);
         Assert.Equal("@id ( \"x\" )", token.Text);
+    }
+
+    [Fact]
+    public void TokenizeBareAnnotationWithWhitespace()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("@ bare\n")).ToArray();
+
+        Assert.Equal(TokenType.Annotation, tokens[0].Type);
+        Assert.Equal("@ bare", tokens[0].Text);
+        Assert.Equal(TokenType.EOF, tokens[1].Type);
+    }
+
+    [Fact]
+    public void TokenizeCreatesAtTokenWhenNotAnnotation()
+    {
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("@\"x\"")).ToArray();
+
+        Assert.Equal(TokenType.At, tokens[0].Type);
+        Assert.Equal(TokenType.String, tokens[1].Type);
     }
 
     [Fact]

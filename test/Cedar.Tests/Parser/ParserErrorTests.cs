@@ -44,6 +44,24 @@ public sealed class ParserErrorTests
     }
 
     [Fact]
+    public void DuplicateBareAnnotationsProduceError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("@key @key permit(principal, action, resource);"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("Duplicate annotation", parse.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DuplicateBareAndValuedAnnotationsProduceError()
+    {
+        AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("@key @key(\"value\") permit(principal, action, resource);"));
+
+        ParseException parse = Assert.Single(ex.InnerExceptions) as ParseException ?? throw new InvalidOperationException();
+        Assert.Contains("Duplicate annotation", parse.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DuplicateRecordKeyProducesError()
     {
         AggregateException ex = Assert.Throws<AggregateException>(() => CedarParser.ParsePolicies("permit(principal, action, resource) when { {a: 1, a: 2} };"));

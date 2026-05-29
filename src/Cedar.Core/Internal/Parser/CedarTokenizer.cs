@@ -490,13 +490,13 @@ internal sealed class CedarTokenizer
         }
 
         ScanIdentifier(CurrentPosition());
+        int annotationTextEnd = _index;
 
         SkipWhitespaceOnly();
         if (IsAtEnd || PeekByte() != (byte)'(')
         {
-            RestoreState(snapshot);
-            ConsumeByte();
-            return new Token(TokenType.At, "@", position);
+            string bareText = Encoding.UTF8.GetString(_input, snapshot.Index, annotationTextEnd - snapshot.Index);
+            return new Token(TokenType.Annotation, bareText, position);
         }
 
         ConsumeByte();

@@ -41,6 +41,14 @@ public sealed class CedarWriterTests
     }
 
     [Fact]
+    public void BareAnnotationRoundTripsToExplicitEmptyValue()
+    {
+        PolicyAst policy = ParseSingle("@foo\npermit(principal, action, resource);");
+
+        Assert.Equal("@foo(\"\")\npermit(principal, action, resource);", CedarWriter.Write(policy));
+    }
+
+    [Fact]
     public void WriteScopeVariants()
     {
         PolicyAst eq = ParseSingle("permit(principal == User::\"a\", action, resource);");

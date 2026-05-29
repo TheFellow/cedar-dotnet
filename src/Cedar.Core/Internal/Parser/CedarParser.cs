@@ -153,7 +153,12 @@ internal static class CedarParser
         SkipWhitespace(text, ref index);
         if (!TryReadChar(text, ref index, '('))
         {
-            throw new ParseException(token.Position, "Malformed annotation.");
+            if (index != text.Length)
+            {
+                throw new ParseException(token.Position, "Malformed annotation.");
+            }
+
+            return new Annotation(new Ident(key), new CedarString(string.Empty));
         }
 
         SkipWhitespace(text, ref index);

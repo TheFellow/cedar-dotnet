@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Cedar.Ast;
 using Cedar.Ast.Internal;
 using Cedar.Core;
@@ -148,6 +149,59 @@ public sealed class ParserTests
         Annotation annotation = Assert.Single(policy.Annotations);
         Assert.Equal("if", annotation.Key.Value);
         Assert.Equal("bar", annotation.Value.Value);
+    }
+
+    [Fact]
+    public void ParseBareAnnotation()
+    {
+        PolicyAst policy = ParseSingle("@foo\npermit(principal, action, resource);");
+
+        Annotation annotation = Assert.Single(policy.Annotations);
+        Assert.Equal("foo", annotation.Key.Value);
+        Assert.Equal(string.Empty, annotation.Value.Value);
+    }
+
+    [Fact]
+    public void ParseBareReservedKeywordAnnotation()
+    {
+        PolicyAst policy = ParseSingle("@is\npermit(principal, action, resource);");
+
+        Annotation annotation = Assert.Single(policy.Annotations);
+        Assert.Equal("is", annotation.Key.Value);
+        Assert.Equal(string.Empty, annotation.Value.Value);
+    }
+
+    [Fact]
+    public void ParseBareThenValuedAnnotations()
+    {
+        PolicyAst policy = ParseSingle("@foo\n@baz(\"quux\")\npermit(principal, action, resource);");
+
+        Assert.Equal(2, policy.Annotations.Length);
+        Assert.Equal("foo", policy.Annotations[0].Key.Value);
+        Assert.Equal(string.Empty, policy.Annotations[0].Value.Value);
+        Assert.Equal("baz", policy.Annotations[1].Key.Value);
+        Assert.Equal("quux", policy.Annotations[1].Value.Value);
+    }
+
+    [Fact]
+    public void ParseTwoBareAnnotations()
+    {
+        PolicyAst policy = ParseSingle("@foo\n@bar\npermit(principal, action, resource);");
+
+        Assert.Equal(2, policy.Annotations.Length);
+        Assert.Equal("foo", policy.Annotations[0].Key.Value);
+        Assert.Equal(string.Empty, policy.Annotations[0].Value.Value);
+        Assert.Equal("bar", policy.Annotations[1].Key.Value);
+        Assert.Equal(string.Empty, policy.Annotations[1].Value.Value);
+    }
+
+    [Fact]
+    public void BareAnnotationEquivalentToExplicitEmptyValue()
+    {
+        PolicyAst bare = ParseSingle("@foo\npermit(principal, action, resource);");
+        PolicyAst explicitEmpty = ParseSingle("@foo(\"\")\npermit(principal, action, resource);");
+
+        Assert.Equal<IReadOnlyList<Annotation>>(bare.Annotations, explicitEmpty.Annotations);
     }
 
     [Fact]
