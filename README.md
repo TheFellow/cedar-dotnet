@@ -179,7 +179,7 @@ dotnet test cedar-dotnet.sln
 dotnet pack cedar-dotnet.sln --configuration Release
 ```
 
-Requires .NET 10.0 SDK. TreatWarningsAsErrors and .NET analyzers are enabled.
+Requires the .NET SDK version pinned in `global.json`. TreatWarningsAsErrors and .NET analyzers are enabled.
 
 ## Upstream Sync
 
