@@ -151,7 +151,7 @@ public sealed class TokenizerTests
     [Fact]
     public void TokenizeCreatesCollapsedAnnotationToken()
     {
-        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("@id(\"abc\") permit")) .ToArray();
+        Token[] tokens = CedarTokenizer.Tokenize(Encoding.UTF8.GetBytes("@id(\"abc\") permit")).ToArray();
 
         Assert.Equal(TokenType.Annotation, tokens[0].Type);
         Assert.Equal("@id(\"abc\")", tokens[0].Text);

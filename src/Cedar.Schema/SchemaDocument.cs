@@ -34,11 +34,11 @@ public sealed record SchemaDocument
 
     private bool IsEmpty()
     {
-        return this.Namespaces.Count == 0
-            && this.GlobalNamespace.Entities.Count == 0
-            && this.GlobalNamespace.Enums.Count == 0
-            && this.GlobalNamespace.Actions.Count == 0
-            && this.GlobalNamespace.CommonTypes.Count == 0;
+        return Namespaces.Count == 0
+            && GlobalNamespace.Entities.Count == 0
+            && GlobalNamespace.Enums.Count == 0
+            && GlobalNamespace.Actions.Count == 0
+            && GlobalNamespace.CommonTypes.Count == 0;
     }
 
     public string MarshalJson()

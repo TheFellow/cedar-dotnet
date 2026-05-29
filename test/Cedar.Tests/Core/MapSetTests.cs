@@ -73,7 +73,7 @@ public sealed class MapSetTests
     {
         ImmutableMapSet<int> set = new MapSetBuilder<int>([1, 2, 3]).Build();
 
-        Assert.Equal(3, set.Count());
+        Assert.Equal(3, set.Count);
     }
 
     [Fact]
