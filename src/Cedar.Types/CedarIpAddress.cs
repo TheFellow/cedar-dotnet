@@ -7,13 +7,27 @@ using System.Text;
 
 namespace Cedar.Types;
 
+/// <summary>
+/// Represents a Cedar <c>ip</c> value as an IPv4 or IPv6 address with an associated prefix length.
+/// </summary>
 public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : CedarValue
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CedarIpAddress"/> record using the full-width prefix for the address family.
+    /// </summary>
+    /// <param name="address">The IPv4 or IPv6 address.</param>
     public CedarIpAddress(IPAddress address)
         : this(address, GetBitLength(address))
     {
     }
 
+    /// <summary>
+    /// Parses a Cedar IP address literal or CIDR prefix.
+    /// </summary>
+    /// <param name="value">The textual IP address value to parse.</param>
+    /// <returns>The parsed <see cref="CedarIpAddress"/> value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException">The supplied value is not a valid Cedar IP address.</exception>
     public static CedarIpAddress Parse(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -86,23 +100,49 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
         return new CedarIpAddress(address, effectivePrefix);
     }
 
+    /// <summary>
+    /// Determines whether this value is an IPv4 address.
+    /// </summary>
+    /// <returns><see langword="true"/> when the address family is IPv4; otherwise, <see langword="false"/>.</returns>
     public bool IsIPv4()
     {
         return Address.AddressFamily == AddressFamily.InterNetwork;
     }
 
+    /// <summary>
+    /// Determines whether this value is an IPv6 address.
+    /// </summary>
+    /// <returns><see langword="true"/> when the address family is IPv6; otherwise, <see langword="false"/>.</returns>
     public bool IsIPv6()
     {
         return Address.AddressFamily == AddressFamily.InterNetworkV6;
     }
 
+    /// <summary>
+    /// Determines whether this value is a loopback address according to Cedar semantics.
+    /// </summary>
+    /// <returns><see langword="true"/> when the masked address is loopback; otherwise, <see langword="false"/>.</returns>
     public bool IsLoopback()
     {
+        if (Address.IsIPv4MappedToIPv6)
+        {
+            return false;
+        }
+
         return IPAddress.IsLoopback(new IPAddress(GetMaskedBytes(Address, PrefixLength)));
     }
 
+    /// <summary>
+    /// Determines whether this value is a multicast address according to Cedar semantics.
+    /// </summary>
+    /// <returns><see langword="true"/> when the address range is multicast; otherwise, <see langword="false"/>.</returns>
     public bool IsMulticast()
     {
+        if (Address.IsIPv4MappedToIPv6)
+        {
+            return false;
+        }
+
         byte[] bytes = Address.GetAddressBytes();
 
         if (IsIPv4())
@@ -113,6 +153,11 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
         return PrefixLength >= 8 && bytes[0] == 0xff;
     }
 
+    /// <summary>
+    /// Determines whether this IP address range contains another Cedar IP address value.
+    /// </summary>
+    /// <param name="other">The candidate value to test for containment.</param>
+    /// <returns><see langword="true"/> when <paramref name="other"/> falls within this range; otherwise, <see langword="false"/>.</returns>
     public bool Contains(CedarIpAddress other)
     {
         if (GetBitLength(Address) != GetBitLength(other.Address))
@@ -128,11 +173,19 @@ public sealed record CedarIpAddress(IPAddress Address, int PrefixLength) : Cedar
         return GetMaskedBytes(Address, PrefixLength).SequenceEqual(GetMaskedBytes(other.Address, PrefixLength));
     }
 
+    /// <summary>
+    /// Produces the Cedar source representation of this IP address value.
+    /// </summary>
+    /// <returns>The Cedar <c>ip("...")</c> representation for this value.</returns>
     public override string MarshalCedar()
     {
         return "ip(\"" + FormatValue() + "\")";
     }
 
+    /// <summary>
+    /// Returns a hash code for this Cedar IP address value.
+    /// </summary>
+    /// <returns>A stable hash code derived from the address bytes and prefix length.</returns>
     public override int GetHashCode()
     {
         return CedarHash.ForBytesAndInt32(nameof(CedarIpAddress), Address.GetAddressBytes(), PrefixLength);
