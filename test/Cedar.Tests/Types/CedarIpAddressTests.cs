@@ -171,6 +171,8 @@ public sealed class CedarIpAddressTests
     [InlineData("::/128", false)]
     [InlineData("::1/128", true)]
     [InlineData("::1/127", false)]
+    [InlineData("::ffff:7f00:0001", false)]
+    [InlineData("::ffff:7f00:0001/128", false)]
     [InlineData("2001:db8::1", false)]
     [InlineData("2001:db8::1:0:0:1", false)]
     [InlineData("2001:db8::1/32", false)]
@@ -192,6 +194,8 @@ public sealed class CedarIpAddressTests
     [InlineData("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", true)]
     [InlineData("ff00::/8", true)]
     [InlineData("ff00::/7", false)]
+    [InlineData("::ffff:e000:0000", false)]
+    [InlineData("::ffff:e000:0000/128", false)]
     [InlineData("224.0.0.0/4", true)]
     [InlineData("224.0.0.0/3", false)]
     public void IsMulticastMatchesGoUpstreamCases(string input, bool expected)
