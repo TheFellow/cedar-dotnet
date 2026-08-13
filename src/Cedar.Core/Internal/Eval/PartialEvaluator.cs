@@ -64,7 +64,6 @@ internal static class PartialEvaluator
 
     public static PolicyAst? PartialPolicy(EvalEnv env, PolicyAst policy, out bool keep, Effect ignoreBias = Effect.Permit)
     {
-        ArgumentNullException.ThrowIfNull(env);
         ArgumentNullException.ThrowIfNull(policy);
 
         if (!TryPartialScope(env, env.Principal, policy.PrincipalScope, out IScope principalScope))

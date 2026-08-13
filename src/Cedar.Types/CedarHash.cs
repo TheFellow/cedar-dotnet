@@ -1,6 +1,5 @@
 using System;
 using System.Buffers.Binary;
-using System.Collections.Generic;
 using System.Text;
 
 namespace Cedar.Types;
@@ -82,17 +81,8 @@ internal static class CedarHash
         return Finish(hash);
     }
 
-    public static int ForXorCollection(string discriminator, IEnumerable<int> itemHashes)
+    public static int ForXorCollection(string discriminator, ulong combined, int count)
     {
-        ulong combined = 0;
-        int count = 0;
-
-        foreach (int itemHash in itemHashes)
-        {
-            combined ^= unchecked((uint)itemHash);
-            count++;
-        }
-
         Span<byte> bytes = stackalloc byte[sizeof(ulong) + sizeof(int)];
         BinaryPrimitives.WriteUInt64LittleEndian(bytes[..sizeof(ulong)], combined);
         BinaryPrimitives.WriteInt32LittleEndian(bytes[sizeof(ulong)..], count);

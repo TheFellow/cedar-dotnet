@@ -82,6 +82,26 @@ public sealed class CedarSetTests
     }
 
     [Fact]
+    public void ContainsAllRequiresEveryMember()
+    {
+        CedarSet set = new(new CedarLong(1), new CedarLong(2), new CedarLong(3));
+
+        Assert.True(set.ContainsAll(new CedarSet(new CedarLong(1), new CedarLong(3))));
+        Assert.False(set.ContainsAll(new CedarSet(new CedarLong(1), new CedarLong(4))));
+        Assert.True(set.ContainsAll(new CedarSet()));
+    }
+
+    [Fact]
+    public void ContainsAnyRequiresAtLeastOneMember()
+    {
+        CedarSet set = new(new CedarLong(1), new CedarLong(2), new CedarLong(3));
+
+        Assert.True(set.ContainsAny(new CedarSet(new CedarLong(3), new CedarLong(4))));
+        Assert.False(set.ContainsAny(new CedarSet(new CedarLong(4), new CedarLong(5))));
+        Assert.False(set.ContainsAny(new CedarSet()));
+    }
+
+    [Fact]
     public void MarshalCedarFormatsEmptySet()
     {
         CedarAssert.CedarText(new CedarSet(), "[]");

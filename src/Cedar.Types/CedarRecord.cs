@@ -101,12 +101,14 @@ public sealed record CedarRecord : CedarValue, IEnumerable<KeyValuePair<CedarStr
 
     public override int GetHashCode()
     {
-        int[] hashes = new int[_orderedEntries.Length];
+        ulong combined = 0;
         for (int i = 0; i < _orderedEntries.Length; i++)
         {
-            hashes[i] = CedarHash.ForInt32Pair("Entry", _orderedEntries[i].Key.GetHashCode(), CedarData.GetHashCode(_orderedEntries[i].Value));
+            int hash = CedarHash.ForInt32Pair("Entry", _orderedEntries[i].Key.GetHashCode(), CedarData.GetHashCode(_orderedEntries[i].Value));
+            combined ^= unchecked((uint)hash);
         }
-        return CedarHash.ForXorCollection(nameof(CedarRecord), hashes);
+
+        return CedarHash.ForXorCollection(nameof(CedarRecord), combined, _orderedEntries.Length);
     }
 
     public IEnumerator<KeyValuePair<CedarString, ICedarData>> GetEnumerator()

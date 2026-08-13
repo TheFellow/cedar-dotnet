@@ -56,8 +56,8 @@ internal sealed class HasEvaluator(IEvaluator value, CedarString attribute) : IE
 
         return source switch
         {
-            CedarRecord record => new CedarBool(record.TryGetValue(attribute, out _)),
-            EntityUid entityUid => new CedarBool(env.Entities.TryGet(entityUid, out Entity entity) && entity.Attributes.TryGetValue(attribute, out _)),
+            CedarRecord record => record.TryGetValue(attribute, out _) ? CedarBool.True : CedarBool.False,
+            EntityUid entityUid => env.Entities.TryGet(entityUid, out Entity entity) && entity.Attributes.TryGetValue(attribute, out _) ? CedarBool.True : CedarBool.False,
             _ => throw new EvalException($"expected record or entity, got {EvalErrors.TypeName(source)}")
         };
     }

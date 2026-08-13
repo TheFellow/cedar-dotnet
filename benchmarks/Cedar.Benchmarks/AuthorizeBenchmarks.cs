@@ -12,6 +12,7 @@ public class AuthorizeBenchmarks
 {
     private readonly PolicySet _simplePolicies;
     private readonly PolicySet _complexPolicies;
+    private readonly PolicySet _booleanPolicies;
     private readonly Request _request;
     private readonly EntityMap _entities;
     private readonly BatchRequest _batchRequest;
@@ -44,6 +45,16 @@ public class AuthorizeBenchmarks
                 action,
                 resource
             );
+            """));
+
+        _booleanPolicies = new PolicySet();
+        _booleanPolicies.Add(new PolicyId("boolean_methods"), Policy.UnmarshalCedar("""
+            permit(principal, action, resource)
+            when {
+                context has level &&
+                "alice" like "a*" &&
+                ip("127.0.0.1").isIpv4()
+            };
             """));
 
         _request = new Request(
@@ -84,6 +95,12 @@ public class AuthorizeBenchmarks
     public (Decision Decision, Diagnostic Diagnostic) AuthorizeComplex()
     {
         return Authorization.Authorize(_complexPolicies, _entities, _request);
+    }
+
+    [Benchmark]
+    public (Decision Decision, Diagnostic Diagnostic) AuthorizeBooleanMethods()
+    {
+        return Authorization.Authorize(_booleanPolicies, _entities, _request);
     }
 
     [Benchmark]

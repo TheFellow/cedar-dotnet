@@ -33,13 +33,7 @@ public sealed record EntityUidSet : IReadOnlyCollection<EntityUid>
 
     public override int GetHashCode()
     {
-        int[] hashes = new int[Count];
-        int index = 0;
-        foreach (EntityUid item in this)
-        {
-            hashes[index++] = item.GetHashCode();
-        }
-        return CedarHash.ForXorCollection(nameof(EntityUidSet), hashes);
+        return CedarHash.ForXorCollection(nameof(EntityUidSet), _items.GetXorHashCode(), Count);
     }
 
     public IEnumerator<EntityUid> GetEnumerator()

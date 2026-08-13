@@ -43,6 +43,17 @@ internal sealed class ImmutableMapSet<T> : IReadOnlyCollection<T>
         return true;
     }
 
+    public ulong GetXorHashCode()
+    {
+        ulong combined = 0;
+        foreach (T item in _items)
+        {
+            combined ^= unchecked((uint)item.GetHashCode());
+        }
+
+        return combined;
+    }
+
     public IEnumerator<T> GetEnumerator()
     {
         return _items.GetEnumerator();
