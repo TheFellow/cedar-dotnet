@@ -259,9 +259,9 @@ public static class BatchAuthorization
 
     private static (Decision Decision, Diagnostic Diagnostic) EvaluateCompiledPolicies(CompiledPolicySet policies, EvalEnv env)
     {
-        ImmutableArray<DiagnosticReason>.Builder permitReasons = ImmutableArray.CreateBuilder<DiagnosticReason>();
-        ImmutableArray<DiagnosticReason>.Builder forbidReasons = ImmutableArray.CreateBuilder<DiagnosticReason>();
-        ImmutableArray<DiagnosticError>.Builder errors = ImmutableArray.CreateBuilder<DiagnosticError>();
+        DiagnosticAccumulator<DiagnosticReason> permitReasons = new();
+        DiagnosticAccumulator<DiagnosticReason> forbidReasons = new();
+        DiagnosticAccumulator<DiagnosticError> errors = new();
 
         foreach (CompiledPolicy policy in policies.Forbids)
         {
@@ -301,15 +301,15 @@ public static class BatchAuthorization
 
         if (forbidReasons.Count > 0)
         {
-            return (Decision.Deny, new Diagnostic(forbidReasons.ToImmutable(), errors.ToImmutable()));
+            return (Decision.Deny, new Diagnostic(forbidReasons.ToImmutableArray(), errors.ToImmutableArray()));
         }
 
         if (permitReasons.Count > 0)
         {
-            return (Decision.Allow, new Diagnostic(permitReasons.ToImmutable(), errors.ToImmutable()));
+            return (Decision.Allow, new Diagnostic(permitReasons.ToImmutableArray(), errors.ToImmutableArray()));
         }
 
-        return (Decision.Deny, new Diagnostic(ImmutableArray<DiagnosticReason>.Empty, errors.ToImmutable()));
+        return (Decision.Deny, new Diagnostic([], errors.ToImmutableArray()));
     }
 
     private static IReadOnlyDictionary<PolicyId, Policy> PartialPolicies(IReadOnlyDictionary<PolicyId, Policy> policies, EvalEnv env, Effect ignoreBias)

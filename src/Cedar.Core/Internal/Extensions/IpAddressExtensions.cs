@@ -7,28 +7,28 @@ internal static class IpAddressExtensions
 {
     public static ICedarData IsIpv4(ICedarData[] args)
     {
-        return new CedarBool(TypeConversion.ValueToIp(args[0]).IsIPv4());
+        return TypeConversion.ValueToIp(args[0]).IsIPv4() ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData IsIpv6(ICedarData[] args)
     {
-        return new CedarBool(TypeConversion.ValueToIp(args[0]).IsIPv6());
+        return TypeConversion.ValueToIp(args[0]).IsIPv6() ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData IsLoopback(ICedarData[] args)
     {
-        return new CedarBool(TypeConversion.ValueToIp(args[0]).IsLoopback());
+        return TypeConversion.ValueToIp(args[0]).IsLoopback() ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData IsMulticast(ICedarData[] args)
     {
-        return new CedarBool(TypeConversion.ValueToIp(args[0]).IsMulticast());
+        return TypeConversion.ValueToIp(args[0]).IsMulticast() ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData IsInRange(ICedarData[] args)
     {
         CedarIpAddress value = TypeConversion.ValueToIp(args[0]);
         CedarIpAddress range = TypeConversion.ValueToIp(args[1]);
-        return new CedarBool(range.Contains(value));
+        return range.Contains(value) ? CedarBool.True : CedarBool.False;
     }
 }

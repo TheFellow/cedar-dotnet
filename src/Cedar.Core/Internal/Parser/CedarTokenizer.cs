@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Cedar.Core.Internal.Parser;
 
-internal sealed class CedarTokenizer
+internal ref struct CedarTokenizer
 {
     private static readonly Dictionary<string, TokenType> Keywords = new(StringComparer.Ordinal)
     {
@@ -25,7 +25,7 @@ internal sealed class CedarTokenizer
         ["is"] = TokenType.Is
     };
 
-    private readonly byte[] _input;
+    private readonly ReadOnlySpan<byte> _input;
     private readonly string _filename;
     private int _index;
     private int _line;
@@ -33,7 +33,7 @@ internal sealed class CedarTokenizer
 
     private CedarTokenizer(ReadOnlySpan<byte> input, string filename)
     {
-        _input = input.ToArray();
+        _input = input;
         _filename = filename;
         _index = 0;
         _line = 1;
@@ -123,7 +123,7 @@ internal sealed class CedarTokenizer
             throw Error("Unexpected end of input.");
         }
 
-        ReadOnlySpan<byte> slice = _input.AsSpan(_index);
+        ReadOnlySpan<byte> slice = _input[_index..];
         OperationStatus status = Rune.DecodeFromUtf8(slice, out Rune rune, out int bytesConsumed);
         if (status != OperationStatus.Done)
         {
@@ -223,7 +223,7 @@ internal sealed class CedarTokenizer
             ConsumeByte();
         }
 
-        string text = Encoding.UTF8.GetString(_input, start, _index - start);
+        string text = Encoding.UTF8.GetString(_input.Slice(start, _index - start));
         TokenType type = Keywords.TryGetValue(text, out TokenType keywordType) ? keywordType : TokenType.Ident;
         return new Token(type, text, position);
     }
@@ -244,7 +244,7 @@ internal sealed class CedarTokenizer
             throw new ParseException(position, "Invalid integer literal with leading zero.");
         }
 
-        string text = Encoding.UTF8.GetString(_input, start, length);
+        string text = Encoding.UTF8.GetString(_input.Slice(start, length));
         return new Token(TokenType.Int, text, position);
     }
 
@@ -259,7 +259,7 @@ internal sealed class CedarTokenizer
             if (current == (byte)'"')
             {
                 ConsumeByte();
-                string text = Encoding.UTF8.GetString(_input, start, _index - start);
+                string text = Encoding.UTF8.GetString(_input.Slice(start, _index - start));
                 return new Token(TokenType.String, text, position);
             }
 
@@ -495,7 +495,7 @@ internal sealed class CedarTokenizer
         SkipWhitespaceOnly();
         if (IsAtEnd || PeekByte() != (byte)'(')
         {
-            string bareText = Encoding.UTF8.GetString(_input, snapshot.Index, annotationTextEnd - snapshot.Index);
+            string bareText = Encoding.UTF8.GetString(_input.Slice(snapshot.Index, annotationTextEnd - snapshot.Index));
             return new Token(TokenType.Annotation, bareText, position);
         }
 
@@ -517,7 +517,7 @@ internal sealed class CedarTokenizer
 
         ConsumeByte();
 
-        string text = Encoding.UTF8.GetString(_input, snapshot.Index, _index - snapshot.Index);
+        string text = Encoding.UTF8.GetString(_input.Slice(snapshot.Index, _index - snapshot.Index));
         return new Token(TokenType.Annotation, text, position);
     }
 

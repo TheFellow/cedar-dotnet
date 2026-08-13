@@ -9,27 +9,27 @@ internal static class DecimalExtensions
     {
         CedarDecimal left = TypeConversion.ValueToDecimal(args[0]);
         CedarDecimal right = TypeConversion.ValueToDecimal(args[1]);
-        return new CedarBool(left.CompareTo(right) < 0);
+        return left.CompareTo(right) < 0 ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData LessThanOrEqual(ICedarData[] args)
     {
         CedarDecimal left = TypeConversion.ValueToDecimal(args[0]);
         CedarDecimal right = TypeConversion.ValueToDecimal(args[1]);
-        return new CedarBool(left.CompareTo(right) <= 0);
+        return left.CompareTo(right) <= 0 ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData GreaterThan(ICedarData[] args)
     {
         CedarDecimal left = TypeConversion.ValueToDecimal(args[0]);
         CedarDecimal right = TypeConversion.ValueToDecimal(args[1]);
-        return new CedarBool(left.CompareTo(right) > 0);
+        return left.CompareTo(right) > 0 ? CedarBool.True : CedarBool.False;
     }
 
     public static ICedarData GreaterThanOrEqual(ICedarData[] args)
     {
         CedarDecimal left = TypeConversion.ValueToDecimal(args[0]);
         CedarDecimal right = TypeConversion.ValueToDecimal(args[1]);
-        return new CedarBool(left.CompareTo(right) >= 0);
+        return left.CompareTo(right) >= 0 ? CedarBool.True : CedarBool.False;
     }
 }

@@ -82,6 +82,36 @@ public sealed record CedarSet : CedarValue, IEnumerable<ICedarData>
         return false;
     }
 
+    public bool ContainsAll(CedarSet other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        foreach (ICedarData value in other._orderedValues)
+        {
+            if (!Contains(value))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool ContainsAny(CedarSet other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        foreach (ICedarData value in other._orderedValues)
+        {
+            if (Contains(value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public override string MarshalCedar()
     {
         StringBuilder builder = new();
@@ -126,12 +156,13 @@ public sealed record CedarSet : CedarValue, IEnumerable<ICedarData>
 
     public override int GetHashCode()
     {
-        int[] hashes = new int[_orderedValues.Length];
+        ulong combined = 0;
         for (int i = 0; i < _orderedValues.Length; i++)
         {
-            hashes[i] = CedarData.GetHashCode(_orderedValues[i]);
+            combined ^= unchecked((uint)CedarData.GetHashCode(_orderedValues[i]));
         }
-        return CedarHash.ForXorCollection(nameof(CedarSet), hashes);
+
+        return CedarHash.ForXorCollection(nameof(CedarSet), combined, _orderedValues.Length);
     }
 
     public IEnumerator<ICedarData> GetEnumerator()

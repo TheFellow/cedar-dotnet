@@ -6,6 +6,6 @@ internal sealed class LikeEvaluator(IEvaluator value, CedarPattern pattern) : IE
 {
     public ICedarData Eval(EvalEnv env)
     {
-        return new CedarBool(pattern.Match(new CedarString(TypeConversion.ValueToString(value.Eval(env)))));
+        return pattern.Match(new CedarString(TypeConversion.ValueToString(value.Eval(env)))) ? CedarBool.True : CedarBool.False;
     }
 }

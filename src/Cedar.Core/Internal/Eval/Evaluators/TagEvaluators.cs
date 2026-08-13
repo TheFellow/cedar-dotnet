@@ -42,6 +42,6 @@ internal sealed class HasTagEvaluator(IEvaluator left, IEvaluator right) : IEval
     {
         EntityUid entityUid = TypeConversion.ValueToEntity(left.Eval(env));
         string tag = TypeConversion.ValueToString(right.Eval(env));
-        return new CedarBool(env.Entities.TryGet(entityUid, out Entity entity) && entity.Tags.TryGetValue(new CedarString(tag), out _));
+        return env.Entities.TryGet(entityUid, out Entity entity) && entity.Tags.TryGetValue(new CedarString(tag), out _) ? CedarBool.True : CedarBool.False;
     }
 }

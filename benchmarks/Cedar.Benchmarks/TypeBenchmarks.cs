@@ -13,6 +13,7 @@ public class TypeBenchmarks
     private readonly CedarLong _containedValue = new(3);
     private readonly CedarRecord _record;
     private readonly CedarString _recordKey = new("level");
+    private readonly EntityUidSet _entityUidSet;
 
     public TypeBenchmarks()
     {
@@ -28,6 +29,12 @@ public class TypeBenchmarks
         {
             [_recordKey] = new CedarLong(42)
         });
+        _entityUidSet = new EntityUidSet(
+        [
+            _targetUid,
+            new EntityUid(new EntityType("User"), new CedarString("bob")),
+            new EntityUid(new EntityType("User"), new CedarString("carol"))
+        ]);
     }
 
     [Benchmark]
@@ -46,5 +53,23 @@ public class TypeBenchmarks
     public bool RecordAccess()
     {
         return _record.TryGetValue(_recordKey, out _);
+    }
+
+    [Benchmark]
+    public int SetHash()
+    {
+        return _set.GetHashCode();
+    }
+
+    [Benchmark]
+    public int RecordHash()
+    {
+        return _record.GetHashCode();
+    }
+
+    [Benchmark]
+    public int EntityUidSetHash()
+    {
+        return _entityUidSet.GetHashCode();
     }
 }

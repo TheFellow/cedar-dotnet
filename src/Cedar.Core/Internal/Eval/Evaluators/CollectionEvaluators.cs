@@ -20,15 +20,7 @@ internal sealed class ContainsAllEvaluator(IEvaluator left, IEvaluator right) : 
         CedarSet leftValue = TypeConversion.ValueToSet(left.Eval(env));
         CedarSet rightValue = TypeConversion.ValueToSet(right.Eval(env));
 
-        foreach (ICedarData element in rightValue)
-        {
-            if (!leftValue.Contains(element))
-            {
-                return CedarBool.False;
-            }
-        }
-
-        return CedarBool.True;
+        return leftValue.ContainsAll(rightValue) ? CedarBool.True : CedarBool.False;
     }
 }
 
@@ -39,15 +31,7 @@ internal sealed class ContainsAnyEvaluator(IEvaluator left, IEvaluator right) : 
         CedarSet leftValue = TypeConversion.ValueToSet(left.Eval(env));
         CedarSet rightValue = TypeConversion.ValueToSet(right.Eval(env));
 
-        foreach (ICedarData element in rightValue)
-        {
-            if (leftValue.Contains(element))
-            {
-                return CedarBool.True;
-            }
-        }
-
-        return CedarBool.False;
+        return leftValue.ContainsAny(rightValue) ? CedarBool.True : CedarBool.False;
     }
 }
 

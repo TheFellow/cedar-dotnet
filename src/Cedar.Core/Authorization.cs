@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using Cedar.Core.Internal.Eval;
 using Cedar.Types;
 
@@ -16,68 +15,82 @@ public static class Authorization
         IEntityGetter effectiveEntities = entities ?? new EntityMap();
         EvalEnv env = EvalEnv.FromRequest(effectiveEntities, request);
 
-        ImmutableArray<DiagnosticReason>.Builder permitReasons = ImmutableArray.CreateBuilder<DiagnosticReason>();
-        ImmutableArray<DiagnosticReason>.Builder forbidReasons = ImmutableArray.CreateBuilder<DiagnosticReason>();
-        ImmutableArray<DiagnosticError>.Builder errors = ImmutableArray.CreateBuilder<DiagnosticError>();
+        DiagnosticAccumulator<DiagnosticReason> permitReasons = new();
+        DiagnosticAccumulator<DiagnosticReason> forbidReasons = new();
+        DiagnosticAccumulator<DiagnosticError> errors = new();
 
-        foreach ((PolicyId policyId, Policy policy) in EnumeratePolicies(policies))
+        if (policies is PolicySet policySet)
         {
-            BoolEvaluator evaluator = policy.CompiledEvaluator;
-
-            try
+            foreach (KeyValuePair<PolicyId, Policy> entry in policySet.All())
             {
-                if (!evaluator.Eval(env))
+                Policy policy = entry.Value;
+                try
                 {
+                    if (!policy.CompiledEvaluator.Eval(env))
+                    {
+                        continue;
+                    }
+                }
+                catch (EvalException exception)
+                {
+                    errors.Add(new DiagnosticError(entry.Key, policy.Position, exception.Message));
                     continue;
                 }
-            }
-            catch (EvalException exception)
-            {
-                errors.Add(new DiagnosticError(policyId, policy.Position, exception.Message));
-                continue;
-            }
 
-            DiagnosticReason reason = new(policyId, policy.Position);
-            if (policy.Effect == Effect.Forbid)
-            {
-                forbidReasons.Add(reason);
+                DiagnosticReason reason = new(entry.Key, policy.Position);
+                if (policy.Effect == Effect.Forbid)
+                {
+                    forbidReasons.Add(reason);
+                }
+                else
+                {
+                    permitReasons.Add(reason);
+                }
             }
-            else
+        }
+        else
+        {
+            int index = 0;
+            foreach (Policy policy in policies.Policies)
             {
-                permitReasons.Add(reason);
+                PolicyId policyId = new($"policy{index}");
+                index++;
+
+                try
+                {
+                    if (!policy.CompiledEvaluator.Eval(env))
+                    {
+                        continue;
+                    }
+                }
+                catch (EvalException exception)
+                {
+                    errors.Add(new DiagnosticError(policyId, policy.Position, exception.Message));
+                    continue;
+                }
+
+                DiagnosticReason reason = new(policyId, policy.Position);
+                if (policy.Effect == Effect.Forbid)
+                {
+                    forbidReasons.Add(reason);
+                }
+                else
+                {
+                    permitReasons.Add(reason);
+                }
             }
         }
 
         if (forbidReasons.Count > 0)
         {
-            return (Decision.Deny, new Diagnostic(forbidReasons.ToImmutable(), errors.ToImmutable()));
+            return (Decision.Deny, new Diagnostic(forbidReasons.ToImmutableArray(), errors.ToImmutableArray()));
         }
 
         if (permitReasons.Count > 0)
         {
-            return (Decision.Allow, new Diagnostic(permitReasons.ToImmutable(), errors.ToImmutable()));
+            return (Decision.Allow, new Diagnostic(permitReasons.ToImmutableArray(), errors.ToImmutableArray()));
         }
 
-        return (Decision.Deny, new Diagnostic(ImmutableArray<DiagnosticReason>.Empty, errors.ToImmutable()));
-    }
-
-    private static IEnumerable<(PolicyId PolicyId, Policy Policy)> EnumeratePolicies(IPolicyIterator policies)
-    {
-        if (policies is PolicySet policySet)
-        {
-            foreach (KeyValuePair<PolicyId, Policy> entry in policySet.All())
-            {
-                yield return (entry.Key, entry.Value);
-            }
-
-            yield break;
-        }
-
-        int index = 0;
-        foreach (Policy policy in policies.Policies)
-        {
-            yield return (new PolicyId($"policy{index}"), policy);
-            index++;
-        }
+        return (Decision.Deny, new Diagnostic([], errors.ToImmutableArray()));
     }
 }
